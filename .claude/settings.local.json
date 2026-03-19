@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx expo install react-native-safe-area-context)",
+      "Bash(npx expo install @supabase/supabase-js @react-native-async-storage/async-storage react-native-url-polyfill --legacy-peer-deps)",
+      "Bash(curl -s \"http://localhost:8091/index.bundle?platform=web\")"
+    ]
+  }
+}
