@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, Animated, Easing, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Animated, Easing, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenBase from './src/components/ScreenBase';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { colors } from './src/styles/theme';
 import { supabase } from './src/lib/supabase';
 import Splash from './src/app/components/Splash';
@@ -25,6 +26,7 @@ import ImposterScreen from './src/app/game/imposter';
 import ThirteenWordsScreen from './src/app/game/13-words';
 import CustomMysteryPlayerScreen from './src/app/game/custom-mystery-player';
 import PowerPlayScreen from './src/app/game/power-play';
+import AutoCompleteScreen from './src/app/game/auto-complete';
 import GameIntro from './src/app/components/GameIntro';
 import { type Tab } from './src/app/components/ui/BottomNav';
 import Archive from './src/app/components/Archive';
@@ -33,14 +35,16 @@ import FavoriteTeams from './src/app/components/FavoriteTeams';
 import Achievements from './src/app/components/Achievements';
 import NotificationsScreen from './src/app/components/Notifications';
 import SettingsScreen from './src/app/components/Settings';
+import AuthCallback from './src/app/components/AuthCallback';
 import {
   registerForPushNotifications,
   savePushToken,
   scheduleDailyReminder,
   cancelAllNotifications,
 } from './src/lib/notifications';
+import { getInviteCodeFromURL } from './src/lib/friends';
 
-type Screen = 'splash' | 'onboarding' | 'login' | 'home' | 'games' | 'game' | 'leaderboard' | 'profile' | 'archive' | 'settings' | 'favorite-teams' | 'achievements' | 'my-stats' | 'notifications' | 'game-intro';
+type Screen = 'splash' | 'onboarding' | 'login' | 'home' | 'games' | 'game' | 'leaderboard' | 'profile' | 'archive' | 'settings' | 'favorite-teams' | 'achievements' | 'my-stats' | 'notifications' | 'game-intro' | 'auth-callback';
 
 type GameScreenComponent = React.ComponentType<{
   onBack: () => void;
@@ -60,6 +64,7 @@ const GAME_SCREENS: Record<string, GameScreenComponent> = {
   '13-words': ThirteenWordsScreen,
   'custom-mystery-player': CustomMysteryPlayerScreen,
   'power-play': PowerPlayScreen,
+  'auto-complete': AutoCompleteScreen,
 };
 
 export default function App() {
@@ -68,6 +73,13 @@ export default function App() {
   const [archiveDate, setArchiveDate] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [homeRefreshTrigger, setHomeRefreshTrigger] = useState(0);
+  const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
+  const [authCallbackError, setAuthCallbackError] = useState<string | null>(null);
+
+  // Splash routing: store destination here; splash navigates when both
+  // the animation AND the session check are done (whichever finishes last).
+  const pendingDestination = useRef<Screen | null>(null);
+  const splashDone = useRef(false);
 
   const screenOpacity = useRef(new Animated.Value(0)).current;
   const screenTranslateY = useRef(new Animated.Value(30)).current;
@@ -82,32 +94,89 @@ export default function App() {
       AsyncStorage.getItem('onboarded'),
       AsyncStorage.getItem('bk_intros_seen'),
     ]).then(([{ data: { session } }, onboarded, introSeen]) => {
-      const homeScreen: Screen = introSeen ? 'home' : 'game-intro';
+      // Check for invite code in URL (web only)
+      const inviteCode = getInviteCodeFromURL();
+      if (inviteCode) setPendingInviteCode(inviteCode);
 
-      if (onboarded && session) {
-        setScreen(homeScreen);
+      // Determine post-splash destination
+      let dest: Screen;
+      if (!introSeen) {
+        // First ever open — show gameplay preview after splash
+        dest = 'game-intro';
+      } else if (inviteCode && onboarded && session) {
+        // Deep-linked invite — go straight to leaderboard friends tab
+        dest = 'leaderboard';
+      } else if (onboarded && session) {
+        dest = 'home';
         // Register for push notifications on session restore
         registerForPushNotifications().then(token => {
           if (token) {
             void savePushToken(token);
-            void scheduleDailyReminder(18); // default 6pm
+            void scheduleDailyReminder(18);
           }
         });
       } else if (onboarded && !session) {
-        setScreen('login');
+        dest = 'login';
       } else {
-        // Not onboarded — go straight to home (or intro) as guest
-        setScreen(homeScreen);
+        dest = 'home';
       }
+
+      pendingDestination.current = dest;
       setSessionChecked(true);
+
+      // If splash already finished before session check completed, navigate now
+      if (splashDone.current) {
+        setScreen(dest);
+      }
+    }).catch((err) => {
+      console.error('[App] Init failed:', err);
+      // Fallback: show login if init fails
+      pendingDestination.current = 'login';
+      setSessionChecked(true);
+      if (splashDone.current) setScreen('login');
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) setScreen('login');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // Ignore INITIAL_SESSION — handled by getSession() above.
+      // Only react to actual sign-out events to avoid race conditions
+      // where the listener fires before session is restored from storage.
+      if (event === 'SIGNED_OUT') setScreen('login');
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // OAuth redirect detection (web only)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const hash = window.location.hash;
+    if (hash && (hash.includes('access_token') || hash.includes('error'))) {
+      setScreen('auth-callback');
+      if (hash.includes('error')) {
+        const params = new URLSearchParams(hash.substring(1));
+        setAuthCallbackError(
+          params.get('error_description') || params.get('error') || 'Sign-in failed',
+        );
+      }
+      // On success, supabase detects the hash automatically (detectSessionInUrl: true on web)
+      // and fires SIGNED_IN, which the onAuthStateChange listener handles below.
+    }
+  }, []);
+
+  // When auth state changes to SIGNED_IN while on callback screen, navigate home
+  useEffect(() => {
+    if (screen !== 'auth-callback') return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') {
+        // Clear the hash so a page refresh doesn't re-trigger
+        if (Platform.OS === 'web') {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        setScreen('home');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [screen]);
 
   // Screen transition animation
   useEffect(() => {
@@ -128,6 +197,14 @@ export default function App() {
       }),
     ]).start();
   }, [screen]);
+
+  function handleSplashFinish() {
+    splashDone.current = true;
+    if (pendingDestination.current) {
+      setScreen(pendingDestination.current);
+    }
+    // else: session check will call setScreen when it completes (handled above)
+  }
 
   function handleNavigate(tab: Tab | 'logout' | string) {
     if (tab === 'logout') {
@@ -176,21 +253,27 @@ export default function App() {
   }
 
   function renderScreen() {
+    // Splash always plays first on every launch.
+    // Show a blank dark screen for the brief moment before fonts load (<300ms).
+    if (screen === 'splash') {
+      if (!fontsLoaded) {
+        return <ScreenBase starCount={0} />;
+      }
+      return (
+        <ScreenBase starCount={120}>
+          <StatusBar style="light" />
+          <Splash onFinish={handleSplashFinish} />
+        </ScreenBase>
+      );
+    }
+
+    // All other screens require fonts + session to be ready
     if (!fontsLoaded || !sessionChecked) {
       return (
         <ScreenBase>
           <View style={styles.loading}>
             <ActivityIndicator size="large" color={colors.brand} />
           </View>
-        </ScreenBase>
-      );
-    }
-
-    if (screen === 'splash') {
-      return (
-        <ScreenBase starCount={120}>
-          <StatusBar style="light" />
-          <Splash onFinish={() => setScreen('onboarding')} />
         </ScreenBase>
       );
     }
@@ -222,6 +305,15 @@ export default function App() {
       );
     }
 
+    if (screen === 'auth-callback') {
+      return (
+        <ScreenBase>
+          <StatusBar style="light" />
+          <AuthCallback error={authCallbackError} />
+        </ScreenBase>
+      );
+    }
+
     if (screen === 'login') {
       return (
         <ScreenBase>
@@ -235,7 +327,11 @@ export default function App() {
       return (
         <ScreenBase>
           <StatusBar style="light" />
-          <Leaderboard onNavigate={handleNavigate} />
+          <Leaderboard
+            onNavigate={handleNavigate}
+            initialInviteCode={pendingInviteCode}
+            onInviteCodeConsumed={() => setPendingInviteCode(null)}
+          />
         </ScreenBase>
       );
     }
@@ -359,17 +455,19 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <Animated.View
-        style={{
-          flex: 1,
-          opacity: screenOpacity,
-          transform: [{ translateY: screenTranslateY }],
-        }}
-      >
-        {renderScreen()}
-      </Animated.View>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <Animated.View
+          style={{
+            flex: 1,
+            opacity: screenOpacity,
+            transform: [{ translateY: screenTranslateY }],
+          }}
+        >
+          {renderScreen()}
+        </Animated.View>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

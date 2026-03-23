@@ -1,6 +1,332 @@
-Deno.serve(async () => {
-  return new Response(JSON.stringify({
-    message: 'Daily games are now seeded manually. This function is disabled.',
-    status: 'disabled'
-  }), { headers: { 'Content-Type': 'application/json' } })
+/**
+ * generate-daily-games Edge Function
+ *
+ * Generates daily game content for all 4 leagues for a given date.
+ * - Called automatically by pg_cron at midnight ET (05:00 UTC) each night (generating tomorrow's games).
+ * - Can also be called manually via HTTP POST for backfilling.
+ *
+ * POST body (optional):
+ *   { "date": "2026-03-21" }   — generate for a specific date
+ *   {}                          — generate for tomorrow ET (default)
+ *
+ * Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
+ *
+ * Idempotent — safe to call multiple times for the same date (skips existing rows).
+ * Deterministic — same date + league always produces the same player picks,
+ * so every user sees identical games.
+ */
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+// ── Supabase client (service role) ────────────────────────────────────────────
+
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+)
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
+
+function getDateEST(offsetDays = 0): string {
+  const now = new Date()
+  now.setDate(now.getDate() + offsetDays)
+  const estString = now.toLocaleString('en-US', { timeZone: 'America/New_York' })
+  const estDate = new Date(estString)
+  const y = estDate.getFullYear()
+  const m = String(estDate.getMonth() + 1).padStart(2, '0')
+  const d = String(estDate.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+// ── Seeded PRNG (mulberry32) — deterministic for same seed ────────────────────
+
+function makePRNG(seed: number) {
+  let s = seed
+  return function rand(): number {
+    s = (s + 0x6D2B79F5) | 0
+    let t = Math.imul(s ^ (s >>> 15), 1 | s)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function dateLeagueSeed(date: string, league: string): number {
+  const str = date + '|' + league
+  let hash = 2166136261
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i)
+    hash = (hash * 16777619) >>> 0
+  }
+  return hash
+}
+
+function seededShuffle<T>(arr: T[], rand: () => number): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+// ── Blind rank categories (cycling) ──────────────────────────────────────────
+
+const BLIND_RANK_CATEGORIES: Record<string, string[]> = {
+  NBA: [
+    'RANK BY PPG THIS SEASON',
+    'RANK BY OVERALL IMPACT',
+    'WHO WOULD YOU BUILD AROUND?',
+    'RANK BY PLAYOFF PEDIGREE',
+    'RANK BY FANTASY VALUE',
+    'WHO IS THE BETTER SCORER?',
+    'RANK BY TWO-WAY ABILITY',
+  ],
+  NFL: [
+    'RANK BY 2024 SEASON PERFORMANCE',
+    'RANK BY OVERALL GREATNESS',
+    'WHO WOULD YOU FRANCHISE?',
+    'RANK BY SUPER BOWL IMPACT',
+    'RANK BY FANTASY VALUE',
+    'WHO IS THE BETTER PLAYMAKER?',
+  ],
+  MLB: [
+    'RANK BY 2024 SEASON STATS',
+    'RANK BY OVERALL GREATNESS',
+    'WHO WOULD YOU BUILD AROUND?',
+    'RANK BY POSTSEASON IMPACT',
+    'RANK BY FANTASY VALUE',
+    'WHO IS THE BETTER HITTER?',
+  ],
+  NHL: [
+    'RANK BY 2024-25 POINTS',
+    'RANK BY OVERALL GREATNESS',
+    'WHO WOULD YOU BUILD AROUND?',
+    'RANK BY PLAYOFF IMPACT',
+    'RANK BY FANTASY VALUE',
+    'WHO IS THE BETTER TWO-WAY PLAYER?',
+  ],
+}
+
+const SHOWDOWN_CATEGORIES: Record<string, string[]> = {
+  NBA: [
+    'WHO IS THE BETTER PLAYER RIGHT NOW?',
+    'WHO WOULD YOU WANT IN A MUST-WIN GAME?',
+    'WHO HAS THE HIGHER CEILING?',
+    'WHO WOULD YOU TAKE FOR THE NEXT 5 YEARS?',
+  ],
+  NFL: [
+    'WHO IS THE BETTER PLAYER RIGHT NOW?',
+    'WHO WOULD YOU WANT IN A PLAYOFF GAME?',
+    'WHO HAS THE HIGHER CEILING?',
+    'WHO WOULD YOU TAKE FOR THE NEXT 3 YEARS?',
+  ],
+  MLB: [
+    'WHO IS THE BETTER PLAYER RIGHT NOW?',
+    'WHO WOULD YOU WANT IN THE WORLD SERIES?',
+    'WHO HAS THE HIGHER CEILING?',
+    'WHO IS THE MORE COMPLETE PLAYER?',
+  ],
+  NHL: [
+    'WHO IS THE BETTER PLAYER RIGHT NOW?',
+    'WHO WOULD YOU WANT IN THE PLAYOFFS?',
+    'WHO HAS THE HIGHER CEILING?',
+    'WHO IS THE MORE COMPLETE PLAYER?',
+  ],
+}
+
+// ── Trivia question banks ─────────────────────────────────────────────────────
+
+const TRIVIA_BANKS: Record<string, Array<{ question: string; options: string[]; correctIndex: number; explanation: string }>> = {
+  NBA: [
+    { question: 'How many NBA Championships has LeBron James won?', options: ['2', '3', '4', '5'], correctIndex: 2, explanation: 'LeBron has won 4 championships: 2012, 2013 with Miami, 2016 with Cleveland, and 2020 with the Lakers.' },
+    { question: 'Who holds the NBA all-time scoring record?', options: ['Kareem Abdul-Jabbar', 'Karl Malone', 'LeBron James', 'Kobe Bryant'], correctIndex: 2, explanation: 'LeBron James surpassed Kareem Abdul-Jabbar on February 7, 2023 to become the NBA all-time leading scorer.' },
+    { question: 'Stephen Curry plays for which NBA team?', options: ['Los Angeles Lakers', 'Golden State Warriors', 'Sacramento Kings', 'Phoenix Suns'], correctIndex: 1, explanation: 'Stephen Curry has spent his entire career with the Golden State Warriors, where he has won four championships.' },
+    { question: 'Nikola Jokic was drafted with which overall pick in 2014?', options: ['15th', '27th', '41st', '52nd'], correctIndex: 2, explanation: 'Jokic was a steal at 41st overall — one of the greatest late picks in draft history, winning 3 MVPs.' },
+    { question: 'Which team did Kevin Durant NOT play for?', options: ['Oklahoma City Thunder', 'Golden State Warriors', 'Chicago Bulls', 'Brooklyn Nets'], correctIndex: 2, explanation: 'KD played for OKC, Golden State (2 titles), Brooklyn, and Phoenix. He never played for the Bulls.' },
+    { question: 'Giannis Antetokounmpo is from which country?', options: ['Nigeria', 'Greece', 'Cameroon', 'DR Congo'], correctIndex: 1, explanation: 'Giannis was born in Athens, Greece to Nigerian parents.' },
+    { question: 'Which year did the Golden State Warriors win their first championship of the dynasty era?', options: ['2013', '2014', '2015', '2016'], correctIndex: 2, explanation: 'The Warriors won in 2015, then again in 2017, 2018, and 2022.' },
+    { question: 'Victor Wembanyama was selected with which pick in the 2023 NBA Draft?', options: ['1st', '2nd', '3rd', '4th'], correctIndex: 0, explanation: 'Wembanyama was the consensus #1 pick, selected by the San Antonio Spurs.' },
+    { question: 'Luka Doncic was traded to which team mid-season in 2025?', options: ['Los Angeles Clippers', 'Los Angeles Lakers', 'Golden State Warriors', 'Miami Heat'], correctIndex: 1, explanation: 'Luka Doncic was traded from the Dallas Mavericks to the Los Angeles Lakers in January 2025.' },
+    { question: 'How many MVP awards has Nikola Jokic won as of 2025?', options: ['1', '2', '3', '4'], correctIndex: 2, explanation: 'Jokic won the MVP in 2021, 2022, and 2024 — three in four years.' },
+    { question: 'Which player is known as "The Greek Freak"?', options: ['Luka Doncic', 'Nikola Jokic', 'Giannis Antetokounmpo', 'Kristaps Porzingis'], correctIndex: 2, explanation: 'Giannis earned the nickname for his unique combination of size, speed, and ball-handling.' },
+    { question: 'The 1996 NBA Draft class included which two future Hall of Famers?', options: ['LeBron & Wade', 'Kobe Bryant & Allen Iverson', 'Duncan & Garnett', 'Shaq & Penny'], correctIndex: 1, explanation: 'The 1996 class featured Kobe Bryant (13th pick) and Allen Iverson (1st overall), both future Hall of Famers.' },
+    { question: 'Jayson Tatum played college basketball at which school?', options: ['Kentucky', 'Duke', 'Kansas', 'North Carolina'], correctIndex: 1, explanation: 'Tatum played one season at Duke under Coach K before being drafted 3rd overall by Boston in 2017.' },
+    { question: 'What is the NBA record for most 3-pointers made in a single game?', options: ['11', '12', '14', '13'], correctIndex: 2, explanation: 'Klay Thompson set the record with 14 three-pointers in a single game against the Bulls in 2016.' },
+    { question: 'Who was the first player to win the NBA Finals MVP unanimously?', options: ['Michael Jordan', 'Magic Johnson', 'LeBron James', 'Shaquille O\'Neal'], correctIndex: 2, explanation: 'LeBron James in 2016 was the first unanimous Finals MVP after leading Cleveland\'s comeback from 3-1.' },
+  ],
+  NFL: [
+    { question: 'How many Super Bowls has Patrick Mahomes won as of 2025?', options: ['1', '2', '3', '4'], correctIndex: 2, explanation: 'Mahomes won Super Bowls LIV (2020), LVII (2023), and LVIII (2024) with the Kansas City Chiefs.' },
+    { question: 'Tom Brady won how many Super Bowl rings in his career?', options: ['5', '6', '7', '8'], correctIndex: 2, explanation: 'Brady won 7 Super Bowls: 6 with New England (2002, 04, 05, 15, 17, 19) and 1 with Tampa Bay (2021).' },
+    { question: 'Which team did Joe Burrow win a Heisman Trophy with?', options: ['Cincinnati Bengals', 'Ohio State', 'LSU', 'Georgia'], correctIndex: 2, explanation: 'Burrow won the 2019 Heisman Trophy at LSU, setting the single-season TD record in college football.' },
+    { question: 'Lamar Jackson plays for which NFL team?', options: ['Cleveland Browns', 'Pittsburgh Steelers', 'Baltimore Ravens', 'Cincinnati Bengals'], correctIndex: 2, explanation: 'Lamar Jackson was drafted by the Baltimore Ravens in 2018 and has been their franchise QB since.' },
+    { question: 'Who holds the NFL all-time rushing yards record?', options: ['Emmitt Smith', 'Walter Payton', 'Barry Sanders', 'Frank Gore'], correctIndex: 0, explanation: 'Emmitt Smith retired with 18,355 career rushing yards, a record that still stands.' },
+    { question: 'Which wide receiver holds the single-season receiving yards record?', options: ['Jerry Rice', 'Randy Moss', 'Calvin Johnson', 'Julio Jones'], correctIndex: 2, explanation: 'Calvin Johnson ("Megatron") set the single-season receiving yards record with 1,964 yards in 2012.' },
+    { question: 'Josh Allen plays for which NFL team?', options: ['Miami Dolphins', 'New England Patriots', 'New York Jets', 'Buffalo Bills'], correctIndex: 3, explanation: 'Josh Allen was drafted 7th overall by the Buffalo Bills in 2018 and has led them to multiple playoff appearances.' },
+    { question: 'CeeDee Lamb plays for which NFL team?', options: ['Los Angeles Rams', 'San Francisco 49ers', 'Dallas Cowboys', 'Green Bay Packers'], correctIndex: 2, explanation: 'CeeDee Lamb was drafted 17th overall by the Dallas Cowboys in 2020 and became their top receiver.' },
+    { question: 'What record did Ja\'Marr Chase break in 2024?', options: ['Single-season TDs', 'Single-season receiving yards', 'Consecutive 100-yard games', 'Single-game receiving yards'], correctIndex: 1, explanation: 'Ja\'Marr Chase broke Calvin Johnson\'s single-season receiving yards record with 1,708 yards in 2024.' },
+    { question: 'Which team won Super Bowl LVIII in Las Vegas?', options: ['San Francisco 49ers', 'Kansas City Chiefs', 'Baltimore Ravens', 'Detroit Lions'], correctIndex: 1, explanation: 'The Kansas City Chiefs defeated the San Francisco 49ers 25-22 in overtime in Super Bowl LVIII.' },
+    { question: 'Jalen Hurts plays for which NFL team?', options: ['Dallas Cowboys', 'New York Giants', 'Washington Commanders', 'Philadelphia Eagles'], correctIndex: 3, explanation: 'Jalen Hurts was drafted 53rd overall by the Philadelphia Eagles in 2020 and became their starter in 2021.' },
+    { question: 'Which quarterback has the most career passing touchdowns?', options: ['Peyton Manning', 'Tom Brady', 'Drew Brees', 'Brett Favre'], correctIndex: 1, explanation: 'Tom Brady retired with 649 career passing TDs, surpassing Drew Brees\'s previous record of 571.' },
+    { question: 'Which college did Justin Jefferson attend?', options: ['Alabama', 'Ohio State', 'LSU', 'Clemson'], correctIndex: 2, explanation: 'Justin Jefferson played at LSU alongside Joe Burrow during their 2019 national championship season.' },
+    { question: 'What position does Micah Parsons play?', options: ['Safety', 'Linebacker', 'Cornerback', 'Defensive End'], correctIndex: 1, explanation: 'Micah Parsons is a versatile linebacker for the Dallas Cowboys, known for his elite pass-rushing ability.' },
+    { question: 'Which team has won the most Super Bowls in NFL history?', options: ['San Francisco 49ers', 'Dallas Cowboys', 'New England Patriots', 'Pittsburgh Steelers'], correctIndex: 3, explanation: 'The Pittsburgh Steelers and New England Patriots are tied with 6 Super Bowls each, but Pittsburgh got there first.' },
+  ],
+  MLB: [
+    { question: 'Shohei Ohtani plays for which MLB team?', options: ['Los Angeles Angels', 'New York Yankees', 'Los Angeles Dodgers', 'Toronto Blue Jays'], correctIndex: 2, explanation: 'Ohtani signed a record $700 million contract with the Dodgers ahead of the 2024 season.' },
+    { question: 'How many home runs did Aaron Judge hit in the 2022 regular season?', options: ['54', '57', '60', '62'], correctIndex: 3, explanation: 'Judge hit 62 home runs in 2022, breaking the American League record set by Roger Maris in 1961.' },
+    { question: 'Ted Williams famously hit .406 in which year?', options: ['1939', '1940', '1941', '1942'], correctIndex: 2, explanation: 'Williams hit .406 in 1941, the last time any player batted .400 or better in a full season.' },
+    { question: 'Which pitcher holds the record for most career strikeouts?', options: ['Randy Johnson', 'Roger Clemens', 'Nolan Ryan', 'Pedro Martinez'], correctIndex: 2, explanation: 'Nolan Ryan struck out 5,714 batters in his career, a record that still stands today.' },
+    { question: 'Freddie Freeman plays for which MLB team?', options: ['Atlanta Braves', 'Boston Red Sox', 'Los Angeles Dodgers', 'New York Mets'], correctIndex: 2, explanation: 'Freeman signed with the Dodgers in 2022 and won a World Series with them in 2024.' },
+    { question: 'Juan Soto plays for which MLB team?', options: ['Washington Nationals', 'San Diego Padres', 'New York Mets', 'New York Yankees'], correctIndex: 2, explanation: 'Soto signed a record $765 million deal with the New York Mets ahead of the 2025 season.' },
+    { question: 'Which team did the Dodgers defeat in the 2024 World Series?', options: ['New York Yankees', 'Houston Astros', 'Philadelphia Phillies', 'San Diego Padres'], correctIndex: 0, explanation: 'The Dodgers beat the Yankees in 5 games, with Freddie Freeman hitting a walk-off grand slam in Game 1.' },
+    { question: 'Barry Bonds holds the single-season home run record with how many?', options: ['61', '70', '73', '75'], correctIndex: 2, explanation: 'Barry Bonds hit 73 home runs in the 2001 season, breaking Mark McGwire\'s record of 70 set in 1998.' },
+    { question: 'Which pitcher won the 2024 NL Cy Young Award?', options: ['Zack Wheeler', 'Paul Skenes', 'Chris Sale', 'Corbin Burnes'], correctIndex: 2, explanation: 'Chris Sale won the 2024 NL Cy Young Award with the Atlanta Braves, returning to dominance at age 35.' },
+    { question: 'Gerrit Cole pitches for which MLB team?', options: ['Pittsburgh Pirates', 'Houston Astros', 'Los Angeles Dodgers', 'New York Yankees'], correctIndex: 3, explanation: 'Cole signed a 9-year, $324 million deal with the Yankees in 2019, the largest ever for a pitcher at the time.' },
+    { question: 'Which player won the 2024 World Series MVP?', options: ['Freddie Freeman', 'Mookie Betts', 'Shohei Ohtani', 'Walker Buehler'], correctIndex: 0, explanation: 'Freddie Freeman hit .400 with 4 HR and 12 RBI in the series, including the legendary walk-off grand slam in Game 1.' },
+    { question: 'Who holds the record for most career hits in MLB history?', options: ['Ty Cobb', 'Pete Rose', 'Hank Aaron', 'Stan Musial'], correctIndex: 1, explanation: 'Pete Rose had 4,256 career hits, though he was banned from baseball for gambling.' },
+    { question: 'Yordan Alvarez plays for which MLB team?', options: ['Miami Marlins', 'Houston Astros', 'Oakland Athletics', 'Texas Rangers'], correctIndex: 1, explanation: 'Yordan Alvarez has been the Astros\' designated hitter/outfielder since 2019 and won the 2022 World Series MVP.' },
+    { question: 'Which pitcher had a 0.64 ERA in 2023 before injury, which led to a famous podcast bet?', options: ['Spencer Strider', 'Gerrit Cole', 'Zack Wheeler', 'Sandy Alcantara'], correctIndex: 0, explanation: 'Spencer Strider of the Braves had a historically dominant stretch before injury in 2024.' },
+    { question: 'Which team has won the most World Series titles?', options: ['Boston Red Sox', 'Los Angeles Dodgers', 'New York Yankees', 'Oakland Athletics'], correctIndex: 2, explanation: 'The New York Yankees have won 27 World Series titles, far more than any other franchise.' },
+  ],
+  NHL: [
+    { question: 'Connor McDavid plays for which NHL team?', options: ['Toronto Maple Leafs', 'Calgary Flames', 'Edmonton Oilers', 'Ottawa Senators'], correctIndex: 2, explanation: 'McDavid has played his entire career with the Edmonton Oilers since being drafted 1st overall in 2015.' },
+    { question: 'Who holds the NHL record for most career goals?', options: ['Mario Lemieux', 'Jaromir Jagr', 'Wayne Gretzky', 'Brett Hull'], correctIndex: 2, explanation: 'Wayne Gretzky scored 894 career goals — a record so dominant, he would still hold the scoring record even without his goals.' },
+    { question: 'Which team won the 2024 Stanley Cup?', options: ['Florida Panthers', 'Edmonton Oilers', 'New York Rangers', 'Vancouver Canucks'], correctIndex: 0, explanation: 'The Florida Panthers defeated the Edmonton Oilers in 7 games to win their first Stanley Cup in franchise history.' },
+    { question: 'Nathan MacKinnon plays for which NHL team?', options: ['Montreal Canadiens', 'Minnesota Wild', 'Colorado Avalanche', 'Pittsburgh Penguins'], correctIndex: 2, explanation: 'MacKinnon was drafted 1st overall by Colorado in 2013 and won the Stanley Cup with them in 2022.' },
+    { question: 'Which goalie holds the NHL record for career wins?', options: ['Patrick Roy', 'Martin Brodeur', 'Dominik Hasek', 'Henrik Lundqvist'], correctIndex: 1, explanation: 'Martin Brodeur won 691 games in his career, a record that still stands. He won 3 Stanley Cups with New Jersey.' },
+    { question: 'Auston Matthews plays for which NHL team?', options: ['Boston Bruins', 'Pittsburgh Penguins', 'Toronto Maple Leafs', 'Detroit Red Wings'], correctIndex: 2, explanation: 'Matthews was drafted 1st overall by Toronto in 2016 and won the Hart Trophy (MVP) in 2022 and 2024.' },
+    { question: 'Which country does Nikita Kucherov represent?', options: ['Finland', 'Sweden', 'Czech Republic', 'Russia'], correctIndex: 3, explanation: 'Kucherov is from Russia and has won two Stanley Cups with the Tampa Bay Lightning (2020, 2021).' },
+    { question: 'How many points did Wayne Gretzky score in the 1981-82 season?', options: ['192', '199', '212', '215'], correctIndex: 2, explanation: 'Gretzky scored 212 points in 1981-82, a record that will likely never be broken.' },
+    { question: 'David Pastrnak plays for which NHL team?', options: ['Pittsburgh Penguins', 'Boston Bruins', 'Colorado Avalanche', 'Tampa Bay Lightning'], correctIndex: 1, explanation: 'Pastrnak has been the Bruins\' top scorer since being drafted 25th overall in 2014.' },
+    { question: 'Which NHL team has won the most Stanley Cups?', options: ['Montreal Canadiens', 'Toronto Maple Leafs', 'Detroit Red Wings', 'Boston Bruins'], correctIndex: 0, explanation: 'The Montreal Canadiens have won 24 Stanley Cups, more than any other franchise in NHL history.' },
+    { question: 'Cale Makar plays for which NHL team?', options: ['Calgary Flames', 'Colorado Avalanche', 'Nashville Predators', 'Minnesota Wild'], correctIndex: 1, explanation: 'Makar was drafted 4th overall by Colorado in 2019 and won the Norris Trophy (best defenseman) and Conn Smythe in 2022.' },
+    { question: 'What is the record for most goals scored by a team in a single NHL season?', options: ['397', '401', '446', '446'], correctIndex: 2, explanation: 'The 1983-84 Edmonton Oilers scored 446 goals in a single season, led by Wayne Gretzky\'s 87 goals.' },
+    { question: 'Which position does Quinn Hughes play?', options: ['Center', 'Left Wing', 'Defenseman', 'Goalie'], correctIndex: 2, explanation: 'Quinn Hughes is an offensive defenseman for the Vancouver Canucks, winning the Norris Trophy in 2024.' },
+    { question: 'Sidney Crosby has won how many Stanley Cups?', options: ['1', '2', '3', '4'], correctIndex: 2, explanation: 'Crosby won the Cup in 2009, 2016, and 2017 with the Pittsburgh Penguins, earning two Conn Smythe trophies.' },
+    { question: 'Which team did the Florida Panthers defeat to win the 2024 Stanley Cup?', options: ['New York Rangers', 'Boston Bruins', 'Edmonton Oilers', 'Vancouver Canucks'], correctIndex: 2, explanation: 'The Panthers defeated the Oilers in 7 games, completing a comeback after being down 3-0 in the series.' },
+  ],
+}
+
+// ── Main generation function ──────────────────────────────────────────────────
+
+async function generateGameForDate(date: string, league: string): Promise<{ status: string }> {
+  // Check if already exists
+  const { data: existing } = await supabaseAdmin
+    .from('daily_games')
+    .select('id')
+    .eq('date', date)
+    .eq('league', league)
+    .maybeSingle()
+
+  if (existing) {
+    return { status: 'already_exists' }
+  }
+
+  // Fetch player pool — ordered by tier so normal players are preferred
+  const { data: players, error } = await supabaseAdmin
+    .from('players_pool')
+    .select('id, name, team, position, tier')
+    .eq('league', league)
+    .in('tier', ['normal', 'ball_knowledge'])
+
+  if (error || !players?.length) {
+    console.error(`No players for ${league}:`, error?.message)
+    return { status: 'no_players' }
+  }
+
+  const rand = makePRNG(dateLeagueSeed(date, league))
+  const shuffled = seededShuffle(players, rand)
+
+  // Mystery player — first in shuffled list
+  const mysteryRaw = shuffled[0]
+  const mysteryPlayer = {
+    name: mysteryRaw.name,
+    team: mysteryRaw.team,
+    position: mysteryRaw.position,
+    // Client will supplement remaining attrs (height, age, etc.) from local playerAttrs cache
+  }
+
+  // Blind rank 5 — next 5
+  const blindRankPlayers = shuffled.slice(1, 6).map(p => ({
+    name: p.name,
+    team: p.team,
+  }))
+
+  // Blind rank category — deterministic pick
+  const categories = BLIND_RANK_CATEGORIES[league] ?? ['RANK BY OVERALL GREATNESS']
+  const categoryIdx = Math.floor(rand() * categories.length)
+  const blindRankCategory = categories[categoryIdx]
+
+  // Showdown — next 2 after rank 5
+  const showdownA = shuffled[6]
+  const showdownB = shuffled[7]
+  const showCategories = SHOWDOWN_CATEGORIES[league] ?? ['WHO IS THE BETTER PLAYER?']
+  const showCategoryIdx = Math.floor(rand() * showCategories.length)
+
+  // Trivia — pick 3 non-overlapping questions from the bank
+  const bank = TRIVIA_BANKS[league] ?? []
+  const bankShuffled = seededShuffle(bank, rand)
+  const triviaQuestions = bankShuffled.slice(0, 3)
+
+  const game = {
+    date,
+    league,
+    mystery_player: mysteryPlayer,
+    blind_rank_players: blindRankPlayers,
+    blind_rank_category: blindRankCategory,
+    showdown_player_a: { name: showdownA.name, team: showdownA.team, stats: {} },
+    showdown_player_b: { name: showdownB.name, team: showdownB.team, stats: {} },
+    showdown_category: showCategories[showCategoryIdx],
+    showdown_correct_answer: null, // auto-generated games don't have a curated answer
+    showdown_correct_reason: null,
+    trivia_questions: triviaQuestions,
+  }
+
+  const { error: insertError } = await supabaseAdmin
+    .from('daily_games')
+    .insert(game)
+
+  if (insertError) {
+    console.error(`Insert error for ${date} ${league}:`, insertError.message)
+    return { status: 'error' }
+  }
+
+  return { status: 'inserted' }
+}
+
+// ── HTTP handler ──────────────────────────────────────────────────────────────
+
+Deno.serve(async (req: Request) => {
+  // Authorization — must be called with service role key or by pg_cron (no auth)
+  const authHeader = req.headers.get('Authorization') ?? ''
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  const isPgCron = req.headers.get('x-pg-cron') === '1'
+
+  if (!isPgCron && authHeader !== `Bearer ${serviceKey}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Parse target date — default is tomorrow ET (cron runs at midnight ET (05:00 UTC), generating next day)
+  let body: { date?: string; leagues?: string[] } = {}
+  try { body = await req.json() } catch { /* no body */ }
+
+  const targetDate = body.date ?? getDateEST(1)
+  const leagues = body.leagues ?? ['NBA', 'NFL', 'MLB', 'NHL']
+
+  console.log(`Generating daily games for ${targetDate}, leagues: ${leagues.join(', ')}`)
+
+  const results: Record<string, string> = {}
+  for (const league of leagues) {
+    const result = await generateGameForDate(targetDate, league)
+    results[league] = result.status
+    console.log(`  ${league}: ${result.status}`)
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, date: targetDate, results }),
+    { headers: { 'Content-Type': 'application/json' } },
+  )
 })

@@ -9,7 +9,7 @@ export function getTodayEST(): string {
 // Save a completed game result
 export async function saveGameResult(
   league: string,
-  gameType: 'mystery-player' | 'showdown' | 'blind-rank-5' | 'trivia' | 'power-play',
+  gameType: 'mystery-player' | 'showdown' | 'blind-rank-5' | 'trivia' | 'power-play' | 'auto-complete',
   score: number,
   xpEarned: number
 ) {

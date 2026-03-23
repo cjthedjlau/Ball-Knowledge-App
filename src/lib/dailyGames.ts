@@ -1,12 +1,19 @@
-// NOTE: The Edge Function cron schedule for generate-daily-games has been disabled.
-// To re-disable if it gets re-scheduled, run in Supabase SQL Editor:
-//   select cron.unschedule('generate-daily-games');
-// Daily games are now seeded manually via: npx ts-node scripts/seed-daily-games.ts
-
 import { supabase } from './supabase'
 
+/**
+ * Returns today's date string in America/New_York time (YYYY-MM-DD).
+ * Daily games reset at midnight ET, so all clients must agree on the same
+ * "current date" regardless of the device's local timezone.
+ *
+ * Uses 'en-CA' locale which natively outputs YYYY-MM-DD, avoiding
+ * the unreliable toLocaleString → re-parse approach.
+ */
+function getTodayEST(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+}
+
 export async function getTodaysDailyGame(league: string) {
-  const today = new Date().toISOString().split('T')[0]
+  const today = getTodayEST()
   const { data, error } = await supabase
     .from('daily_games')
     .select('*')
@@ -29,7 +36,7 @@ export async function getArchiveGame(league: string, date: string) {
 }
 
 export async function getAvailableArchiveDates(league: string) {
-  const today = new Date().toISOString().split('T')[0]
+  const today = getTodayEST()
   const { data, error } = await supabase
     .from('daily_games')
     .select('date')

@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Zap } from 'lucide-react-native';
+import { ArrowLeft, Type } from 'lucide-react-native';
 import MidnightCountdown from '../../components/MidnightCountdown';
 import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
 import { type Tab } from '../components/ui/BottomNav';
@@ -25,24 +25,24 @@ import {
 } from '../../lib/gameResults';
 import { supabase } from '../../lib/supabase';
 import { updatePlayHour } from '../../lib/notifications';
-import { sharePowerPlay } from '../../lib/shareResults';
+import { shareAutoComplete } from '../../lib/shareResults';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// -- Types --------------------------------------------------------------------
 
-interface PowerPlayAnswer {
+interface AutoCompleteAnswer {
   text: string;
   points: number;
   aliases?: string[];
 }
 
-interface PowerPlayQuestion {
+interface AutoCompletePrompt {
   text: string;
-  answers: PowerPlayAnswer[];
+  answers: AutoCompleteAnswer[];
 }
 
-interface PowerPlayData {
+interface AutoCompleteData {
   league: string;
-  questions: PowerPlayQuestion[];
+  prompts: AutoCompletePrompt[];
 }
 
 interface Props {
@@ -53,13 +53,14 @@ interface Props {
 
 type Phase = 'loading' | 'intro' | 'playing' | 'results';
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// -- Constants ----------------------------------------------------------------
 
-const TOTAL_TIME = 60;
-const TARGET_SCORE = 500;
-const NUM_QUESTIONS = 5;
+const TARGET_SCORE = 300;
+const NUM_PROMPTS = 3;
+const MAX_STRIKES_PER_PROMPT = 3;
+const NUM_ANSWERS_PER_PROMPT = 5;
 
-// ── Answer matching ────────────────────────────────────────────────────────────
+// -- Answer matching (same as power-play.tsx) ----------------------------------
 
 function normalizeText(s: string): string {
   return s.trim().toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ');
@@ -67,12 +68,11 @@ function normalizeText(s: string): string {
 
 function matchAnswer(
   userInput: string,
-  answers: PowerPlayAnswer[],
+  answers: AutoCompleteAnswer[],
 ): { points: number; matchedAnswer: string } {
   const norm = normalizeText(userInput);
   if (!norm) return { points: 0, matchedAnswer: '' };
 
-  // Score each answer candidate — highest-scoring match wins (avoids short false positives)
   let bestMatch = { points: 0, matchedAnswer: '', quality: 0 };
 
   for (const answer of answers) {
@@ -81,13 +81,11 @@ function matchAnswer(
       const candNorm = normalizeText(candidate);
       let quality = 0;
 
-      // 1. Exact match — best possible
+      // 1. Exact match
       if (candNorm === norm) {
         quality = 100;
       }
       // 2. Candidate is fully contained in user input or vice versa
-      //    The shorter string must be at least 50% the length of the longer one
-      //    to prevent "trade" matching "trade deadline drama"
       else if (norm.length >= 3 && candNorm.includes(norm)) {
         const ratio = norm.length / candNorm.length;
         if (ratio >= 0.5) quality = 80 * ratio;
@@ -96,8 +94,7 @@ function matchAnswer(
         if (ratio >= 0.5) quality = 80 * ratio;
       }
 
-      // 3. Multi-word overlap — user and candidate share most of their meaningful words
-      //    (for short 1-2 word answers this is very effective)
+      // 3. Multi-word overlap
       if (quality === 0) {
         const candWords = candNorm.split(' ').filter(w => w.length >= 2);
         const userWords = norm.split(' ').filter(w => w.length >= 2);
@@ -106,7 +103,6 @@ function matchAnswer(
             candWords.some(cw => cw === uw || (cw.length >= 4 && uw.length >= 4 && (cw.startsWith(uw) || uw.startsWith(cw)))),
           );
           const overlapRatio = matchedWords.length / Math.max(candWords.length, userWords.length);
-          // Require at least 50% word overlap and at least one matched word
           if (matchedWords.length >= 1 && overlapRatio >= 0.5) {
             quality = 60 * overlapRatio;
           }
@@ -119,66 +115,64 @@ function matchAnswer(
     }
   }
 
-  // Only accept matches above a minimum quality threshold
   if (bestMatch.quality >= 30) {
     return { points: bestMatch.points, matchedAnswer: bestMatch.matchedAnswer };
   }
   return { points: 0, matchedAnswer: '' };
 }
 
-// ── Component ──────────────────────────────────────────────────────────────────
+// -- Component ----------------------------------------------------------------
 
-export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
+export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
   const isArchive = !!archiveDate;
   const [selectedLeague, setSelectedLeague] = useState('NBA');
   const [phase, setPhase] = useState<Phase>('loading');
-  const [gameData, setGameData] = useState<PowerPlayData | null>(null);
+  const [gameData, setGameData] = useState<AutoCompleteData | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [alreadyPlayed, setAlreadyPlayed] = useState<{ score: number; xp: number } | null>(null);
 
   // Playing state
-  const [currentQ, setCurrentQ] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<string[]>(['', '', '', '', '']);
-  const [lockedIn, setLockedIn] = useState<boolean[]>([false, false, false, false, false]);
-  const [passed, setPassed] = useState<boolean[]>([false, false, false, false, false]);
+  const [currentPrompt, setCurrentPrompt] = useState(0);
   const [currentInput, setCurrentInput] = useState('');
-  const [timeRemaining, setTimeRemaining] = useState(TOTAL_TIME);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [strikes, setStrikes] = useState(0);
+  // Track which answers have been revealed per prompt: revealedAnswers[promptIdx] = Set of answer texts
+  const [revealedAnswers, setRevealedAnswers] = useState<Set<string>[]>([]);
+  // Points earned per prompt
+  const [promptScores, setPromptScores] = useState<number[]>([0, 0, 0]);
+  // Whether each prompt is finished (all found, 3 strikes, or passed)
+  const [promptFinished, setPromptFinished] = useState<boolean[]>([false, false, false]);
   const inputRef = useRef<TextInput>(null);
 
   // Results state
-  const [matchResults, setMatchResults] = useState<{ points: number; matchedAnswer: string }[]>([]);
   const [totalScore, setTotalScore] = useState(0);
   const [revealedCount, setRevealedCount] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
 
   // Animations
-  const timerBarWidth = useRef(new Animated.Value(1)).current;
-  const questionSlide = useRef(new Animated.Value(0)).current;
+  const promptSlide = useRef(new Animated.Value(0)).current;
   const rowFlash = useRef([
     new Animated.Value(0),
     new Animated.Value(0),
     new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
   ]).current;
+  const answerFlash = useRef(
+    Array.from({ length: NUM_ANSWERS_PER_PROMPT }, () => new Animated.Value(0)),
+  ).current;
 
-  // ── Load game data ──────────────────────────────────────────────────────────
+  // -- Load game data ---------------------------------------------------------
 
   useEffect(() => {
     setPhase('loading');
     setLoadError(false);
     setGameData(null);
-    setCurrentQ(0);
-    setUserAnswers(['', '', '', '', '']);
-    setLockedIn([false, false, false, false, false]);
-    setPassed([false, false, false, false, false]);
+    setCurrentPrompt(0);
     setCurrentInput('');
-    setTimeRemaining(TOTAL_TIME);
-    setMatchResults([]);
+    setStrikes(0);
+    setRevealedAnswers([]);
+    setPromptScores([0, 0, 0]);
+    setPromptFinished([false, false, false]);
     setRevealedCount(0);
     setAlreadyPlayed(null);
-    timerBarWidth.setValue(1);
 
     const fetchGame = isArchive
       ? getArchiveGame(selectedLeague, archiveDate!)
@@ -186,7 +180,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
     const checkCompletion = isArchive
       ? Promise.resolve(null)
-      : getGameResultToday(selectedLeague, 'power-play');
+      : getGameResultToday(selectedLeague, 'auto-complete');
 
     void Promise.all([fetchGame, checkCompletion]).then(([data, priorResult]) => {
       if (priorResult) {
@@ -194,157 +188,129 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
         setPhase('intro');
         return;
       }
-      if (!data?.power_play) {
+      if (!data?.auto_complete) {
         setLoadError(true);
         setPhase('intro');
         return;
       }
-      setGameData(data.power_play as PowerPlayData);
+      const acData = data.auto_complete as AutoCompleteData;
+      // Take only the first NUM_PROMPTS (3) prompts
+      const trimmed = { ...acData, prompts: acData.prompts.slice(0, NUM_PROMPTS) };
+      setGameData(trimmed);
+      setRevealedAnswers(trimmed.prompts.map(() => new Set<string>()));
       setPhase('intro');
     });
   }, [selectedLeague]);
 
-  // ── Timer ───────────────────────────────────────────────────────────────────
-
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
-
-  const startTimer = useCallback(() => {
-    stopTimer();
-    Animated.timing(timerBarWidth, {
-      toValue: 0,
-      duration: timeRemaining * 1000,
-      useNativeDriver: false,
-    }).start();
-    timerRef.current = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1) {
-          stopTimer();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, [timeRemaining, stopTimer]);
-
-  useEffect(() => {
-    if (timeRemaining === 0 && phase === 'playing') {
-      handleFinishGame();
-    }
-  }, [timeRemaining, phase]);
-
-  useEffect(() => {
-    return () => stopTimer();
-  }, []);
-
-  // ── Game logic ──────────────────────────────────────────────────────────────
+  // -- Game logic -------------------------------------------------------------
 
   function handleStartGame() {
     setPhase('playing');
     setTimeout(() => {
-      startTimer();
       inputRef.current?.focus();
     }, 300);
   }
 
-  function slideToNextQuestion(nextIndex: number) {
-    questionSlide.setValue(40);
-    Animated.timing(questionSlide, {
+  function slideToNextPrompt(nextIndex: number) {
+    promptSlide.setValue(40);
+    Animated.timing(promptSlide, {
       toValue: 0,
       duration: 220,
       useNativeDriver: true,
     }).start();
-    setCurrentQ(nextIndex);
+    setCurrentPrompt(nextIndex);
     setCurrentInput('');
+    setStrikes(0);
+    // Reset answer flash animations for the new prompt
+    answerFlash.forEach(v => v.setValue(0));
     setTimeout(() => inputRef.current?.focus(), 250);
   }
 
-  /** Find the next unlocked question index after `from`. Returns -1 if none remain. */
-  function findNextUnlocked(from: number, locked: boolean[]): number {
-    // First: look forward from `from + 1`
-    for (let i = from + 1; i < NUM_QUESTIONS; i++) {
-      if (!locked[i]) return i;
+  function advanceOrFinish() {
+    if (currentPrompt < NUM_PROMPTS - 1) {
+      slideToNextPrompt(currentPrompt + 1);
+    } else {
+      finishGame();
     }
-    // Then: wrap around from the start (for passed questions)
-    for (let i = 0; i < from; i++) {
-      if (!locked[i]) return i;
-    }
-    return -1;
   }
 
-  function handleLockIn() {
-    const answer = currentInput.trim();
-    const newAnswers = [...userAnswers];
-    newAnswers[currentQ] = answer;
-    const newLocked = [...lockedIn];
-    newLocked[currentQ] = true;
+  function handleGuess() {
+    if (!gameData) return;
+    const input = currentInput.trim();
+    if (!input) return;
 
-    setUserAnswers(newAnswers);
-    setLockedIn(newLocked);
+    const prompt = gameData.prompts[currentPrompt];
+    if (!prompt) return;
 
-    const next = findNextUnlocked(currentQ, newLocked);
-    if (next === -1) {
-      // All questions answered
-      stopTimer();
-      finishWithAnswers(newAnswers);
+    // Filter out already-revealed answers so we don't re-match them
+    const unrevealed = prompt.answers.filter(
+      a => !revealedAnswers[currentPrompt]?.has(a.text),
+    );
+
+    const result = matchAnswer(input, unrevealed);
+
+    if (result.points > 0 && result.matchedAnswer) {
+      // Correct guess — reveal the answer
+      const newRevealed = revealedAnswers.map((s, i) =>
+        i === currentPrompt ? new Set(s).add(result.matchedAnswer) : s,
+      );
+      setRevealedAnswers(newRevealed);
+
+      const newScores = [...promptScores];
+      newScores[currentPrompt] += result.points;
+      setPromptScores(newScores);
+
+      // Flash the matched answer row
+      const matchedIdx = prompt.answers.findIndex(a => a.text === result.matchedAnswer);
+      if (matchedIdx >= 0) {
+        Animated.sequence([
+          Animated.timing(answerFlash[matchedIdx], { toValue: 1, duration: 150, useNativeDriver: true }),
+          Animated.timing(answerFlash[matchedIdx], { toValue: 0, duration: 300, useNativeDriver: true }),
+        ]).start();
+      }
+
+      setCurrentInput('');
+
+      // Check if all answers found
+      const totalRevealed = newRevealed[currentPrompt].size;
+      if (totalRevealed >= prompt.answers.length) {
+        // All answers found for this prompt
+        const newFinished = [...promptFinished];
+        newFinished[currentPrompt] = true;
+        setPromptFinished(newFinished);
+        setTimeout(() => advanceOrFinish(), 800);
+      }
     } else {
-      slideToNextQuestion(next);
+      // Wrong guess — add a strike
+      const newStrikes = strikes + 1;
+      setStrikes(newStrikes);
+      setCurrentInput('');
+
+      if (newStrikes >= MAX_STRIKES_PER_PROMPT) {
+        // Prompt over — reveal remaining answers, wait for user to press NEXT
+        const newFinished = [...promptFinished];
+        newFinished[currentPrompt] = true;
+        setPromptFinished(newFinished);
+      }
     }
   }
 
   function handlePass() {
-    // Mark as passed (skipped) but NOT locked — we'll come back to it
-    const newPassed = [...passed];
-    newPassed[currentQ] = true;
-    setPassed(newPassed);
-
-    // Look for the next unlocked question that isn't the current one
-    const newLocked = [...lockedIn];
-    const next = findNextUnlocked(currentQ, newLocked);
-
-    if (next === -1) {
-      // Every other question is locked — this passed one is the only one left.
-      // Lock it with empty answer and finish.
-      const newAnswers = [...userAnswers];
-      newAnswers[currentQ] = '';
-      newLocked[currentQ] = true;
-      setUserAnswers(newAnswers);
-      setLockedIn(newLocked);
-      stopTimer();
-      finishWithAnswers(newAnswers);
-    } else {
-      slideToNextQuestion(next);
-    }
+    const newFinished = [...promptFinished];
+    newFinished[currentPrompt] = true;
+    setPromptFinished(newFinished);
+    // Don't auto-advance — user presses NEXT after seeing answers
   }
 
-  function handleFinishGame() {
-    // Timer ran out — lock any remaining unlocked questions with empty answers
-    const finalAnswers = [...userAnswers];
-    for (let i = 0; i < NUM_QUESTIONS; i++) {
-      if (!lockedIn[i]) finalAnswers[i] = '';
-    }
-    finishWithAnswers(finalAnswers);
-  }
-
-  function finishWithAnswers(answers: string[]) {
+  function finishGame() {
     if (!gameData) return;
-    stopTimer();
 
-    const results = answers.map((ans, i) =>
-      matchAnswer(ans, gameData.questions[i]?.answers ?? []),
-    );
-    const score = results.reduce((sum, r) => sum + r.points, 0);
+    const score = promptScores.reduce((sum, s) => sum + s, 0);
     const xp = 500 + score * 5;
 
-    setMatchResults(results);
     setTotalScore(score);
     setXpEarned(xp);
     setPhase('results');
-
     // Persist result
     if (!isArchive) {
       void (async () => {
@@ -352,17 +318,17 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
           data: { user },
         } = await supabase.auth.getUser();
         if (user) {
-          await saveXPResult(user.id, 'power-play', xp, score);
+          await saveXPResult(user.id, 'auto-complete', xp, score);
           await updateUserXPAndStreak(user.id, xp, true);
         }
       })();
-      void saveCompletionResult(selectedLeague, 'power-play', score, xp);
+      void saveCompletionResult(selectedLeague, 'auto-complete', score, xp);
       void updatePlayHour();
     }
 
-    // Sequential reveal animation
+    // Sequential reveal animation for results
     rowFlash.forEach(v => v.setValue(0));
-    results.forEach((_, i) => {
+    promptScores.forEach((_, i) => {
       setTimeout(() => {
         setRevealedCount(i + 1);
         Animated.sequence([
@@ -373,7 +339,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
     });
   }
 
-  // ── Render helpers ──────────────────────────────────────────────────────────
+  // -- Render helpers ---------------------------------------------------------
 
   function renderLoading() {
     return (
@@ -397,7 +363,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
           </View>
           <Text style={styles.alreadyCta}>COME BACK TOMORROW</Text>
           <Text style={styles.alreadySub}>
-            A new Power Play drops every day. Switch leagues to keep playing.
+            A new Auto Complete drops every day. Switch leagues to keep playing.
           </Text>
           <MidnightCountdown />
         </View>
@@ -407,7 +373,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
     if (loadError || !gameData) {
       return (
         <View style={styles.centerState}>
-          <Text style={styles.errorText}>No Power Play available today</Text>
+          <Text style={styles.errorText}>No Auto Complete available today</Text>
           <Text style={styles.errorSub}>Check back tomorrow or switch leagues</Text>
         </View>
       );
@@ -416,14 +382,15 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
     return (
       <View style={styles.introCard}>
         <View style={styles.introIconWrap}>
-          <Zap size={36} color={colors.brand} strokeWidth={2} />
+          <Type size={36} color={colors.brand} strokeWidth={2} />
         </View>
         <Text style={styles.introTitle}>HOW IT WORKS</Text>
         <View style={styles.introRules}>
-          <Text style={styles.introRule}>• 5 survey-style questions</Text>
-          <Text style={styles.introRule}>• 60 seconds on the clock</Text>
-          <Text style={styles.introRule}>• Match the top answers to score points</Text>
-          <Text style={styles.introRule}>• Each question is worth up to 100 pts</Text>
+          <Text style={styles.introRule}>• 3 search-style prompts</Text>
+          <Text style={styles.introRule}>• Each prompt has 5 ranked answers</Text>
+          <Text style={styles.introRule}>• Type guesses to match the top completions</Text>
+          <Text style={styles.introRule}>• 3 wrong guesses per prompt and it's over</Text>
+          <Text style={styles.introRule}>• Max score: {TARGET_SCORE} points</Text>
         </View>
         <Pressable
           style={({ pressed }) => [styles.startBtn, pressed && styles.startBtnPressed]}
@@ -437,7 +404,11 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
   function renderPlaying() {
     if (!gameData) return null;
-    const question = gameData.questions[currentQ];
+    const prompt = gameData.prompts[currentPrompt];
+    if (!prompt) return null;
+
+    const isPromptDone = promptFinished[currentPrompt];
+    const currentRevealed = revealedAnswers[currentPrompt] ?? new Set<string>();
 
     return (
       <KeyboardAvoidingView
@@ -445,97 +416,176 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
         style={styles.playingWrap}
         keyboardVerticalOffset={0}
       >
-        {/* Timer bar */}
-        <View style={styles.timerBarTrack}>
-          <Animated.View
-            style={[
-              styles.timerBarFill,
-              { flex: timerBarWidth },
-            ]}
-          />
-        </View>
-
-        {/* Timer number + question counter */}
-        <View style={styles.timerRow}>
-          <Text style={styles.questionCounter}>
-            Q{currentQ + 1} <Text style={styles.questionCounterOf}>of {NUM_QUESTIONS}</Text>
+        <ScrollView
+          style={styles.playingScroll}
+          contentContainerStyle={styles.playingScrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+        {/* Prompt counter + strikes */}
+        <View style={styles.topRow}>
+          <Text style={styles.promptCounter}>
+            {currentPrompt + 1} <Text style={styles.promptCounterOf}>of {NUM_PROMPTS}</Text>
           </Text>
-          <View
-            style={[
-              styles.timerBadge,
-              timeRemaining <= 15 && styles.timerBadgeUrgent,
-            ]}
-          >
-            <Text style={[styles.timerNum, timeRemaining <= 15 && styles.timerNumUrgent]}>
-              {timeRemaining}
-            </Text>
+          <View style={styles.strikesRow}>
+            {Array.from({ length: MAX_STRIKES_PER_PROMPT }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.strikeBox,
+                  i < strikes && styles.strikeBoxActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.strikeX,
+                    i < strikes && styles.strikeXActive,
+                  ]}
+                >
+                  X
+                </Text>
+              </View>
+            ))}
           </View>
         </View>
 
-        {/* Question */}
+        {/* Search bar prompt */}
         <Animated.View
           style={[
-            styles.questionWrap,
-            { transform: [{ translateY: questionSlide }] },
+            styles.searchBarWrap,
+            { transform: [{ translateY: promptSlide }] },
           ]}
         >
-          {passed[currentQ] && (
-            <Text style={styles.passedBadge}>PASSED — ANSWER NOW</Text>
-          )}
-          <Text style={styles.questionText}>{question?.text ?? ''}</Text>
+          <View style={styles.searchBar}>
+            <Text style={styles.searchBarText}>
+              {prompt.text}
+              <Text style={styles.searchBarCursor}> ___</Text>
+            </Text>
+          </View>
         </Animated.View>
 
-        {/* Input */}
-        <View style={styles.inputWrap}>
-          <TextInput
-            ref={inputRef}
-            style={styles.answerInput}
-            value={currentInput}
-            onChangeText={setCurrentInput}
-            placeholder="Type your answer..."
-            placeholderTextColor="#555"
-            returnKeyType="done"
-            onSubmitEditing={currentInput.trim() ? handleLockIn : handlePass}
-            autoCapitalize="words"
-            autoCorrect={false}
-          />
+        {/* Answer board — 5 ranked slots */}
+        <View style={styles.answerBoard}>
+          {prompt.answers.map((answer, i) => {
+            const isRevealed = currentRevealed.has(answer.text);
+            const showUnrevealed = isPromptDone && !isRevealed;
+
+            return (
+              <Animated.View
+                key={i}
+                style={[
+                  styles.answerSlot,
+                  isRevealed && styles.answerSlotRevealed,
+                  showUnrevealed && styles.answerSlotMissed,
+                  {
+                    opacity: answerFlash[i].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 0.3],
+                    }),
+                  },
+                ]}
+              >
+                <View style={styles.answerRankWrap}>
+                  <Text style={[styles.answerRank, isRevealed && styles.answerRankRevealed]}>
+                    {i + 1}
+                  </Text>
+                </View>
+                {isRevealed ? (
+                  <View style={styles.answerContentRow}>
+                    <Text style={styles.answerText}>{answer.text}</Text>
+                    <View style={styles.answerPtsBadge}>
+                      <Text style={styles.answerPtsText}>{answer.points}</Text>
+                    </View>
+                  </View>
+                ) : showUnrevealed ? (
+                  <View style={styles.answerContentRow}>
+                    <Text style={styles.answerTextMissed}>{answer.text}</Text>
+                    <View style={styles.answerPtsBadgeMissed}>
+                      <Text style={styles.answerPtsTextMissed}>{answer.points}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.answerHidden}>
+                    <View style={styles.answerHiddenBar} />
+                  </View>
+                )}
+              </Animated.View>
+            );
+          })}
         </View>
 
-        {/* Buttons */}
-        <View style={styles.actionRow}>
-          <Pressable
-            style={({ pressed }) => [styles.passBtn, pressed && styles.passBtnPressed]}
-            onPress={handlePass}
-          >
-            <Text style={styles.passBtnText}>PASS</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.lockInBtn,
-              !currentInput.trim() && styles.lockInBtnDisabled,
-              pressed && currentInput.trim() && styles.lockInBtnPressed,
-            ]}
-            onPress={handleLockIn}
-            disabled={!currentInput.trim()}
-          >
-            <Text style={styles.lockInBtnText}>LOCK IN</Text>
-          </Pressable>
+        {/* Score for current prompt */}
+        <View style={styles.promptScoreRow}>
+          <Text style={styles.promptScoreLabel}>POINTS</Text>
+          <Text style={styles.promptScoreValue}>{promptScores[currentPrompt]}</Text>
         </View>
 
-        {/* Question dots */}
+        {/* Input + buttons (shown while prompt is active) */}
+        {!isPromptDone && (
+          <>
+            <View style={styles.inputWrap}>
+              <TextInput
+                ref={inputRef}
+                style={styles.answerInput}
+                value={currentInput}
+                onChangeText={setCurrentInput}
+                placeholder="Type your guess..."
+                placeholderTextColor={darkColors.textSecondary}
+                returnKeyType="done"
+                onSubmitEditing={currentInput.trim() ? handleGuess : undefined}
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.actionRow}>
+              <Pressable
+                style={({ pressed }) => [styles.passBtn, pressed && styles.passBtnPressed]}
+                onPress={handlePass}
+              >
+                <Text style={styles.passBtnText}>PASS</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.lockInBtn,
+                  !currentInput.trim() && styles.lockInBtnDisabled,
+                  pressed && currentInput.trim() && styles.lockInBtnPressed,
+                ]}
+                onPress={handleGuess}
+                disabled={!currentInput.trim()}
+              >
+                <Text style={styles.lockInBtnText}>GUESS</Text>
+              </Pressable>
+            </View>
+          </>
+        )}
+
+        {/* NEXT button (shown after 3 strikes or pass — user reviews answers then advances) */}
+        {isPromptDone && (
+          <Pressable
+            style={({ pressed }) => [styles.nextPromptBtn, pressed && styles.nextPromptBtnPressed]}
+            onPress={advanceOrFinish}
+          >
+            <Text style={styles.nextPromptBtnText}>
+              {currentPrompt < NUM_PROMPTS - 1 ? 'NEXT' : 'SEE RESULTS'}
+            </Text>
+          </Pressable>
+        )}
+
+        {/* Prompt dots */}
         <View style={styles.dotsRow}>
-          {Array.from({ length: NUM_QUESTIONS }).map((_, i) => (
+          {Array.from({ length: NUM_PROMPTS }).map((_, i) => (
             <View
               key={i}
               style={[
                 styles.dot,
-                i === currentQ && styles.dotActive,
-                lockedIn[i] && styles.dotLocked,
-                !lockedIn[i] && passed[i] && styles.dotPassed,
+                i === currentPrompt && styles.dotActive,
+                promptFinished[i] && styles.dotLocked,
               ]}
             />
           ))}
         </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     );
   }
@@ -560,13 +610,13 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
           {hitTarget && <Text style={styles.perfectLabel}>PERFECT GAME!</Text>}
         </View>
 
-        {/* Question results */}
+        {/* Prompt results */}
         <View style={styles.resultsList}>
-          {gameData.questions.map((q, i) => {
+          {gameData.prompts.map((prompt, i) => {
             const revealed = i < revealedCount;
-            const result = matchResults[i];
-            const pts = result?.points ?? 0;
-            const matched = result?.matchedAnswer ?? '';
+            const pts = promptScores[i];
+            const promptRevealed = revealedAnswers[i] ?? new Set<string>();
+            const answersFound = promptRevealed.size;
 
             return (
               <Animated.View
@@ -579,18 +629,13 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
                 ]}
               >
                 <View style={styles.resultLeft}>
-                  <Text style={styles.resultQNum}>Q{i + 1}</Text>
+                  <Text style={styles.resultQNum}>P{i + 1}</Text>
                   <View style={styles.resultTextCol}>
-                    <Text style={styles.resultQuestion} numberOfLines={1}>{q.text}</Text>
+                    <Text style={styles.resultQuestion} numberOfLines={2}>{prompt.text}</Text>
                     {revealed ? (
-                      <>
-                        <Text style={[styles.resultUserAnswer, pts > 0 && styles.resultUserAnswerHit]}>
-                          {userAnswers[i] || '— no answer —'}
-                        </Text>
-                        {pts > 0 && matched && (
-                          <Text style={styles.resultMatchedLabel}>✓ {matched}</Text>
-                        )}
-                      </>
+                      <Text style={[styles.resultUserAnswer, pts > 0 && styles.resultUserAnswerHit]}>
+                        {answersFound}/{prompt.answers.length} answers found
+                      </Text>
                     ) : (
                       <View style={styles.resultPlaceholder} />
                     )}
@@ -608,62 +653,67 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
           })}
         </View>
 
-        {/* Top answers reveal (after all revealed) */}
-        {revealedCount === NUM_QUESTIONS && (
+        {/* Full answer reveal (after all results revealed) */}
+        {revealedCount === NUM_PROMPTS && (
           <View style={styles.topAnswersSection}>
-            <Text style={styles.topAnswersTitle}>TOP ANSWERS</Text>
-            {gameData.questions.map((q, i) => (
-              <View key={i} style={styles.topAnswersCard}>
-                <Text style={styles.topAnswersQText} numberOfLines={2}>{q.text}</Text>
-                {q.answers.slice(0, 3).map((ans, j) => (
-                  <View key={j} style={styles.topAnswerRow}>
-                    <Text style={styles.topAnswerRank}>{j + 1}</Text>
-                    <Text style={styles.topAnswerText}>{ans.text}</Text>
-                    <Text style={styles.topAnswerPts}>{ans.points}</Text>
-                  </View>
-                ))}
-              </View>
-            ))}
+            <Text style={styles.topAnswersTitle}>ALL ANSWERS</Text>
+            {gameData.prompts.map((prompt, i) => {
+              const promptRevealed = revealedAnswers[i] ?? new Set<string>();
+              return (
+                <View key={i} style={styles.topAnswersCard}>
+                  <Text style={styles.topAnswersQText} numberOfLines={2}>{prompt.text}</Text>
+                  {prompt.answers.map((ans, j) => {
+                    const wasFound = promptRevealed.has(ans.text);
+                    return (
+                      <View key={j} style={styles.topAnswerRow}>
+                        <Text style={styles.topAnswerRank}>{j + 1}</Text>
+                        <Text style={[styles.topAnswerText, !wasFound && styles.topAnswerTextMissed]}>
+                          {ans.text}
+                        </Text>
+                        <Text style={[styles.topAnswerPts, wasFound && styles.topAnswerPtsFound]}>
+                          {ans.points}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })}
           </View>
         )}
 
         {/* XP card */}
-        {revealedCount === NUM_QUESTIONS && !isArchive && (
+        {revealedCount === NUM_PROMPTS && !isArchive && (
           <View style={styles.xpCard}>
-            <Text style={styles.xpCardLabel}>⭐ XP EARNED</Text>
+            <Text style={styles.xpCardLabel}>XP EARNED</Text>
             <Text style={styles.xpCardTotal}>+{xpEarned}</Text>
             <Text style={styles.xpCardBreakdown}>
-              500 base + {totalScore} pts × 5
+              500 base + {totalScore} pts x 5
             </Text>
           </View>
         )}
 
-        {isArchive && revealedCount === NUM_QUESTIONS && (
+        {isArchive && revealedCount === NUM_PROMPTS && (
           <Text style={styles.archiveNotice}>ARCHIVE MODE — Results not saved</Text>
         )}
 
-        {!isArchive && revealedCount === NUM_QUESTIONS && (
+        {!isArchive && revealedCount === NUM_PROMPTS && (
           <MidnightCountdown />
         )}
 
-        {revealedCount === NUM_QUESTIONS && (
+        {revealedCount === NUM_PROMPTS && (
           <Pressable
             style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
-            onPress={() =>
-              sharePowerPlay(
-                selectedLeague,
-                totalScore,
-                TARGET_SCORE,
-                matchResults.filter(r => r.points > 0).length,
-                NUM_QUESTIONS,
-              )
-            }
+            onPress={() => {
+              const promptsHit = promptScores.filter(s => s > 0).length;
+              shareAutoComplete(selectedLeague, totalScore, TARGET_SCORE, promptsHit, NUM_PROMPTS);
+            }}
           >
             <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
           </Pressable>
         )}
 
-        {revealedCount === NUM_QUESTIONS && (
+        {revealedCount === NUM_PROMPTS && (
           <Pressable
             style={({ pressed }) => [styles.doneBtn, pressed && styles.doneBtnPressed]}
             onPress={onBack}
@@ -675,7 +725,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
     );
   }
 
-  // ── Main render ────────────────────────────────────────────────────────────
+  // -- Main render ------------------------------------------------------------
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -688,10 +738,10 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
         </View>
         <View style={styles.zone1Center}>
           <View style={styles.zone1TitleRow}>
-            <Zap size={20} color={colors.white} strokeWidth={2} fill={colors.white} />
-            <Text style={styles.zone1Title}>POWER PLAY</Text>
+            <Type size={20} color={colors.white} strokeWidth={2} />
+            <Text style={styles.zone1Title}>AUTO COMPLETE</Text>
           </View>
-          <Text style={styles.zone1Sub}>Fast Money · {TARGET_SCORE} points to win</Text>
+          <Text style={styles.zone1Sub}>Sports Google Feud · {TARGET_SCORE} points to win</Text>
         </View>
         {isArchive ? (
           <View style={styles.archiveBanner}>
@@ -715,7 +765,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────────
+// -- Styles -------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   root: {
@@ -957,78 +1007,216 @@ const styles = StyleSheet.create({
   // Playing
   playingWrap: {
     flex: 1,
+  },
+  playingScroll: {
+    flex: 1,
+  },
+  playingScrollContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing['2xl'],
+    paddingBottom: spacing['2xl'],
   },
-  timerBarTrack: {
-    height: 4,
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 2,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    marginBottom: spacing.lg,
-  },
-  timerBarFill: {
-    height: 4,
-    backgroundColor: colors.brand,
-    borderRadius: 2,
-  },
-  timerRow: {
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing['2xl'],
+    marginBottom: spacing.lg,
   },
-  questionCounter: {
+  promptCounter: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
     fontSize: 22,
     color: darkColors.text,
     letterSpacing: 1,
   },
-  questionCounterOf: {
+  promptCounterOf: {
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 16,
     color: darkColors.textSecondary,
     letterSpacing: 0,
   },
-  timerBadge: {
+  strikesRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  strikeBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 12,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
-    minWidth: 52,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  timerBadgeUrgent: {
+  strikeBoxActive: {
     backgroundColor: 'rgba(252,52,92,0.15)',
     borderColor: colors.brand,
   },
-  timerNum: {
+  strikeX: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
-    fontSize: 22,
-    color: darkColors.text,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.15)',
   },
-  timerNumUrgent: {
+  strikeXActive: {
     color: colors.brand,
   },
-  questionWrap: {
-    marginBottom: spacing['2xl'],
-    minHeight: 80,
+
+  // Search bar prompt
+  searchBarWrap: {
+    marginBottom: spacing.lg,
   },
-  questionText: {
+  searchBar: {
+    backgroundColor: darkColors.surfaceElevated,
+    borderRadius: 16,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  searchBarText: {
     fontFamily: fontFamily.bold,
     fontWeight: '700',
+    fontSize: 18,
+    color: darkColors.text,
+    lineHeight: 26,
+  },
+  searchBarCursor: {
+    color: darkColors.textSecondary,
+  },
+
+  // Answer board
+  answerBoard: {
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  answerSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: darkColors.surfaceElevated,
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    minHeight: 48,
+  },
+  answerSlotRevealed: {
+    borderColor: 'rgba(0,200,151,0.30)',
+    backgroundColor: 'rgba(0,200,151,0.08)',
+  },
+  answerSlotMissed: {
+    borderColor: 'rgba(255,255,255,0.04)',
+    opacity: 0.5,
+  },
+  answerRankWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: darkColors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  answerRank: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900',
+    fontSize: 13,
+    color: darkColors.textSecondary,
+  },
+  answerRankRevealed: {
+    color: colors.accentGreen,
+  },
+  answerContentRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  answerText: {
+    flex: 1,
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 15,
+    color: darkColors.text,
+  },
+  answerTextMissed: {
+    flex: 1,
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 15,
+    color: darkColors.textSecondary,
+  },
+  answerPtsBadge: {
+    minWidth: 40,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,200,151,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  answerPtsText: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900',
+    fontSize: 14,
+    color: colors.accentGreen,
+  },
+  answerPtsBadgeMissed: {
+    minWidth: 40,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: darkColors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  answerPtsTextMissed: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900',
+    fontSize: 14,
+    color: darkColors.textSecondary,
+  },
+  answerHidden: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  answerHiddenBar: {
+    height: 12,
+    borderRadius: 4,
+    backgroundColor: darkColors.surface,
+    width: '70%',
+  },
+
+  // Prompt score
+  promptScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  promptScoreLabel: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 11,
+    color: darkColors.textSecondary,
+    letterSpacing: 2,
+  },
+  promptScoreValue: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900',
     fontSize: 20,
     color: darkColors.text,
-    lineHeight: 28,
   },
+
+  // Input
   inputWrap: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   answerInput: {
     backgroundColor: darkColors.surfaceElevated,
@@ -1042,6 +1230,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.10)',
   },
+
+  // Buttons
   actionRow: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -1087,6 +1277,28 @@ const styles = StyleSheet.create({
     color: colors.white,
     letterSpacing: 2,
   },
+
+  // Next prompt button (shown after strikes/pass)
+  nextPromptBtn: {
+    backgroundColor: colors.brand,
+    borderRadius: 16,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  nextPromptBtnPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
+  nextPromptBtnText: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900',
+    fontSize: 17,
+    color: colors.white,
+    letterSpacing: 2,
+  },
+
+  // Dots
   dotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -1107,19 +1319,6 @@ const styles = StyleSheet.create({
   dotLocked: {
     backgroundColor: 'rgba(255,255,255,0.25)',
     borderColor: 'rgba(255,255,255,0.25)',
-  },
-  dotPassed: {
-    backgroundColor: 'transparent',
-    borderColor: colors.brand,
-    borderWidth: 2,
-  },
-  passedBadge: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 11,
-    color: colors.brand,
-    letterSpacing: 1.5,
-    marginBottom: spacing.sm,
   },
 
   // Results
@@ -1225,13 +1424,6 @@ const styles = StyleSheet.create({
   resultUserAnswerHit: {
     color: colors.accentGreen,
   },
-  resultMatchedLabel: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 12,
-    color: colors.accentGreen,
-    marginTop: 2,
-  },
   resultPlaceholder: {
     height: 16,
     width: '60%',
@@ -1311,11 +1503,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: darkColors.text,
   },
+  topAnswerTextMissed: {
+    color: darkColors.textSecondary,
+  },
   topAnswerPts: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
     fontSize: 14,
     color: darkColors.textSecondary,
+  },
+  topAnswerPtsFound: {
+    color: colors.accentGreen,
   },
   xpCard: {
     backgroundColor: darkColors.surfaceElevated,
@@ -1360,6 +1558,25 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: spacing['2xl'],
   },
+  shareBtn: {
+    backgroundColor: darkColors.surfaceElevated,
+    borderRadius: 16,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: darkColors.border,
+    marginBottom: spacing.md,
+  },
+  shareBtnPressed: {
+    opacity: 0.7,
+  },
+  shareBtnText: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900',
+    fontSize: 15,
+    color: darkColors.text,
+    letterSpacing: 2,
+  },
   doneBtn: {
     backgroundColor: darkColors.surfaceElevated,
     borderRadius: 16,
@@ -1376,25 +1593,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 15,
     color: darkColors.textSecondary,
-    letterSpacing: 2,
-  },
-  shareBtn: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 16,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    marginBottom: spacing.md,
-  },
-  shareBtnPressed: {
-    opacity: 0.7,
-  },
-  shareBtnText: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 15,
-    color: colors.white,
     letterSpacing: 2,
   },
 });

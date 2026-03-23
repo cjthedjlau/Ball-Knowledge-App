@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Search, Swords, ListOrdered, Brain, Check, Zap } from 'lucide-react-native';
+import { ArrowLeft, Search, Swords, ListOrdered, Brain, Check, Zap, Type } from 'lucide-react-native';
 import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import { type Tab } from './ui/BottomNav';
@@ -53,6 +53,7 @@ const GAME_TYPES = [
   { id: 'blind-rank-5', gameType: 'blind-rank-5', label: 'BLIND RANK 5', Icon: ListOrdered },
   { id: 'trivia', gameType: 'trivia', label: 'TRIVIA', Icon: Brain },
   { id: 'power-play', gameType: 'power-play', label: 'POWER PLAY', Icon: Zap },
+  { id: 'auto-complete', gameType: 'auto-complete', label: 'AUTO COMPLETE', Icon: Type },
 ] as const;
 
 // ── Component ────────────────────────────────────────────────────────────────

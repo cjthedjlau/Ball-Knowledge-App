@@ -1,0 +1,112 @@
+// Question of the Day bank — nostalgic, thought-provoking, league-agnostic
+// Cycled by day-of-year so every day has a unique question
+
+const QOTD_QUESTIONS: string[] = [
+  "What's the greatest sports moment you've ever witnessed live?",
+  "If you could erase one play from your team's history, which one?",
+  "What athlete made you fall in love with sports?",
+  "What's the most underrated dynasty in sports history?",
+  "If you could have dinner with any athlete, dead or alive, who?",
+  "What's the best jersey number of all time and why?",
+  "What game made you cry — happy or sad tears?",
+  "Who is the most clutch athlete you've ever watched?",
+  "What's a sports hill you will die on?",
+  "If you could relive one game as if you'd never seen it, which one?",
+  "What athlete's career would you want to experience for one day?",
+  "What's the greatest upset in sports history?",
+  "What team do you secretly respect even though you'd never root for them?",
+  "What's the most iconic call in broadcasting history?",
+  "If you could bring back one retired athlete in their prime, who?",
+  "What's the best nickname in sports history?",
+  "What's a rule change you'd make to any sport?",
+  "What was the first jersey you ever owned?",
+  "Who is the GOAT — not of one sport, but of all sports?",
+  "What game do you wish you could've attended?",
+  "What was your 'I just witnessed greatness' moment?",
+  "If sports had a Mount Rushmore, who are the four faces?",
+  "What's the most heartbreaking loss in sports history?",
+  "What athlete had the most wasted talent?",
+  "If you could create a super-team from any era, what's your starting five?",
+  "What's a sports conspiracy theory you actually believe?",
+  "What was the best halftime show or in-game moment off the field?",
+  "Who is the most entertaining athlete to ever play any sport?",
+  "What team's fans are the most loyal in all of sports?",
+  "If you had to pick one sport to watch for the rest of your life, which one?",
+  "What's the best rivalry in sports?",
+  "What athlete's documentary should everyone watch?",
+  "If you could coach any team for one season, which team and which season?",
+  "What was the biggest choke in sports history?",
+  "What's the most iconic uniform in sports?",
+  "What athlete changed their sport forever?",
+  "What was the best draft pick in any sport's history?",
+  "If you could undo one trade, which one?",
+  "What's the greatest individual performance in a single game?",
+  "What sport has the best playoffs and why?",
+  "What's the funniest moment you've seen in sports?",
+  "Who is the most underrated athlete of all time?",
+  "What's the best sports movie ever made?",
+  "If you could add one sport to the Olympics, what would it be?",
+  "What's the most disrespectful celebration you've ever seen?",
+  "What team has the best fight song or chant?",
+  "What was the defining moment of your sports fandom?",
+  "If you had to bet your life on one athlete making the last shot, who?",
+  "What's the worst call by a ref or umpire in history?",
+  "Who is the most feared athlete to ever compete?",
+  "What athlete had the best comeback story?",
+  "If you could witness any historic sports event, which one?",
+  "What's the best trash talk moment in sports?",
+  "What sports tradition should never die?",
+  "Who was better: the player or the legend we made them into?",
+  "What's one stat that completely changes how you see an athlete?",
+  "If aliens challenged Earth to one sport, which sport do we pick and who plays?",
+  "What's the best walk-up song or entrance music in sports?",
+  "What athlete's prime was the most dominant era we've ever seen?",
+  "If you could only follow one team for the rest of your life, who?",
+  "What's the craziest stat you've ever heard?",
+  "What game do you still think about years later?",
+  "Who is the most likable athlete in sports today?",
+  "What's the greatest what-if in sports history?",
+  "If every athlete played in the same era, who would dominate?",
+  "What's the best stadium or arena you've ever been to?",
+  "What record will never be broken?",
+  "What's the most overhyped moment in recent sports history?",
+  "Who had the best rookie season ever across any sport?",
+  "What is the single greatest photo in sports history?",
+  "If you could change one outcome in sports, which one?",
+  "What's a play that should be studied in schools?",
+  "What athlete do you wish played for your team?",
+  "What's the best sports podcast or show right now?",
+  "If you could be in any locker room for a pregame speech, which one?",
+  "What athlete's post-career path impressed you the most?",
+  "What's the most electric atmosphere you've ever felt at a game?",
+  "Who is someone casual fans sleep on but real ones know?",
+  "What's the most iconic play in any sport — one everyone knows?",
+  "If you could ask any athlete one honest question, what would it be?",
+  "What athlete represents 'heart over talent' to you?",
+  "What's the most impressive record held in sports right now?",
+  "If you had to explain sports fandom to an alien, what game would you show them?",
+  "What moment turned a good player into a legend?",
+  "What's your unpopular sports opinion?",
+  "What childhood sports memory do you think about the most?",
+  "Who is the greatest coach or manager of all time?",
+  "What's the best 30 for 30 or sports documentary?",
+  "If you could freeze one athlete at their peak forever, who?",
+  "What player made you yell at the TV the most?",
+  "What's the best game 7 ever played?",
+];
+
+/**
+ * Get today's question based on the date string (YYYY-MM-DD).
+ * Deterministic — same date always returns same question.
+ */
+export function getQuestionForDate(dateStr: string): string {
+  // Simple hash from date string to pick a question
+  let hash = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    hash = ((hash << 5) - hash + dateStr.charCodeAt(i)) | 0;
+  }
+  const index = Math.abs(hash) % QOTD_QUESTIONS.length;
+  return QOTD_QUESTIONS[index];
+}
+
+export default QOTD_QUESTIONS;

@@ -1,5 +1,6 @@
 import React, { useRef, useCallback } from 'react';
 import { View, Pressable, Animated, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home as HomeIcon, Gamepad2, TrendingUp, User } from 'lucide-react-native';
 import { colors, darkColors } from '../../../styles/theme';
 
@@ -84,8 +85,9 @@ function TabItem({
 }
 
 export default function BottomNav({ activeTab, onNavigate }: BottomNavProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.navOuter}>
+    <View style={[styles.navOuter, { bottom: insets.bottom + 16 }]}>
       <View style={styles.navPill}>
         {TABS.map(({ id, Icon }) => (
           <TabItem
@@ -104,7 +106,7 @@ export default function BottomNav({ activeTab, onNavigate }: BottomNavProps) {
 const styles = StyleSheet.create({
   navOuter: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 16, // overridden dynamically with safe area inset
     left: 0,
     right: 0,
     alignItems: 'center',

@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Eye, EyeOff } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
-import { supabase } from '../../lib/supabase';
+import { supabase, signInWithGoogle } from '../../lib/supabase';
 import useZoneEntrance from '../../hooks/useZoneEntrance';
 
 interface LoginProps {
@@ -26,9 +26,9 @@ interface LoginProps {
 
 function AppleIcon() {
   return (
-    <Svg width={24} height={24} viewBox="0 0 24 24">
+    <Svg width={17} height={20} viewBox="0 0 170 200">
       <Path
-        d="M17.05 20.28c-.96.95-2.04 1.44-3.23 1.44-1.2 0-2.18-.41-2.95-.41-.77 0-1.87.41-3.05.41-2.13 0-4.04-1.21-5.13-3.12-2.21-3.85-.57-9.56 1.57-12.64 1.07-1.53 2.62-2.48 4.31-2.52 1.29-.02 2.5.87 3.29.87.79 0 2.23-1.07 3.79-.91 1.63.17 2.87.76 3.65 1.9-3.15 1.86-2.65 5.86.51 7.15-.81 1.94-1.84 3.86-3.26 5.23zm-3.35-15.68c-.04-2.15 1.77-3.95 3.84-4.14.23 2.47-2.11 4.58-3.84 4.14z"
+        d="M150.4 172.3c-7.8 11.6-16.3 23.1-29.1 23.3-12.8.2-16.9-7.5-31.5-7.5-14.6 0-19.2 7.3-31.3 7.7-12.5.4-22-12.5-29.9-24.1C13 148.6 1.2 107.5 17.3 79.3c8-14 22.3-22.9 37.9-23.1 12.3-.2 24 8.3 31.5 8.3 7.5 0 21.7-10.3 36.5-8.8 6.2.3 23.7 2.5 34.9 19-0.9.6-20.9 12.2-20.7 36.4.2 28.9 25.4 38.5 25.6 38.6-.2.6-4 13.7-13.3 27.2l-0.3-.6zM119.9 20c6-7.3 10-17.3 8.9-27.4-8.6.4-19 5.7-25.2 13-5.5 6.4-10.4 16.7-9.1 26.6 9.6.7 19.4-4.9 25.4-12.2z"
         fill={colors.white}
       />
     </Svg>
@@ -56,32 +56,66 @@ export default function Login({ onLogin }: LoginProps) {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
 
   async function handleLogin() {
     setErrorMsg('');
-    setSuccessMsg('');
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      setErrorMsg('Invalid email or password');
+      // Surface the real error so "Email not confirmed" etc. shows through
+      setErrorMsg(error.message);
     } else {
       onLogin?.();
     }
   }
 
+  async function handleGuest() {
+    setErrorMsg('');
+    setLoading(true);
+    const { error } = await supabase.auth.signInAnonymously();
+    setLoading(false);
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
+      onLogin?.();
+    }
+  }
+
+  async function handleAppleSignIn() {
+    setErrorMsg('');
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'apple' });
+    setLoading(false);
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
+      onLogin?.();
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setErrorMsg('');
+    setSocialLoading(true);
+    const { error } = await signInWithGoogle();
+    setSocialLoading(false);
+    if (error) {
+      setErrorMsg(error.message);
+    }
+    // On web, the page redirects — onLogin is handled by AuthCallback / App.tsx
+  }
+
   async function handleSignUp() {
     setErrorMsg('');
-    setSuccessMsg('');
     setLoading(true);
     const { error } = await supabase.auth.signUp({ email, password });
     setLoading(false);
     if (error) {
       setErrorMsg(error.message);
     } else {
-      setSuccessMsg('Account created! You can now log in.');
+      onLogin?.();
     }
   }
 
@@ -175,7 +209,6 @@ export default function Login({ onLogin }: LoginProps) {
 
           {/* Feedback messages */}
           {!!errorMsg && <Text style={styles.errorMsg}>{errorMsg}</Text>}
-          {!!successMsg && <Text style={styles.successMsg}>{successMsg}</Text>}
 
           {/* Divider */}
           <View style={styles.dividerRow}>
@@ -184,25 +217,66 @@ export default function Login({ onLogin }: LoginProps) {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Social Buttons */}
-          <View style={styles.socialRow}>
+          {/* Google Sign In — full-width button on web, icon circle on native */}
+          {Platform.OS === 'web' ? (
             <Pressable
               style={({ pressed }) => [
-                styles.socialBtn,
-                pressed && styles.socialBtnPressed,
+                styles.googleWebBtn,
+                pressed && styles.googleWebBtnPressed,
               ]}
+              onPress={handleGoogleSignIn}
+              disabled={loading || socialLoading}
             >
-              <AppleIcon />
+              {socialLoading ? (
+                <ActivityIndicator color={darkColors.text} />
+              ) : (
+                <>
+                  <GoogleIcon />
+                  <Text style={styles.googleWebBtnText}>Continue with Google</Text>
+                </>
+              )}
             </Pressable>
-            <Pressable
-              style={({ pressed }) => [
-                styles.socialBtn,
-                pressed && styles.socialBtnPressed,
-              ]}
-            >
-              <GoogleIcon />
-            </Pressable>
-          </View>
+          ) : (
+            <View style={styles.socialRow}>
+              {/* TODO: TEMPORARY — Apple Sign In button removed until Apple OAuth credentials are configured.
+                  To restore: uncomment the Apple button below and remove this comment.
+                  See also: handleAppleSignIn() and AppleIcon() which are still in place. */}
+              {/* <Pressable
+                style={({ pressed }) => [
+                  styles.socialBtn,
+                  pressed && styles.socialBtnPressed,
+                ]}
+                onPress={handleAppleSignIn}
+                disabled={loading}
+              >
+                <AppleIcon />
+              </Pressable> */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.socialBtn,
+                  pressed && styles.socialBtnPressed,
+                ]}
+                onPress={handleGoogleSignIn}
+                disabled={loading || socialLoading}
+              >
+                {socialLoading ? (
+                  <ActivityIndicator color={darkColors.textSecondary} size="small" />
+                ) : (
+                  <GoogleIcon />
+                )}
+              </Pressable>
+            </View>
+          )}
+
+          {/* Guest access */}
+          <Pressable
+            style={({ pressed }) => [styles.guestBtn, pressed && styles.guestBtnPressed]}
+            onPress={handleGuest}
+            disabled={loading}
+          >
+            <Text style={styles.guestBtnText}>Continue as Guest</Text>
+            <Text style={styles.guestBtnSubtext}>No stats recorded</Text>
+          </Pressable>
         </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -360,14 +434,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
-  successMsg: {
-    fontFamily: fontFamily.medium,
-    fontSize: 14,
-    color: colors.accentGreen,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-
   // ── Divider ──
   dividerRow: {
     flexDirection: 'row',
@@ -384,6 +450,28 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: 13,
     color: darkColors.textSecondary,
+  },
+
+  // ── Google web button ──
+  googleWebBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: colors.white,
+    gap: spacing.md,
+    marginBottom: spacing['3xl'],
+  },
+  googleWebBtnPressed: {
+    opacity: 0.85,
+    transform: [{ translateY: 1 }],
+  },
+  googleWebBtnText: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 16,
+    color: darkColors.surface,
   },
 
   // ── Social buttons ──
@@ -417,5 +505,28 @@ const styles = StyleSheet.create({
   socialBtnPressed: {
     opacity: 0.8,
     transform: [{ translateY: 2 }],
+  },
+
+  // ── Guest button ──
+  guestBtn: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  guestBtnPressed: {
+    opacity: 0.6,
+  },
+  guestBtnText: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 15,
+    color: darkColors.textSecondary,
+  },
+  guestBtnSubtext: {
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    color: darkColors.textSecondary,
+    opacity: 0.6,
+    marginTop: 2,
   },
 });

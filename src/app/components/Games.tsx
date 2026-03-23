@@ -21,7 +21,9 @@ import {
   Archive,
   UserSearch,
   Zap,
+  TextSearch,
 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fontFamily, spacing } from '../../styles/theme';
 import GameCard from '../../screens/components/ui/GameCard';
 import AnimatedCard from '../../components/AnimatedCard';
@@ -36,6 +38,7 @@ interface GamesProps {
 }
 
 export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNavigate }: GamesProps) {
+  const insets = useSafeAreaInsets();
   const { zone1Style, zone2Style } = useZoneEntrance();
 
   return (
@@ -48,7 +51,7 @@ export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNa
         <View style={styles.statStrip}>
           <View style={[styles.statItem, styles.statItemLeft]}>
             <Text style={styles.statLabel}>DAILY GAMES</Text>
-            <Text style={styles.statValue}>5 Available</Text>
+            <Text style={styles.statValue}>6 Available</Text>
           </View>
           <View style={[styles.statItem, styles.statItemLeft]}>
             <Text style={styles.statLabel}>MULTIPLAYER</Text>
@@ -65,7 +68,7 @@ export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNa
       <Animated.View style={[{ flex: 1 }, zone2Style]}>
       <ScrollView
         style={styles.zone2}
-        contentContainerStyle={styles.zone2Content}
+        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Multiplayer — 3x2 grid */}
@@ -178,6 +181,18 @@ export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNa
               onPress={() => onGoToGame('power-play')}
               status="unplayed"
               onArchivePress={onGoToArchive}
+              isNew
+            />
+          </AnimatedCard>
+          <AnimatedCard delay={880} style={styles.cardGridItem}>
+            <GameCard
+              title="Auto Complete"
+              subtitle="Daily Challenge"
+              icon={<TextSearch size={24} color={colors.brand} strokeWidth={2} />}
+              onPress={() => onGoToGame('auto-complete')}
+              status="unplayed"
+              onArchivePress={onGoToArchive}
+              isNew
             />
           </AnimatedCard>
         </View>
@@ -258,7 +273,10 @@ const styles = StyleSheet.create({
   zone2Content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing['3xl'],
-    paddingBottom: 120,
+    paddingBottom: 0,
+    maxWidth: 960,
+    alignSelf: 'center' as const,
+    width: '100%',
   },
   sectionLabel: {
     fontFamily: fontFamily.black,
@@ -279,6 +297,7 @@ const styles = StyleSheet.create({
   },
   cardGridItem: {
     width: '47%',
+    maxWidth: 300,
   },
   cardGridCentered: {
     alignItems: 'center',

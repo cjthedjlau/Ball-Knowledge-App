@@ -43,7 +43,7 @@ async function getPlayerPool(league: League): Promise<string[]> {
 
 interface NBAAttrs { height: string; jersey: number; team: string; position: string; conference: string; college: string; age: number }
 interface NFLAttrs { height: string; jersey: number; team: string; position: string; conference: string; college: string; age: number }
-interface MLBAttrs { bat: string; throwing: string; country: string; team: string; position: string; division: string; age: number }
+interface MLBAttrs { bat: string; throwing: string; country: string; college?: string; team: string; position: string; division: string; age: number }
 interface NHLAttrs { height: string; jersey: number; team: string; position: string; conference: string; country: string; age: number }
 type PlayerAttrs = NBAAttrs | NFLAttrs | MLBAttrs | NHLAttrs;
 
@@ -155,54 +155,54 @@ const NFL_ATTRS: Record<string, NFLAttrs> = {
 
 const MLB_ATTRS: Record<string, MLBAttrs> = {
   'Shohei Ohtani':       { bat: 'L', throwing: 'R', country: 'Japan',              team: 'Los Angeles Dodgers',  position: 'DH', division: 'NL West',    age: 30 },
-  'Mike Trout':          { bat: 'R', throwing: 'R', country: 'USA',                team: 'Los Angeles Angels',   position: 'CF', division: 'AL West',    age: 33 },
-  'Mookie Betts':        { bat: 'R', throwing: 'R', country: 'USA',                team: 'Los Angeles Dodgers',  position: 'SS', division: 'NL West',    age: 32 },
-  'Freddie Freeman':     { bat: 'L', throwing: 'R', country: 'USA',                team: 'Los Angeles Dodgers',  position: '1B', division: 'NL West',    age: 35 },
+  'Mike Trout':          { bat: 'R', throwing: 'R', country: 'USA', college: 'Millville HS',      team: 'Los Angeles Angels',   position: 'CF', division: 'AL West',    age: 33 },
+  'Mookie Betts':        { bat: 'R', throwing: 'R', country: 'USA', college: 'None (HS)',         team: 'Los Angeles Dodgers',  position: 'SS', division: 'NL West',    age: 32 },
+  'Freddie Freeman':     { bat: 'L', throwing: 'R', country: 'USA', college: 'Cal State Fullerton', team: 'Los Angeles Dodgers', position: '1B', division: 'NL West',    age: 35 },
   'Ronald Acuna Jr':     { bat: 'R', throwing: 'R', country: 'Venezuela',           team: 'Atlanta Braves',       position: 'RF', division: 'NL East',    age: 27 },
   'Juan Soto':           { bat: 'L', throwing: 'L', country: 'Dominican Republic',  team: 'New York Mets',        position: 'RF', division: 'NL East',    age: 26 },
   'Fernando Tatis Jr':   { bat: 'R', throwing: 'R', country: 'Dominican Republic',  team: 'San Diego Padres',     position: 'RF', division: 'NL West',    age: 26 },
   'Vladimir Guerrero Jr': { bat: 'R', throwing: 'R', country: 'Dominican Republic', team: 'Toronto Blue Jays',    position: '1B', division: 'AL East',    age: 26 },
   'Yordan Alvarez':      { bat: 'L', throwing: 'R', country: 'Cuba',               team: 'Houston Astros',       position: 'DH', division: 'AL West',    age: 27 },
-  'Trea Turner':         { bat: 'R', throwing: 'R', country: 'USA',                team: 'Philadelphia Phillies', position: 'SS', division: 'NL East',    age: 31 },
-  'Aaron Judge':         { bat: 'R', throwing: 'R', country: 'USA',                team: 'New York Yankees',     position: 'RF', division: 'AL East',    age: 33 },
-  'Gerrit Cole':         { bat: 'R', throwing: 'R', country: 'USA',                team: 'New York Yankees',     position: 'SP', division: 'AL East',    age: 34 },
-  'Max Scherzer':        { bat: 'R', throwing: 'R', country: 'USA',                team: 'Texas Rangers',        position: 'SP', division: 'AL West',    age: 40 },
-  'Jacob deGrom':        { bat: 'L', throwing: 'R', country: 'USA',                team: 'Texas Rangers',        position: 'SP', division: 'AL West',    age: 37 },
-  'Clayton Kershaw':     { bat: 'L', throwing: 'L', country: 'USA',                team: 'Los Angeles Dodgers',  position: 'SP', division: 'NL West',    age: 37 },
-  'Zack Wheeler':        { bat: 'L', throwing: 'R', country: 'USA',                team: 'Philadelphia Phillies', position: 'SP', division: 'NL East',   age: 35 },
-  'Spencer Strider':     { bat: 'R', throwing: 'R', country: 'USA',                team: 'Atlanta Braves',       position: 'SP', division: 'NL East',    age: 26 },
+  'Trea Turner':         { bat: 'R', throwing: 'R', country: 'USA', college: 'NC State',           team: 'Philadelphia Phillies', position: 'SS', division: 'NL East',    age: 31 },
+  'Aaron Judge':         { bat: 'R', throwing: 'R', country: 'USA', college: 'Fresno State',       team: 'New York Yankees',     position: 'RF', division: 'AL East',    age: 33 },
+  'Gerrit Cole':         { bat: 'R', throwing: 'R', country: 'USA', college: 'UCLA',               team: 'New York Yankees',     position: 'SP', division: 'AL East',    age: 34 },
+  'Max Scherzer':        { bat: 'R', throwing: 'R', country: 'USA', college: 'Missouri',           team: 'Texas Rangers',        position: 'SP', division: 'AL West',    age: 40 },
+  'Jacob deGrom':        { bat: 'L', throwing: 'R', country: 'USA', college: 'Stetson',            team: 'Texas Rangers',        position: 'SP', division: 'AL West',    age: 37 },
+  'Clayton Kershaw':     { bat: 'L', throwing: 'L', country: 'USA', college: 'None (HS)',          team: 'Los Angeles Dodgers',  position: 'SP', division: 'NL West',    age: 37 },
+  'Zack Wheeler':        { bat: 'L', throwing: 'R', country: 'USA', college: 'East Paulding HS',   team: 'Philadelphia Phillies', position: 'SP', division: 'NL East',   age: 35 },
+  'Spencer Strider':     { bat: 'R', throwing: 'R', country: 'USA', college: 'Clemson',            team: 'Atlanta Braves',       position: 'SP', division: 'NL East',    age: 26 },
   'Julio Rodriguez':     { bat: 'R', throwing: 'R', country: 'Dominican Republic',  team: 'Seattle Mariners',     position: 'CF', division: 'AL West',    age: 24 },
-  'Bobby Witt Jr':       { bat: 'R', throwing: 'R', country: 'USA',                team: 'Kansas City Royals',   position: 'SS', division: 'AL Central', age: 25 },
-  'Gunnar Henderson':    { bat: 'L', throwing: 'R', country: 'USA',                team: 'Baltimore Orioles',    position: 'SS', division: 'AL East',    age: 24 },
-  'Babe Ruth':           { bat: 'L', throwing: 'L', country: 'USA',                team: 'New York Yankees',     position: 'RF', division: 'AL East',    age: 130 },
-  'Hank Aaron':          { bat: 'R', throwing: 'R', country: 'USA',                team: 'Atlanta Braves',       position: 'RF', division: 'NL East',    age: 91 },
-  'Willie Mays':         { bat: 'R', throwing: 'R', country: 'USA',                team: 'San Francisco Giants', position: 'CF', division: 'NL West',    age: 94 },
-  'Ted Williams':        { bat: 'L', throwing: 'R', country: 'USA',                team: 'Boston Red Sox',       position: 'LF', division: 'AL East',    age: 106 },
-  'Mickey Mantle':       { bat: 'S', throwing: 'R', country: 'USA',                team: 'New York Yankees',     position: 'CF', division: 'AL East',    age: 93 },
-  'Derek Jeter':         { bat: 'R', throwing: 'R', country: 'USA',                team: 'New York Yankees',     position: 'SS', division: 'AL East',    age: 51 },
-  'Cal Ripken Jr':       { bat: 'R', throwing: 'R', country: 'USA',                team: 'Baltimore Orioles',    position: 'SS', division: 'AL East',    age: 64 },
-  'Sandy Koufax':        { bat: 'R', throwing: 'L', country: 'USA',                team: 'Los Angeles Dodgers',  position: 'SP', division: 'NL West',    age: 89 },
-  'Nolan Ryan':          { bat: 'R', throwing: 'R', country: 'USA',                team: 'Texas Rangers',        position: 'SP', division: 'AL West',    age: 78 },
-  'Roger Clemens':       { bat: 'R', throwing: 'R', country: 'USA',                team: 'New York Yankees',     position: 'SP', division: 'AL East',    age: 62 },
-  'Randy Johnson':       { bat: 'R', throwing: 'L', country: 'USA',                team: 'Arizona Diamondbacks', position: 'SP', division: 'NL West',    age: 61 },
-  'Greg Maddux':         { bat: 'R', throwing: 'R', country: 'USA',                team: 'Atlanta Braves',       position: 'SP', division: 'NL East',    age: 59 },
-  'Tom Seaver':          { bat: 'R', throwing: 'R', country: 'USA',                team: 'New York Mets',        position: 'SP', division: 'NL East',    age: 80 },
-  'Bob Gibson':          { bat: 'R', throwing: 'R', country: 'USA',                team: 'St. Louis Cardinals',  position: 'SP', division: 'NL Central', age: 89 },
-  'Cy Young':            { bat: 'R', throwing: 'R', country: 'USA',                team: 'Cleveland Guardians',  position: 'SP', division: 'AL Central', age: 158 },
-  'Lou Gehrig':          { bat: 'L', throwing: 'L', country: 'USA',                team: 'New York Yankees',     position: '1B', division: 'AL East',    age: 122 },
-  'Ty Cobb':             { bat: 'L', throwing: 'R', country: 'USA',                team: 'Detroit Tigers',       position: 'CF', division: 'AL Central', age: 138 },
-  'Stan Musial':         { bat: 'L', throwing: 'L', country: 'USA',                team: 'St. Louis Cardinals',  position: 'LF', division: 'NL Central', age: 104 },
-  'Joe DiMaggio':        { bat: 'R', throwing: 'R', country: 'USA',                team: 'New York Yankees',     position: 'CF', division: 'AL East',    age: 110 },
-  'Jackie Robinson':     { bat: 'R', throwing: 'R', country: 'USA',                team: 'Brooklyn Dodgers',     position: '2B', division: 'NL East',    age: 106 },
-  'Ken Griffey Jr':      { bat: 'L', throwing: 'L', country: 'USA',                team: 'Seattle Mariners',     position: 'CF', division: 'AL West',    age: 55 },
-  'Barry Bonds':         { bat: 'L', throwing: 'L', country: 'USA',                team: 'San Francisco Giants', position: 'LF', division: 'NL West',    age: 60 },
-  'Alex Rodriguez':      { bat: 'R', throwing: 'R', country: 'USA',                team: 'New York Yankees',     position: 'SS', division: 'AL East',    age: 49 },
+  'Bobby Witt Jr':       { bat: 'R', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'Kansas City Royals',   position: 'SS', division: 'AL Central', age: 25 },
+  'Gunnar Henderson':    { bat: 'L', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'Baltimore Orioles',    position: 'SS', division: 'AL East',    age: 24 },
+  'Babe Ruth':           { bat: 'L', throwing: 'L', country: 'USA', college: 'None (HS)',          team: 'New York Yankees',     position: 'RF', division: 'AL East',    age: 130 },
+  'Hank Aaron':          { bat: 'R', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'Atlanta Braves',       position: 'RF', division: 'NL East',    age: 91 },
+  'Willie Mays':         { bat: 'R', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'San Francisco Giants', position: 'CF', division: 'NL West',    age: 94 },
+  'Ted Williams':        { bat: 'L', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'Boston Red Sox',       position: 'LF', division: 'AL East',    age: 106 },
+  'Mickey Mantle':       { bat: 'S', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'New York Yankees',     position: 'CF', division: 'AL East',    age: 93 },
+  'Derek Jeter':         { bat: 'R', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'New York Yankees',     position: 'SS', division: 'AL East',    age: 51 },
+  'Cal Ripken Jr':       { bat: 'R', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'Baltimore Orioles',    position: 'SS', division: 'AL East',    age: 64 },
+  'Sandy Koufax':        { bat: 'R', throwing: 'L', country: 'USA', college: 'Cincinnati',        team: 'Los Angeles Dodgers',  position: 'SP', division: 'NL West',    age: 89 },
+  'Nolan Ryan':          { bat: 'R', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'Texas Rangers',        position: 'SP', division: 'AL West',    age: 78 },
+  'Roger Clemens':       { bat: 'R', throwing: 'R', country: 'USA', college: 'Texas',             team: 'New York Yankees',     position: 'SP', division: 'AL East',    age: 62 },
+  'Randy Johnson':       { bat: 'R', throwing: 'L', country: 'USA', college: 'USC',               team: 'Arizona Diamondbacks', position: 'SP', division: 'NL West',    age: 61 },
+  'Greg Maddux':         { bat: 'R', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'Atlanta Braves',       position: 'SP', division: 'NL East',    age: 59 },
+  'Tom Seaver':          { bat: 'R', throwing: 'R', country: 'USA', college: 'USC',               team: 'New York Mets',        position: 'SP', division: 'NL East',    age: 80 },
+  'Bob Gibson':          { bat: 'R', throwing: 'R', country: 'USA', college: 'Creighton',         team: 'St. Louis Cardinals',  position: 'SP', division: 'NL Central', age: 89 },
+  'Cy Young':            { bat: 'R', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'Cleveland Guardians',  position: 'SP', division: 'AL Central', age: 158 },
+  'Lou Gehrig':          { bat: 'L', throwing: 'L', country: 'USA', college: 'Columbia',          team: 'New York Yankees',     position: '1B', division: 'AL East',    age: 122 },
+  'Ty Cobb':             { bat: 'L', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'Detroit Tigers',       position: 'CF', division: 'AL Central', age: 138 },
+  'Stan Musial':         { bat: 'L', throwing: 'L', country: 'USA', college: 'None (HS)',          team: 'St. Louis Cardinals',  position: 'LF', division: 'NL Central', age: 104 },
+  'Joe DiMaggio':        { bat: 'R', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'New York Yankees',     position: 'CF', division: 'AL East',    age: 110 },
+  'Jackie Robinson':     { bat: 'R', throwing: 'R', country: 'USA', college: 'UCLA',              team: 'Brooklyn Dodgers',     position: '2B', division: 'NL East',    age: 106 },
+  'Ken Griffey Jr':      { bat: 'L', throwing: 'L', country: 'USA', college: 'None (HS)',          team: 'Seattle Mariners',     position: 'CF', division: 'AL West',    age: 55 },
+  'Barry Bonds':         { bat: 'L', throwing: 'L', country: 'USA', college: 'Arizona State',     team: 'San Francisco Giants', position: 'LF', division: 'NL West',    age: 60 },
+  'Alex Rodriguez':      { bat: 'R', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'New York Yankees',     position: 'SS', division: 'AL East',    age: 49 },
   'Albert Pujols':       { bat: 'R', throwing: 'R', country: 'Dominican Republic',  team: 'St. Louis Cardinals',  position: '1B', division: 'NL Central', age: 45 },
   'David Ortiz':         { bat: 'L', throwing: 'L', country: 'Dominican Republic',  team: 'Boston Red Sox',       position: 'DH', division: 'AL East',    age: 49 },
-  'Chipper Jones':       { bat: 'S', throwing: 'R', country: 'USA',                team: 'Atlanta Braves',       position: '3B', division: 'NL East',    age: 53 },
-  'Mike Schmidt':        { bat: 'R', throwing: 'R', country: 'USA',                team: 'Philadelphia Phillies', position: '3B', division: 'NL East',   age: 75 },
-  'Reggie Jackson':      { bat: 'L', throwing: 'L', country: 'USA',                team: 'New York Yankees',     position: 'RF', division: 'AL East',    age: 79 },
-  'Pete Rose':           { bat: 'S', throwing: 'R', country: 'USA',                team: 'Cincinnati Reds',      position: 'LF', division: 'NL Central', age: 84 },
+  'Chipper Jones':       { bat: 'S', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'Atlanta Braves',       position: '3B', division: 'NL East',    age: 53 },
+  'Mike Schmidt':        { bat: 'R', throwing: 'R', country: 'USA', college: 'Ohio',              team: 'Philadelphia Phillies', position: '3B', division: 'NL East',   age: 75 },
+  'Reggie Jackson':      { bat: 'L', throwing: 'L', country: 'USA', college: 'Arizona State',     team: 'New York Yankees',     position: 'RF', division: 'AL East',    age: 79 },
+  'Pete Rose':           { bat: 'S', throwing: 'R', country: 'USA', college: 'None (HS)',          team: 'Cincinnati Reds',      position: 'LF', division: 'NL Central', age: 84 },
   'Johnny Bench':        { bat: 'R', throwing: 'R', country: 'USA',                team: 'Cincinnati Reds',      position: 'C',  division: 'NL Central', age: 77 },
 };
 
@@ -269,12 +269,27 @@ function getPlayerAttrs(name: string, league: League): PlayerAttrs | null {
   return null;
 }
 
+// ── Helpers for college/country display ──────────────────────────────────────
+
+function isInternationalNBA(college: string | undefined): boolean {
+  return !!college && college.includes('(intl)');
+}
+
+function getNBACountry(college: string): string {
+  return college.replace(/\s*\(intl\)\s*/, '').trim();
+}
+
+function isInternationalMLB(country: string | undefined): boolean {
+  return !!country && country !== 'USA';
+}
+
 // ── Column definitions per league ────────────────────────────────────────────
+// NBA and MLB have a dynamic 7th column (college or country) based on the player
 
 const LEAGUE_COLS: Record<League, string[]> = {
-  NBA: ['PLAYER', 'HT', '#', 'TEAM', 'POS', 'CONF', 'COLLEGE', 'AGE'],
+  NBA: ['PLAYER', 'HT', '#', 'TEAM', 'POS', 'CONF', 'ORIGIN', 'AGE'],
   NFL: ['PLAYER', 'HT', '#', 'TEAM', 'POS', 'CONF', 'COLLEGE', 'AGE'],
-  MLB: ['PLAYER', 'BAT', 'THR', 'COUNTRY', 'TEAM', 'POS', 'DIV', 'AGE'],
+  MLB: ['PLAYER', 'BAT', 'THR', 'ORIGIN', 'TEAM', 'POS', 'DIV', 'AGE'],
   NHL: ['PLAYER', 'HT', '#', 'TEAM', 'POS', 'CONF', 'COUNTRY', 'AGE'],
 };
 
@@ -385,11 +400,16 @@ function evaluateGuessForLeague(
 
   if (league === 'MLB') {
     const g = guessAttrs as MLBAttrs;
+    // MLB: show college for US players, country for international
+    const isIntl = isInternationalMLB(g.country);
+    const collegeCountryTile: TileData = isIntl
+      ? { value: g.country, state: compareTile(g.country, mystery.country, 'country') }
+      : { value: g.college ?? 'N/A', state: compareTile(g.college, mystery.college, 'college') };
     return [
       { value: nameDisplay, state: nameState },
       { value: g.bat, state: compareTile(g.bat, mystery.bat, 'bat') },
       { value: g.throwing, state: compareTile(g.throwing, mystery.throwing, 'throwing') },
-      { value: g.country, state: compareTile(g.country, mystery.country, 'country') },
+      collegeCountryTile,
       { value: g.team, state: compareTile(g.team, mystery.team, 'team') },
       { value: g.position, state: compareTile(g.position, mystery.position, 'position') },
       { value: g.division, state: compareTile(g.division, mystery.division, 'division') },
@@ -401,9 +421,25 @@ function evaluateGuessForLeague(
   const gHeight = parseHeightToInches(g.height);
   const mHeight = mystery.height ? parseHeightToInches(mystery.height) : 0;
 
-  const sixthCol = league === 'NHL'
-    ? { value: (g as NHLAttrs).country, state: compareTile((g as NHLAttrs).country, mystery.country, 'country') }
-    : { value: (g as NBAAttrs | NFLAttrs).college, state: compareTile((g as NBAAttrs | NFLAttrs).college, mystery.college, 'college') };
+  let sixthCol: TileData;
+  if (league === 'NHL') {
+    sixthCol = { value: (g as NHLAttrs).country, state: compareTile((g as NHLAttrs).country, mystery.country, 'country') };
+  } else if (league === 'NBA') {
+    // NBA: show country for international players, college for US players
+    const nbaCollege = (g as NBAAttrs).college;
+    if (isInternationalNBA(nbaCollege)) {
+      const guessCountry = getNBACountry(nbaCollege);
+      const mysteryCountry = mystery.college ? getNBACountry(mystery.college) : mystery.country;
+      sixthCol = { value: guessCountry, state: compareTile(guessCountry, mysteryCountry, 'country') };
+    } else {
+      // US player — compare college to college (or extract college from mystery if mystery is also US)
+      const mysteryCollege = mystery.college && !isInternationalNBA(mystery.college) ? mystery.college : undefined;
+      sixthCol = { value: nbaCollege, state: compareTile(nbaCollege, mysteryCollege, 'college') };
+    }
+  } else {
+    // NFL: always college
+    sixthCol = { value: (g as NFLAttrs).college, state: compareTile((g as NFLAttrs).college, mystery.college, 'college') };
+  }
 
   const heightState = compareTile(gHeight, mHeight, 'height');
 
@@ -497,7 +533,7 @@ export default function CustomMysteryPlayer({ onBack }: Props) {
       const a = attrs as MLBAttrs;
       mp = {
         name, team: a.team, position: a.position, age: a.age,
-        bat: a.bat, throwing: a.throwing, country: a.country, division: a.division,
+        bat: a.bat, throwing: a.throwing, country: a.country, college: a.college, division: a.division,
       };
     } else if (activeLeague === 'NHL') {
       const a = attrs as NHLAttrs;
@@ -600,7 +636,7 @@ export default function CustomMysteryPlayer({ onBack }: Props) {
         { label: 'Bats', value: manualJersey, setter: setManualJersey, placeholder: 'e.g. R, L, or S' },
         { label: 'Throws', value: manualHeight, setter: setManualHeight, placeholder: 'e.g. R or L' },
         { label: 'Division', value: manualConference, setter: setManualConference, placeholder: 'e.g. AL West' },
-        { label: 'Country', value: manualCollege, setter: setManualCollege, placeholder: 'e.g. USA' },
+        { label: 'Country/College', value: manualCollege, setter: setManualCollege, placeholder: 'e.g. USA or Duke' },
       ]
     : activeLeague === 'NHL'
     ? [
@@ -621,7 +657,7 @@ export default function CustomMysteryPlayer({ onBack }: Props) {
         { label: 'Jersey #', value: manualJersey, setter: setManualJersey, placeholder: 'e.g. 23', keyboard: 'numeric' as const },
         { label: 'Height', value: manualHeight, setter: setManualHeight, placeholder: "e.g. 6'9\"" },
         { label: 'Conference', value: manualConference, setter: setManualConference, placeholder: activeLeague === 'NBA' ? 'e.g. Western' : 'e.g. AFC' },
-        { label: 'College', value: manualCollege, setter: setManualCollege, placeholder: 'e.g. Duke' },
+        { label: activeLeague === 'NBA' ? 'College/Country' : 'College', value: manualCollege, setter: setManualCollege, placeholder: activeLeague === 'NBA' ? 'e.g. Duke or France (intl)' : 'e.g. Duke' },
       ];
 
   // ── Render Setup Phase ─────────────────────────────────────────────────────

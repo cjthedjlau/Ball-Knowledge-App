@@ -1,3 +1,4 @@
+import { Platform } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient } from '@supabase/supabase-js'
 import 'react-native-url-polyfill/auto'
@@ -10,6 +11,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: Platform.OS === 'web',
   },
 })
+
+/** Trigger Google OAuth — on web, redirects back to the current origin. */
+export async function signInWithGoogle() {
+  const redirectTo =
+    Platform.OS === 'web' ? window.location.origin : undefined
+
+  return supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo },
+  })
+}

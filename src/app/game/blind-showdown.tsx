@@ -15,6 +15,7 @@ import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import GhostButton from '../../screens/components/ui/GhostButton';
 import { type Tab } from '../components/ui/BottomNav';
 import { calculateDailyGameXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
+import { shareShowdown } from '../../lib/shareResults';
 import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { saveGameResult as saveCompletionResult, getGameResultToday } from '../../lib/gameResults';
@@ -277,8 +278,10 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
             <GhostButton label="VIEW ARCHIVE" onPress={() => onNavigate('archive' as Tab)} />
           </View>
         ) : (<>
-        {/* Stat category label */}
-        <Text style={styles.categoryLabel}>{matchup.categoryLabel}</Text>
+        {/* Category label — only shown after reveal to avoid spoiling identities */}
+        {isRevealed && matchup.categoryLabel ? (
+          <Text style={styles.categoryLabel}>{matchup.categoryLabel}</Text>
+        ) : null}
 
         {/* Cards row */}
         <View style={styles.cardsRow}>
@@ -301,6 +304,23 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
                 ? `${selectedSide === 'A' ? (communityVotes[selectedLeague]?.percentA ?? 0) : (communityVotes[selectedLeague]?.percentB ?? 0)}% of fans made the same pick`
                 : 'Counting votes...'}
             </Text>
+
+            {/* Share button */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.shareBtn,
+                pressed && styles.shareBtnPressed,
+              ]}
+              onPress={() => {
+                const votes = communityVotes[selectedLeague];
+                const votePct = selectedSide === 'A'
+                  ? (votes?.percentA ?? 50)
+                  : (votes?.percentB ?? 50);
+                shareShowdown(selectedLeague, false, votePct);
+              }}
+            >
+              <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
+            </Pressable>
 
             {/* XP card */}
             {!isArchive && xpEarnedMap[selectedLeague] !== undefined && (
@@ -758,5 +778,35 @@ const styles = StyleSheet.create({
     color: '#9A9A9A',
     textAlign: 'center',
     letterSpacing: 0.5,
+  },
+
+  // Share button
+  shareBtn: {
+    width: '100%',
+    height: 56,
+    backgroundColor: darkColors.surfaceElevated,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderBottomWidth: 2,
+    borderBottomColor: 'rgba(0,0,0,0.5)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  shareBtnPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.98 }],
+  },
+  shareBtnText: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 15,
+    color: colors.white,
+    letterSpacing: 1.5,
   },
 });

@@ -108,12 +108,15 @@ export async function saveGameResult(
   xpEarned: number,
   score: number,
 ): Promise<void> {
-  await supabase.from('game_sessions').insert({
+  const { error: sessionError } = await supabase.from('game_sessions').insert({
     user_id: userId,
     game_type: gameType,
     xp_earned: xpEarned,
     score,
   });
+  if (sessionError) {
+    console.error('[XP] Failed to save game session:', sessionError.message);
+  }
 }
 
 export async function updateUserXPAndStreak(
@@ -127,7 +130,10 @@ export async function updateUserXPAndStreak(
     .eq('id', userId)
     .single();
 
-  if (error || !profile) return null;
+  if (error || !profile) {
+    console.error('[XP] Failed to fetch profile for XP update:', error?.message, '| userId:', userId);
+    return null;
+  }
 
   const newLifetimeXP: number = (profile.lifetime_xp ?? 0) + xpEarned;
   const newWeeklyXP: number = (profile.weekly_xp ?? 0) + xpEarned;
@@ -160,7 +166,11 @@ export async function updateUserXPAndStreak(
     .select()
     .single();
 
-  if (updateError) return null;
+  if (updateError) {
+    console.error('[XP] Failed to update profile XP:', updateError.message, '| userId:', userId, '| updates:', JSON.stringify(updates));
+    return null;
+  }
+  console.log('[XP] Successfully updated XP for user:', userId, '| lifetime_xp:', updates.lifetime_xp, '| weekly_xp:', updates.weekly_xp);
   return updated;
 }
 

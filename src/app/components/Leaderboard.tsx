@@ -3,16 +3,18 @@ import {
   Animated,
   View,
   Text,
+  TextInput,
   ScrollView,
   Pressable,
   StyleSheet,
   ActivityIndicator,
-  Share,
+  Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Flame, UserPlus, Users } from 'lucide-react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Flame, UserPlus, Users, Link } from 'lucide-react-native';
 import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
 import { supabase } from '../../lib/supabase';
+import { shareInviteLink, addFriendByCode, getOrCreateInviteCode } from '../../lib/friends';
 import BottomNav, { type Tab } from './ui/BottomNav';
 import useZoneEntrance from '../../hooks/useZoneEntrance';
 import AnimatedCard from '../../components/AnimatedCard';
@@ -29,6 +31,8 @@ interface LeaderboardEntry {
 
 interface LeaderboardProps {
   onNavigate: (tab: Tab) => void;
+  initialInviteCode?: string | null;
+  onInviteCodeConsumed?: () => void;
 }
 
 const TABS: { id: LeaderboardTab; label: string }[] = [
@@ -49,13 +53,36 @@ function formatXP(n: number): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function Leaderboard({ onNavigate }: LeaderboardProps) {
+export default function Leaderboard({ onNavigate, initialInviteCode, onInviteCodeConsumed }: LeaderboardProps) {
+  const insets = useSafeAreaInsets();
   const { zone1Style, zone2Style } = useZoneEntrance();
-  const [activeTab, setActiveTab] = useState<LeaderboardTab>('weekly');
+  const [activeTab, setActiveTab] = useState<LeaderboardTab>(initialInviteCode ? 'friends' : 'weekly');
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Auto-add friend when arriving via invite link
+  useEffect(() => {
+    if (!initialInviteCode) return;
+    let cancelled = false;
+
+    (async () => {
+      const result = await addFriendByCode(initialInviteCode);
+      if (cancelled) return;
+      onInviteCodeConsumed?.();
+      if (result.success) {
+        Alert.alert('Friend Added!', 'You can now compete on the friends leaderboard.');
+        // Refresh friends list
+        setActiveTab('weekly');
+        setTimeout(() => setActiveTab('friends'), 100);
+      } else {
+        Alert.alert('Invite Code', result.error ?? 'Could not add friend');
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [initialInviteCode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -204,7 +231,7 @@ export default function Leaderboard({ onNavigate }: LeaderboardProps) {
       <Animated.View style={[{ flex: 1 }, zone2Style]}>
       <ScrollView
         style={styles.zone2}
-        contentContainerStyle={styles.zone2Content}
+        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
@@ -216,7 +243,7 @@ export default function Leaderboard({ onNavigate }: LeaderboardProps) {
             <Text style={styles.errorText}>Could not load leaderboard</Text>
           </View>
         ) : activeTab === 'friends' && entries.length === 0 ? (
-          <FriendsEmptyState />
+          <FriendsEmptyState onFriendAdded={() => setActiveTab('friends')} />
         ) : (
           <>
             {/* Streak banner */}
@@ -237,6 +264,8 @@ export default function Leaderboard({ onNavigate }: LeaderboardProps) {
 
             {/* Friends tab: flat list (no podium distinction) */}
             {activeTab === 'friends' ? (
+              <>
+              <FriendsActions onFriendAdded={() => setActiveTab('friends')} />
               <View style={styles.rankList}>
                 {entries.map((entry, index) => {
                   const rank = index + 1;
@@ -253,6 +282,7 @@ export default function Leaderboard({ onNavigate }: LeaderboardProps) {
                   );
                 })}
               </View>
+              </>
             ) : (
               /* Rank rows (positions 4–10) for weekly/alltime */
               <View style={styles.rankList}>
@@ -393,13 +423,87 @@ function LeaderboardRow({
   );
 }
 
-function FriendsEmptyState() {
-  const handleInvite = () => {
-    void Share.share({
-      message: 'Think you know ball? Prove it on Ball Knowledge — download now and compete with me!',
-    });
+function FriendsActions({ onFriendAdded }: { onFriendAdded: () => void }) {
+  const [codeInput, setCodeInput] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [myCode, setMyCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getOrCreateInviteCode().then(setMyCode);
+  }, []);
+
+  const handleAddByCode = async () => {
+    if (!codeInput.trim()) return;
+    setAdding(true);
+    const result = await addFriendByCode(codeInput);
+    setAdding(false);
+    if (result.success) {
+      Alert.alert('Friend Added!', 'You can now compete on the friends leaderboard.');
+      setCodeInput('');
+      onFriendAdded();
+    } else {
+      Alert.alert('Could not add', result.error ?? 'Try again');
+    }
   };
 
+  return (
+    <View style={styles.friendsActions}>
+      {/* Share invite link */}
+      <Pressable
+        style={({ pressed }) => [styles.inviteBtn, pressed && styles.inviteBtnPressed]}
+        onPress={() => void shareInviteLink()}
+      >
+        <Link color={colors.white} size={18} strokeWidth={2.5} />
+        <Text style={styles.inviteBtnText}>SHARE INVITE LINK</Text>
+      </Pressable>
+
+      {/* My code display */}
+      {myCode && (
+        <View style={styles.myCodeRow}>
+          <Text style={styles.myCodeLabel}>Your code:</Text>
+          <View style={styles.myCodeBadge}>
+            <Text style={styles.myCodeText}>{myCode}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Divider */}
+      <View style={styles.orDivider}>
+        <View style={styles.orLine} />
+        <Text style={styles.orText}>or enter a friend's code</Text>
+        <View style={styles.orLine} />
+      </View>
+
+      {/* Code input */}
+      <View style={styles.codeInputRow}>
+        <TextInput
+          style={styles.codeInput}
+          value={codeInput}
+          onChangeText={setCodeInput}
+          placeholder="Enter code"
+          placeholderTextColor={darkColors.textSecondary}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={8}
+        />
+        <Pressable
+          style={({ pressed }) => [
+            styles.addCodeBtn,
+            (!codeInput.trim() || adding) && styles.addCodeBtnDisabled,
+            pressed && codeInput.trim() && styles.addCodeBtnPressed,
+          ]}
+          onPress={handleAddByCode}
+          disabled={!codeInput.trim() || adding}
+        >
+          <UserPlus color={colors.white} size={16} strokeWidth={2.5} />
+          <Text style={styles.addCodeBtnText}>ADD</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function FriendsEmptyState({ onFriendAdded }: { onFriendAdded: () => void }) {
   return (
     <View style={styles.friendsEmpty}>
       <View style={styles.friendsIconCircle}>
@@ -409,13 +513,7 @@ function FriendsEmptyState() {
       <Text style={styles.friendsEmptySub}>
         Invite your friends to Ball Knowledge and compete head-to-head on the leaderboard.
       </Text>
-      <Pressable
-        style={({ pressed }) => [styles.inviteBtn, pressed && styles.inviteBtnPressed]}
-        onPress={handleInvite}
-      >
-        <UserPlus color={colors.white} size={18} strokeWidth={2.5} />
-        <Text style={styles.inviteBtnText}>INVITE FRIENDS</Text>
-      </Pressable>
+      <FriendsActions onFriendAdded={onFriendAdded} />
     </View>
   );
 }
@@ -606,7 +704,7 @@ const styles = StyleSheet.create({
   zone2Content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing['3xl'],
-    paddingBottom: 120,
+    paddingBottom: 0,
   },
 
   // Loading / error states
@@ -849,6 +947,97 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 15,
+    letterSpacing: 1,
+    color: colors.white,
+  },
+
+  // Friends actions (invite + code entry)
+  friendsActions: {
+    width: '100%',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  myCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  myCodeLabel: {
+    fontFamily: fontFamily.medium,
+    fontSize: 13,
+    color: darkColors.textSecondary,
+  },
+  myCodeBadge: {
+    backgroundColor: darkColors.surfaceElevated,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: darkColors.border,
+  },
+  myCodeText: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 16,
+    letterSpacing: 3,
+    color: colors.white,
+  },
+  orDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginVertical: spacing.xs,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: darkColors.border,
+  },
+  orText: {
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    color: darkColors.textSecondary,
+  },
+  codeInputRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  codeInput: {
+    flex: 1,
+    height: 48,
+    backgroundColor: darkColors.surfaceElevated,
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 18,
+    letterSpacing: 3,
+    color: colors.white,
+    borderWidth: 1,
+    borderColor: darkColors.border,
+    textAlign: 'center',
+  },
+  addCodeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.brand,
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    height: 48,
+  },
+  addCodeBtnDisabled: {
+    opacity: 0.4,
+  },
+  addCodeBtnPressed: {
+    opacity: 0.85,
+  },
+  addCodeBtnText: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 14,
     letterSpacing: 1,
     color: colors.white,
   },

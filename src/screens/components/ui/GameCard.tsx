@@ -13,6 +13,7 @@ interface GameCardProps extends Omit<PressableProps, 'children'> {
   onPress: () => void;
   status: GameStatus;
   onArchivePress?: () => void;
+  isNew?: boolean;
 }
 
 function Badge({ status }: { status: GameStatus }) {
@@ -45,6 +46,7 @@ export default function GameCard({
   onPress,
   status,
   onArchivePress,
+  isNew,
   ...rest
 }: GameCardProps) {
   return (
@@ -52,36 +54,49 @@ export default function GameCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
+        isNew && styles.cardNew,
         pressed && styles.pressed,
       ]}
       {...rest}
     >
-      <View style={styles.row}>
-        <IconPill icon={icon} size="lg" />
-        <View style={styles.textContainer}>
-          <Text style={styles.title} numberOfLines={2}>{title}</Text>
-          <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
+      {isNew && (
+        <View style={styles.newBadge}>
+          <Text style={styles.newBadgeText}>NEW</Text>
         </View>
-        {onArchivePress ? (
-          <View style={styles.badgeRow}>
+      )}
+      {/* Always use vertical layout — readable at all screen sizes */}
+      <View style={styles.mobileInner}>
+        <Text style={styles.titleMobile} numberOfLines={2}>{title}</Text>
+
+        <View style={styles.iconContainer}>
+          <IconPill icon={icon} size="lg" />
+        </View>
+
+        <Text style={styles.subtitleMobile} numberOfLines={2}>{subtitle}</Text>
+
+        <View style={styles.badgeContainerMobile}>
+          {onArchivePress ? (
+            <View style={styles.badgeRow}>
+              <Badge status={status} />
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onArchivePress();
+                }}
+                style={({ pressed: p }) => [
+                  styles.badgeArchive,
+                  p && styles.badgeArchivePressed,
+                ]}
+              >
+                <Text style={styles.badgeArchiveText}>Archive</Text>
+              </Pressable>
+            </View>
+          ) : (
             <Badge status={status} />
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation();
-                onArchivePress();
-              }}
-              style={({ pressed }) => [
-                styles.badgeArchive,
-                pressed && styles.badgeArchivePressed,
-              ]}
-            >
-              <Text style={styles.badgeArchiveText}>Archive</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <Badge status={status} />
-        )}
+          )}
+        </View>
       </View>
+
       <LinearGradient
         colors={['#FC345C', '#07bccc', '#e601c0', '#f40468']}
         start={{ x: 0, y: 0 }}
@@ -108,31 +123,100 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  cardNew: {
+    borderWidth: 2,
+    borderColor: colors.brand,
+    borderTopWidth: 2,
+    borderTopColor: colors.brand,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.brand,
+  },
+  newBadge: {
+    position: 'absolute',
+    top: -1,
+    left: 12,
+    backgroundColor: colors.brand,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    zIndex: 10,
+  },
+  newBadgeText: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900',
+    fontSize: 10,
+    letterSpacing: 2,
+    color: colors.white,
+  },
   pressed: {
     opacity: 0.85,
   },
-  row: {
+
+  // ── Mobile layout ────────────────────────────────────────────────────────────
+  mobileInner: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: 16,
+    minHeight: 140,
+  },
+  titleMobile: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 14,
+    letterSpacing: 0.5,
+    color: colors.white,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  subtitleMobile: {
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    color: darkColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  badgeContainerMobile: {
+    alignItems: 'center',
+    marginTop: 4,
+  },
+
+  // ── Desktop layout ────────────────────────────────────────────────────────────
+  desktopInner: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     gap: 12,
   },
-  textContainer: {
+  desktopText: {
     flex: 1,
   },
-  title: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 19,
-    letterSpacing: 1,
-    color: colors.white,
-  },
-  subtitle: {
-    fontFamily: fontFamily.medium,
+  titleDesktop: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
     fontSize: 14,
-    color: darkColors.textSecondary,
-    marginTop: 2,
+    letterSpacing: 0.5,
+    color: colors.white,
+    marginBottom: 4,
   },
+  subtitleDesktop: {
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    color: darkColors.textSecondary,
+  },
+  badgeContainerDesktop: {
+    alignItems: 'flex-end',
+  },
+  badgeRowDesktop: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+
   accentLine: {
     height: 2,
     backgroundColor: colors.accentCyan,
@@ -169,10 +253,10 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 
-  // Badge row (Play + Archive side by side)
+  // Badge row (Play + Archive stacked)
   badgeRow: {
     flexDirection: 'column',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: 6,
   },
   badgeArchive: {

@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   colors,
   darkColors,
@@ -27,16 +28,21 @@ import {
   Star,
   CheckCircle,
   Zap,
+  TextSearch,
+  Users,
+  ChevronRight,
 } from 'lucide-react-native';
 import useProfile from '../../lib/useProfile';
 import useZoneEntrance from '../../hooks/useZoneEntrance';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { getTodaysCompletedGames } from '../../lib/gameResults';
 import { LEVELS } from '../../lib/xp';
 import StreakBadge from './ui/StreakBadge';
 import DailyProgressBar from './ui/DailyProgressBar';
-import InnerAccentCard from './ui/InnerAccentCard';
 import GameCard from './ui/GameCard';
 import AnimatedCard from '../../components/AnimatedCard';
+import QuestionOfTheDay from '../../components/qotd/QuestionOfTheDay';
+import QOTDSheet from '../../components/qotd/QOTDSheet';
 import BottomNav, { type Tab } from '../../app/components/ui/BottomNav';
 
 interface HomeProps {
@@ -47,9 +53,14 @@ interface HomeProps {
 }
 
 export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTrigger }: HomeProps) {
+  const insets = useSafeAreaInsets();
+  const isMobile = useIsMobile();
   const { profile, levelInfo } = useProfile(refreshTrigger);
   const { zone1Style, zone2Style } = useZoneEntrance();
   const [completedGameTypes, setCompletedGameTypes] = useState<Set<string>>(new Set());
+  const [qotdOpen, setQotdOpen] = useState(false);
+  const [qotdQuestion, setQotdQuestion] = useState('');
+  const [qotdQuestionId, setQotdQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
     void getTodaysCompletedGames().then(results => {
@@ -66,11 +77,11 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
     <View style={styles.safe}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 108 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* ── ZONE 1: Brand Header ── */}
-        <Animated.View style={[styles.zone1, zone1Style]}>
+        <Animated.View style={[styles.zone1, zone1Style, { paddingTop: insets.top + 16 }]}>
           {/* Top row: greeting + notification bell */}
           <View style={styles.headerRow}>
             <View>
@@ -98,27 +109,26 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
 
           {/* Progress bar */}
           <View style={styles.progressWrapper}>
-            <DailyProgressBar completed={completedGames} total={5} />
+            <DailyProgressBar completed={completedGames} total={6} />
           </View>
         </Animated.View>
 
         {/* ── ZONE 2: Content Area ── */}
         <Animated.View style={[styles.zone2, zone2Style]}>
-          {/* Inner Accent Card */}
-          <InnerAccentCard
-            leftIcon={<Flame color={colors.white} fill={colors.white} size={32} />}
-            leftLabel="Current Streak"
-            rightRows={[
-              { label: 'Weekly XP', value: weeklyXpLabel },
-              { label: 'Games Today', value: `${completedGames}/5` },
-            ]}
+          {/* Question of the Day */}
+          <QuestionOfTheDay
+            onPress={(q, id) => {
+              setQotdQuestion(q);
+              setQotdQuestionId(id);
+              setQotdOpen(true);
+            }}
           />
 
           {/* Daily Games Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Daily Games</Text>
-            <View style={styles.gameGrid}>
-              <AnimatedCard delay={0} style={styles.gameGridItem}>
+            <View style={isMobile ? styles.gameGrid : styles.gameRow}>
+              <AnimatedCard delay={0} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
                 <GameCard
                   title="Mystery Player"
                   subtitle="Guess today's mystery player in 8 tries"
@@ -127,7 +137,7 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
                   onPress={() => onGoToGame('player-guess')}
                 />
               </AnimatedCard>
-              <AnimatedCard delay={80} style={styles.gameGridItem}>
+              <AnimatedCard delay={80} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
                 <GameCard
                   title="Blind Rank 5"
                   subtitle="Rank 5 hidden players"
@@ -136,7 +146,7 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
                   onPress={() => onGoToGame('blind-rank-5')}
                 />
               </AnimatedCard>
-              <AnimatedCard delay={160} style={styles.gameGridItem}>
+              <AnimatedCard delay={160} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
                 <GameCard
                   title="Showdown"
                   subtitle="Compare two mystery athletes"
@@ -145,7 +155,7 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
                   onPress={() => onGoToGame('blind-showdown')}
                 />
               </AnimatedCard>
-              <AnimatedCard delay={240} style={styles.gameGridItem}>
+              <AnimatedCard delay={240} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
                 <GameCard
                   title="Trivia Game"
                   subtitle="3 rapid-fire sports questions"
@@ -154,16 +164,37 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
                   onPress={() => onGoToGame('trivia')}
                 />
               </AnimatedCard>
-              <AnimatedCard delay={320} style={styles.gameGridItem}>
+              <AnimatedCard delay={320} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
                 <GameCard
                   title="Power Play"
                   subtitle="Fast Money — hit 125 pts"
                   icon={<Zap color={colors.brand} size={24} />}
                   status={completedGameTypes.has('power-play') ? 'completed' : 'unplayed'}
                   onPress={() => onGoToGame('power-play')}
+                  isNew
+                />
+              </AnimatedCard>
+              <AnimatedCard delay={400} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
+                <GameCard
+                  title="Auto Complete"
+                  subtitle="Fill in the search"
+                  icon={<TextSearch color={colors.brand} size={24} />}
+                  status={completedGameTypes.has('auto-complete') ? 'completed' : 'unplayed'}
+                  onPress={() => onGoToGame('auto-complete')}
+                  isNew
                 />
               </AnimatedCard>
             </View>
+
+            {/* Multiplayer CTA */}
+            <Pressable
+              style={styles.multiplayerCta}
+              onPress={() => onNavigate('games')}
+            >
+              <Users color={colors.brand} size={20} strokeWidth={2} />
+              <Text style={styles.multiplayerCtaText}>Play with friends</Text>
+              <ChevronRight color={colors.midGray} size={18} strokeWidth={2} />
+            </Pressable>
           </View>
 
           {/* Level Progression */}
@@ -216,6 +247,17 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
 
       {/* ── Floating Pill Bottom Nav ── */}
       <BottomNav activeTab="home" onNavigate={onNavigate} />
+
+      {/* ── Question of the Day Sheet ── */}
+      {qotdOpen && (
+        <View style={StyleSheet.absoluteFill}>
+          <QOTDSheet
+            question={qotdQuestion}
+            questionId={qotdQuestionId}
+            onClose={() => setQotdOpen(false)}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -230,7 +272,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 0, // overridden dynamically with safe area inset + nav clearance
   },
 
   // ── Zone 1: Brand header ──
@@ -239,9 +281,10 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     paddingHorizontal: spacing.screenHorizontal + 8,
-    paddingTop: 48,
+    paddingTop: 16, // overridden dynamically with insets.top + 16
     paddingBottom: 80,
     overflow: 'hidden',
+    width: '100%',
   },
   headerRow: {
     flexDirection: 'row',
@@ -314,6 +357,9 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingBottom: 32,
     elevation: 20,
+    maxWidth: 960,
+    alignSelf: 'center' as const,
+    width: '100%',
   },
   section: {
     marginTop: spacing.sectionGap + 8,
@@ -326,6 +372,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     marginBottom: 16,
   },
+  // Mobile: 2×2 wrap grid
   gameGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -333,6 +380,36 @@ const styles = StyleSheet.create({
   },
   gameGridItem: {
     width: '47%',
+  },
+  // Desktop: 3-column grid — readable cards, not squished
+  gameRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.cardGap,
+    maxWidth: 900,
+  },
+  gameRowItem: {
+    width: '31%',
+    minWidth: 220,
+  },
+  multiplayerCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: darkColors.surfaceElevated,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    gap: 10,
+  },
+  multiplayerCtaText: {
+    flex: 1,
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 15,
+    color: colors.white,
   },
   achievementRow: {
     gap: 12,

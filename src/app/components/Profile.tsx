@@ -8,7 +8,7 @@ import {
   Easing,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   User,
   BarChart2,
@@ -82,6 +82,7 @@ const xpStyles = StyleSheet.create({
 const AVATAR_SIZE = 100;
 
 export default function Profile({ onNavigate }: ProfileProps) {
+  const insets = useSafeAreaInsets();
   const [activeLeague, setActiveLeague] = useState('NBA');
   const [signingOut, setSigningOut] = useState(false);
   const { profile, levelInfo, nextLevelInfo, xpProgressPercent, loading } = useProfile();
@@ -155,7 +156,7 @@ export default function Profile({ onNavigate }: ProfileProps) {
       <Animated.View style={[{ flex: 1 }, zone2Style]}>
       <ScrollView
         style={styles.zone2}
-        contentContainerStyle={styles.zone2Content}
+        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* User info */}
@@ -359,7 +360,7 @@ const styles = StyleSheet.create({
   zone2Content: {
     paddingTop: spacing['2xl'],
     paddingHorizontal: spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: 0,
   },
 
   userInfo: {

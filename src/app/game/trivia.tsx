@@ -18,6 +18,7 @@ import PrimaryButton from '../../screens/components/ui/PrimaryButton';
 import GhostButton from '../../screens/components/ui/GhostButton';
 import { type Tab } from '../components/ui/BottomNav';
 import { calculateDailyGameXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
+import { shareTrivia } from '../../lib/shareResults';
 import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { saveGameResult as saveCompletionResult, getGameResultToday } from '../../lib/gameResults';
@@ -319,6 +320,12 @@ export default function TriviaScreen({ onBack, archiveDate }: Props) {
                 <PrimaryButton label="Play Again" onPress={handlePlayAgain} />
               )}
               <PrimaryButton label="Back to Games" onPress={onBack} />
+              <Pressable
+                style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
+                onPress={() => shareTrivia(selectedLeague, score, questions.length, 0)}
+              >
+                <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
+              </Pressable>
               {!isArchive && (
                 <GhostButton label="PLAY ARCHIVE" onPress={() => onNavigate('archive' as Tab)} />
               )}
@@ -721,6 +728,28 @@ const styles = StyleSheet.create({
   resultsButtons: {
     width: '100%',
     gap: spacing.md,
+  },
+  shareBtn: {
+    width: '100%',
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: darkColors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderBottomWidth: 2,
+    borderBottomColor: 'rgba(0,0,0,0.5)',
+  },
+  shareBtnPressed: {
+    opacity: 0.7,
+  },
+  shareBtnText: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 13,
+    color: colors.white,
+    letterSpacing: 1.5,
   },
 
   // Difficulty breakdown row (already played)

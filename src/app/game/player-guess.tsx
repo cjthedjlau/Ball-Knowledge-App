@@ -28,6 +28,7 @@ import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { saveGameResult as saveCompletionResult, getGameResultToday } from '../../lib/gameResults';
 import { updatePlayHour } from '../../lib/notifications';
+import { shareGuesser } from '../../lib/shareResults';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,6 +120,104 @@ const CONTINENT_MAP: Record<string, string> = {
   'South Sudan': 'Africa', 'Sudan': 'Africa',
 };
 
+// ── Display abbreviations for mobile tiles ──────────────────────────────────
+
+const COUNTRY_ABBREV: Record<string, string> = {
+  'USA': 'USA', 'Canada': 'CAN', 'Cuba': 'CUB', 'Dominican Republic': 'DOM',
+  'Puerto Rico': 'PR', 'Venezuela': 'VEN', 'Colombia': 'COL', 'Brazil': 'BRA',
+  'Japan': 'JPN', 'South Korea': 'KOR', 'China': 'CHN', 'Taiwan': 'TWN',
+  'Germany': 'GER', 'Russia': 'RUS', 'Sweden': 'SWE', 'Finland': 'FIN',
+  'Czechia': 'CZE', 'France': 'FRA', 'Slovenia': 'SVN', 'Serbia': 'SRB',
+  'Greece': 'GRE', 'Spain': 'ESP', 'Lithuania': 'LTU', 'Latvia': 'LVA',
+  'Croatia': 'CRO', 'Montenegro': 'MNE', 'Turkey': 'TUR', 'Switzerland': 'SUI',
+  'Australia': 'AUS', 'New Zealand': 'NZL',
+  'Cameroon': 'CMR', 'Nigeria': 'NGA', 'Congo': 'COG', 'Senegal': 'SEN',
+  'South Sudan': 'SSD', 'Sudan': 'SDN', 'Mexico': 'MEX', 'Panama': 'PAN',
+  'Nicaragua': 'NCA', 'Curacao': 'CUW', 'Aruba': 'ABW',
+};
+
+function abbreviateCountry(country: string): string {
+  return COUNTRY_ABBREV[country] ?? country.slice(0, 3).toUpperCase();
+}
+
+function abbreviateHand(hand: string): string {
+  if (hand === 'Left') return 'L';
+  if (hand === 'Right') return 'R';
+  if (hand === 'Switch') return 'S';
+  return hand.charAt(0);
+}
+
+// Abbreviate MLB team: "Houston Astros" → "HOU"
+const MLB_TEAM_ABBREV: Record<string, string> = {
+  'Arizona Diamondbacks': 'ARI', 'Atlanta Braves': 'ATL', 'Baltimore Orioles': 'BAL',
+  'Boston Red Sox': 'BOS', 'Chicago Cubs': 'CHC', 'Chicago White Sox': 'CWS',
+  'Cincinnati Reds': 'CIN', 'Cleveland Guardians': 'CLE', 'Colorado Rockies': 'COL',
+  'Detroit Tigers': 'DET', 'Houston Astros': 'HOU', 'Kansas City Royals': 'KC',
+  'Los Angeles Angels': 'LAA', 'Los Angeles Dodgers': 'LAD', 'Miami Marlins': 'MIA',
+  'Milwaukee Brewers': 'MIL', 'Minnesota Twins': 'MIN', 'New York Mets': 'NYM',
+  'New York Yankees': 'NYY', 'Oakland Athletics': 'OAK', 'Philadelphia Phillies': 'PHI',
+  'Pittsburgh Pirates': 'PIT', 'San Diego Padres': 'SD', 'San Francisco Giants': 'SF',
+  'Seattle Mariners': 'SEA', 'St. Louis Cardinals': 'STL', 'Tampa Bay Rays': 'TB',
+  'Texas Rangers': 'TEX', 'Toronto Blue Jays': 'TOR', 'Washington Nationals': 'WSH',
+};
+
+// Abbreviate NHL team: "Toronto Maple Leafs" → "TOR"
+const NHL_TEAM_ABBREV: Record<string, string> = {
+  'Anaheim Ducks': 'ANA', 'Arizona Coyotes': 'ARI', 'Boston Bruins': 'BOS',
+  'Buffalo Sabres': 'BUF', 'Calgary Flames': 'CGY', 'Carolina Hurricanes': 'CAR',
+  'Chicago Blackhawks': 'CHI', 'Colorado Avalanche': 'COL', 'Columbus Blue Jackets': 'CBJ',
+  'Dallas Stars': 'DAL', 'Detroit Red Wings': 'DET', 'Edmonton Oilers': 'EDM',
+  'Florida Panthers': 'FLA', 'Los Angeles Kings': 'LAK', 'Minnesota Wild': 'MIN',
+  'Montreal Canadiens': 'MTL', 'Nashville Predators': 'NSH', 'New Jersey Devils': 'NJD',
+  'New York Islanders': 'NYI', 'New York Rangers': 'NYR', 'Ottawa Senators': 'OTT',
+  'Philadelphia Flyers': 'PHI', 'Pittsburgh Penguins': 'PIT', 'San Jose Sharks': 'SJS',
+  'Seattle Kraken': 'SEA', 'St. Louis Blues': 'STL', 'Tampa Bay Lightning': 'TBL',
+  'Toronto Maple Leafs': 'TOR', 'Utah Hockey Club': 'UTA', 'Vancouver Canucks': 'VAN',
+  'Vegas Golden Knights': 'VGK', 'Washington Capitals': 'WSH', 'Winnipeg Jets': 'WPG',
+};
+
+// Abbreviate NFL team: "Kansas City Chiefs" → "KC"
+const NFL_TEAM_ABBREV: Record<string, string> = {
+  'Arizona Cardinals': 'ARI', 'Atlanta Falcons': 'ATL', 'Baltimore Ravens': 'BAL',
+  'Buffalo Bills': 'BUF', 'Carolina Panthers': 'CAR', 'Chicago Bears': 'CHI',
+  'Cincinnati Bengals': 'CIN', 'Cleveland Browns': 'CLE', 'Dallas Cowboys': 'DAL',
+  'Denver Broncos': 'DEN', 'Detroit Lions': 'DET', 'Green Bay Packers': 'GB',
+  'Houston Texans': 'HOU', 'Indianapolis Colts': 'IND', 'Jacksonville Jaguars': 'JAX',
+  'Kansas City Chiefs': 'KC', 'Las Vegas Raiders': 'LV', 'Los Angeles Chargers': 'LAC',
+  'Los Angeles Rams': 'LAR', 'Miami Dolphins': 'MIA', 'Minnesota Vikings': 'MIN',
+  'New England Patriots': 'NE', 'New Orleans Saints': 'NO', 'New York Giants': 'NYG',
+  'New York Jets': 'NYJ', 'Philadelphia Eagles': 'PHI', 'Pittsburgh Steelers': 'PIT',
+  'San Francisco 49ers': 'SF', 'Seattle Seahawks': 'SEA', 'Tampa Bay Buccaneers': 'TB',
+  'Tennessee Titans': 'TEN', 'Washington Commanders': 'WSH',
+};
+
+function abbreviateTeam(team: string, league: League): string {
+  if (league === 'NBA') return team; // NBA already uses 3-letter codes in attrs
+  if (league === 'MLB') return MLB_TEAM_ABBREV[team] ?? team;
+  if (league === 'NHL') return NHL_TEAM_ABBREV[team] ?? team;
+  if (league === 'NFL') return NFL_TEAM_ABBREV[team] ?? team;
+  return team;
+}
+
+// Division: "AL West" → "AL\nWest", "NL Central" → "NL\nCEN"
+function abbreviateDivision(div: string): string {
+  const parts = div.split(' ');
+  if (parts.length === 2) {
+    const league = parts[0]; // AL or NL
+    let region = parts[1];
+    if (region === 'Central') region = 'CEN';
+    return `${league}\n${region}`;
+  }
+  return div;
+}
+
+// Conference: "Western" → "West", "Eastern" → "East"
+function abbreviateConference(conf: string): string {
+  if (conf === 'Western') return 'West';
+  if (conf === 'Eastern') return 'East';
+  return conf;
+}
+
 function isSameContinent(a: string, b: string): boolean {
   const ca = CONTINENT_MAP[a] ?? a;
   const cb = CONTINENT_MAP[b] ?? b;
@@ -151,6 +250,15 @@ function compareTile(
   attribute: string,
 ): TileState {
   if (guessVal === undefined || mysteryVal === undefined) return 'wrong';
+
+  // Coerce numeric comparisons — DB may store numbers as strings
+  const numericAttrs = ['age', 'jersey', 'height'];
+  if (numericAttrs.includes(attribute) && typeof guessVal === 'number' && typeof mysteryVal === 'string') {
+    mysteryVal = Number(mysteryVal);
+  } else if (numericAttrs.includes(attribute) && typeof guessVal === 'string' && typeof mysteryVal === 'number') {
+    guessVal = Number(guessVal);
+  }
+
   if (guessVal === mysteryVal) return 'correct';
 
   if (attribute === 'height') {
@@ -166,7 +274,7 @@ function compareTile(
     const g = guessVal as number;
     const m = mysteryVal as number;
     const diff = m - g;
-    if (Math.abs(diff) <= 2) return 'close';
+    if (Math.abs(diff) <= 2) return diff > 0 ? 'close_higher' : 'close_lower';
     return diff > 0 ? 'higher' : 'lower';
   }
 
@@ -178,13 +286,19 @@ function compareTile(
     return diff > 0 ? 'higher' : 'lower';
   }
 
-  if (attribute === 'conference' || attribute === 'division') {
-    // Same sport, different conference/division = close (yellow)
+  if (attribute === 'conference') {
     return 'close';
   }
 
+  if (attribute === 'division') {
+    // Yellow only if same conference (e.g. "NL East" vs "NL West" → yellow, "NL East" vs "AL East" → wrong)
+    const guessConf = (guessVal as string).split(' ')[0];
+    const mysteryConf = (mysteryVal as string).split(' ')[0];
+    return guessConf === mysteryConf ? 'close' : 'wrong';
+  }
+
   if (attribute === 'country') {
-    return isSameContinent(guessVal as string, mysteryVal as string) ? 'close' : 'wrong';
+    return 'wrong';
   }
 
   return 'wrong';
@@ -203,12 +317,12 @@ function evaluateGuessForLeague(
     const g = guessAttrs as MLBAttrs;
     return [
       { value: nameDisplay, state: nameState },
-      { value: g.bat, state: compareTile(g.bat, mystery.bat, 'bat') },
-      { value: g.throwing, state: compareTile(g.throwing, mystery.throwing, 'throwing') },
-      { value: g.country, state: compareTile(g.country, mystery.country, 'country') },
-      { value: g.team, state: compareTile(g.team, mystery.team, 'team') },
+      { value: abbreviateHand(g.bat), state: compareTile(g.bat, mystery.bat, 'bat') },
+      { value: abbreviateHand(g.throwing), state: compareTile(g.throwing, mystery.throwing, 'throwing') },
+      { value: abbreviateCountry(g.country), state: compareTile(g.country, mystery.country, 'country') },
+      { value: abbreviateTeam(g.team, 'MLB'), state: compareTile(g.team, mystery.team, 'team') },
       { value: g.position, state: compareTile(g.position, mystery.position, 'position') },
-      { value: g.division, state: compareTile(g.division, mystery.division, 'division') },
+      { value: abbreviateDivision(g.division), state: compareTile(g.division, mystery.division, 'division') },
       { value: String(g.age), state: compareTile(g.age, mystery.age, 'age') },
     ];
   }
@@ -219,18 +333,20 @@ function evaluateGuessForLeague(
   const mHeight = mystery.height ? parseHeightToInches(mystery.height) : 0;
   // NBA uses 3-letter team codes in playerAttrs; expand to full name for comparison
   const gTeam = league === 'NBA' ? expandNBATeam(g.team) : g.team;
+  // Display team as abbreviation
+  const gTeamDisplay = league === 'NBA' ? g.team : abbreviateTeam(g.team, league);
 
   const sixthCol = league === 'NHL'
-    ? { value: (g as NHLAttrs).country, state: compareTile((g as NHLAttrs).country, mystery.country, 'country') }
+    ? { value: abbreviateCountry((g as NHLAttrs).country), state: compareTile((g as NHLAttrs).country, mystery.country, 'country') }
     : { value: (g as NBAAttrs | NFLAttrs).college, state: compareTile((g as NBAAttrs | NFLAttrs).college, mystery.college, 'college') };
 
   return [
     { value: nameDisplay, state: nameState },
     { value: formatHeight(gHeight), state: compareTile(gHeight, mHeight, 'height') },
     { value: `#${g.jersey}`, state: compareTile(g.jersey, mystery.jersey, 'jersey') },
-    { value: gTeam, state: compareTile(gTeam, mystery.team, 'team') },
+    { value: gTeamDisplay, state: compareTile(gTeam, mystery.team, 'team') },
     { value: g.position, state: compareTile(g.position, mystery.position, 'position') },
-    { value: g.conference, state: compareTile(g.conference, mystery.conference, 'conference') },
+    { value: abbreviateConference(g.conference), state: compareTile(g.conference, mystery.conference, 'conference') },
     sixthCol,
     { value: String(g.age), state: compareTile(g.age, mystery.age, 'age') },
   ];
@@ -293,6 +409,14 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
       const raw = data.mystery_player;
 
       // Build MysteryPlayer from the raw jsonb data
+      // Normalize single-letter hand codes ('L','R','S') to full words to match MLB_ATTRS format
+      const expandHand = (h?: string): string | undefined => {
+        if (!h) return undefined;
+        if (h === 'L') return 'Left';
+        if (h === 'R') return 'Right';
+        if (h === 'S') return 'Switch';
+        return h; // already full word
+      };
       const mp: MysteryPlayer = {
         name: raw.name,
         team: raw.team ?? '',
@@ -302,11 +426,56 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
         conference: raw.conference,
         college: raw.college,
         age: raw.age,
-        bat: raw.battingHand,
-        throwing: raw.throwingHand,
+        bat: expandHand(raw.battingHand ?? raw.bat),
+        throwing: expandHand(raw.throwingHand ?? raw.throwing),
         country: raw.country,
         division: raw.division,
       };
+
+      // Supplement any missing attrs from the local playerAttrs cache.
+      // Auto-generated games may only store name/team/position in the DB;
+      // the local tables have full attribute data for all known players.
+      const localAttrs = getPlayerAttrs(raw.name, activeLeague);
+      if (localAttrs) {
+        if (activeLeague === 'MLB') {
+          const a = localAttrs as MLBAttrs;
+          if (!mp.bat) mp.bat = expandHand(a.bat);
+          if (!mp.throwing) mp.throwing = expandHand(a.throwing);
+          if (!mp.country) mp.country = a.country;
+          if (!mp.division) mp.division = a.division;
+          if (!mp.position) mp.position = a.position;
+          if (!mp.team) mp.team = a.team;
+          if (mp.age == null) mp.age = a.age;
+        } else if (activeLeague === 'NBA') {
+          const a = localAttrs as NBAAttrs;
+          if (!mp.height) mp.height = a.height;
+          if (mp.jersey == null) mp.jersey = a.jersey;
+          if (!mp.conference) mp.conference = a.conference;
+          if (!mp.college) mp.college = a.college;
+          if (!mp.position) mp.position = a.position;
+          if (!mp.team) mp.team = a.team;
+          if (mp.age == null) mp.age = a.age;
+        } else if (activeLeague === 'NFL') {
+          const a = localAttrs as NFLAttrs;
+          if (!mp.height) mp.height = a.height;
+          if (mp.jersey == null) mp.jersey = a.jersey;
+          if (!mp.conference) mp.conference = a.conference;
+          if (!mp.college) mp.college = a.college;
+          if (!mp.position) mp.position = a.position;
+          if (!mp.team) mp.team = a.team;
+          if (mp.age == null) mp.age = a.age;
+        } else if (activeLeague === 'NHL') {
+          const a = localAttrs as NHLAttrs;
+          if (!mp.height) mp.height = a.height;
+          if (mp.jersey == null) mp.jersey = a.jersey;
+          if (!mp.country) mp.country = a.country;
+          if (!mp.conference) mp.conference = a.conference;
+          if (!mp.position) mp.position = a.position;
+          if (!mp.team) mp.team = a.team;
+          if (mp.age == null) mp.age = a.age;
+        }
+      }
+
       setMystery(mp);
 
       // Restore saved game state from AsyncStorage (daily games only)
@@ -348,13 +517,21 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
     if (!attrs) return;
 
     const row = evaluateGuessForLeague(attrs, playerName, mystery, activeLeague);
+
+    // If the player name matches the mystery player, force ALL tiles to 'correct'.
+    // This prevents data discrepancies between DB and local attrs from blocking a win.
+    const isCorrectPlayer = playerName === mystery.name;
+    if (isCorrectPlayer) {
+      row.forEach(tile => { tile.state = 'correct'; });
+    }
+
     const newGuesses = [...guesses, row];
     setGuesses(newGuesses);
     setGuessedNames(prev => new Set(prev).add(playerName));
     setSearchText('');
     setShowDropdown(false);
 
-    const won = row.every(t => t.state === 'correct');
+    const won = isCorrectPlayer || row.every(t => t.state === 'correct');
     const lost = !won && newGuesses.length >= MAX_GUESSES;
     const newState = won ? 'won' : lost ? 'lost' : 'playing';
 
@@ -511,6 +688,12 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
               <MidnightCountdown />
               <View style={styles.postGameActions}>
                 <PrimaryButton label="PLAY ANOTHER DAILY GAME" onPress={onBack} />
+                <Pressable
+                  style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
+                  onPress={() => shareGuesser(activeLeague, gameState === 'won', guesses.length, MAX_GUESSES)}
+                >
+                  <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
+                </Pressable>
                 <GhostButton label="PLAY ARCHIVE" onPress={() => onNavigate('archive' as Tab)} />
               </View>
             </>
@@ -982,5 +1165,28 @@ const styles = StyleSheet.create({
   postGameActions: {
     gap: spacing.md,
     marginBottom: spacing.lg,
+  },
+  shareBtn: {
+    backgroundColor: darkColors.surfaceElevated,
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderBottomWidth: 2,
+    borderBottomColor: 'rgba(0,0,0,0.5)',
+  },
+  shareBtnPressed: {
+    opacity: 0.7,
+  },
+  shareBtnText: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 13,
+    letterSpacing: 1.5,
+    color: colors.white,
   },
 });

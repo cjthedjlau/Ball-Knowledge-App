@@ -23,6 +23,7 @@ import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { getGameResultToday } from '../../lib/gameResults';
 import { updatePlayHour } from '../../lib/notifications';
+import { shareRank5 } from '../../lib/shareResults';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -102,7 +103,7 @@ function initActiveState(ld: LeagueData) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function BlindRank5Screen({ onBack, archiveDate }: Props) {
+export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Props) {
   const isArchive = !!archiveDate;
   const [selectedLeague, setSelectedLeague] = useState('NBA');
 
@@ -334,7 +335,7 @@ export default function BlindRank5Screen({ onBack, archiveDate }: Props) {
           </View>
 
         ) : (isCompleted && result) ? (
-          <ResultsView result={result} onBack={onBack} isArchive={isArchive} onNavigate={onNavigate} />
+          <ResultsView result={result} onBack={onBack} isArchive={isArchive} onNavigate={onNavigate} selectedLeague={selectedLeague} />
 
         ) : (
           <>
@@ -395,12 +396,22 @@ function ResultsView({
   onBack,
   isArchive,
   onNavigate,
+  selectedLeague,
 }: {
   result: CompletedResult;
   onBack: () => void;
   isArchive: boolean;
   onNavigate: (tab: Tab) => void;
+  selectedLeague: string;
 }) {
+  const matchCount = result.communitySlots
+    ? result.placements.reduce<number>((count, name, idx) => {
+        if (!name) return count;
+        const topEntry = result.communitySlots![idx]?.entries[0];
+        return topEntry?.name === name ? count + 1 : count;
+      }, 0)
+    : 0;
+
   return (
     <>
       {/* XP card (hidden in archive) */}
@@ -462,6 +473,12 @@ function ResultsView({
       {!isArchive && <MidnightCountdown />}
 
       <View style={styles.resultButtons}>
+        <Pressable
+          onPress={() => { void shareRank5(selectedLeague, matchCount, TOTAL_PLAYERS); }}
+          style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
+        >
+          <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
+        </Pressable>
         <GhostButton label="Back to Games" onPress={onBack} />
         {!isArchive && (
           <GhostButton label="PLAY ARCHIVE" onPress={() => onNavigate('archive' as Tab)} />
@@ -893,5 +910,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 1,
     marginTop: spacing.sm,
+  },
+
+  // ── Share button ──────────────────────────────────────────────────────────
+  shareBtn: {
+    backgroundColor: darkColors.surfaceElevated,
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.10)',
+    borderBottomWidth: 2,
+    borderBottomColor: 'rgba(0,0,0,0.50)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  shareBtnPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.98 }],
+  },
+  shareBtnText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 14,
+    color: colors.white,
+    letterSpacing: 2,
   },
 });
