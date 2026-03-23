@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   UserSearch,
   Zap,
   TextSearch,
+  LogIn,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fontFamily, spacing } from '../../styles/theme';
@@ -29,6 +30,7 @@ import GameCard from '../../screens/components/ui/GameCard';
 import AnimatedCard from '../../components/AnimatedCard';
 import BottomNav, { type Tab } from './ui/BottomNav';
 import useZoneEntrance from '../../hooks/useZoneEntrance';
+import { JoinLobby } from '../../components/multiplayer/JoinLobby';
 
 interface GamesProps {
   onBack: () => void;
@@ -40,6 +42,23 @@ interface GamesProps {
 export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNavigate }: GamesProps) {
   const insets = useSafeAreaInsets();
   const { zone1Style, zone2Style } = useZoneEntrance();
+  const [showJoinLobby, setShowJoinLobby] = useState(false);
+
+  if (showJoinLobby) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <JoinLobby
+          onJoin={(_lobbyId, _playerIndex) => {
+            // After joining, navigate to the game — the game screen will detect
+            // the active lobby via its own state. For now, go back to games list.
+            setShowJoinLobby(false);
+          }}
+          onBack={() => setShowJoinLobby(false)}
+        />
+        <BottomNav activeTab="games" onNavigate={onNavigate} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -55,7 +74,7 @@ export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNa
           </View>
           <View style={[styles.statItem, styles.statItemLeft]}>
             <Text style={styles.statLabel}>MULTIPLAYER</Text>
-            <Text style={styles.statValue}>6 Available</Text>
+            <Text style={styles.statValue}>7 Available</Text>
           </View>
           <Pressable style={styles.archiveButton} onPress={onGoToArchive}>
             <Archive size={18} color={colors.white} strokeWidth={2} />
@@ -128,12 +147,21 @@ export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNa
               status="multiplayer"
             />
           </AnimatedCard>
+          <AnimatedCard delay={480} style={styles.cardGridItem}>
+            <GameCard
+              title="Join Game"
+              subtitle="Enter a Code"
+              icon={<LogIn size={24} color={colors.brand} strokeWidth={2} />}
+              onPress={() => setShowJoinLobby(true)}
+              status="multiplayer"
+            />
+          </AnimatedCard>
         </View>
 
         {/* Daily Games — 2x2 grid */}
         <Text style={[styles.sectionLabel, styles.sectionLabelTop]}>── DAILY GAMES ──</Text>
         <View style={styles.cardGrid}>
-          <AnimatedCard delay={480} style={styles.cardGridItem}>
+          <AnimatedCard delay={560} style={styles.cardGridItem}>
             <GameCard
               title="Mystery Player"
               subtitle="Daily Challenge"
@@ -143,7 +171,7 @@ export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNa
               onArchivePress={onGoToArchive}
             />
           </AnimatedCard>
-          <AnimatedCard delay={560} style={styles.cardGridItem}>
+          <AnimatedCard delay={640} style={styles.cardGridItem}>
             <GameCard
               title="Blind Rank 5"
               subtitle="Daily Challenge"
@@ -153,7 +181,7 @@ export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNa
               onArchivePress={onGoToArchive}
             />
           </AnimatedCard>
-          <AnimatedCard delay={640} style={styles.cardGridItem}>
+          <AnimatedCard delay={720} style={styles.cardGridItem}>
             <GameCard
               title="Showdown"
               subtitle="Daily Challenge"
@@ -163,7 +191,7 @@ export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNa
               onArchivePress={onGoToArchive}
             />
           </AnimatedCard>
-          <AnimatedCard delay={720} style={styles.cardGridItem}>
+          <AnimatedCard delay={800} style={styles.cardGridItem}>
             <GameCard
               title="Trivia Game"
               subtitle="Daily Challenge"
@@ -173,7 +201,7 @@ export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNa
               onArchivePress={onGoToArchive}
             />
           </AnimatedCard>
-          <AnimatedCard delay={800} style={styles.cardGridItem}>
+          <AnimatedCard delay={880} style={styles.cardGridItem}>
             <GameCard
               title="Power Play"
               subtitle="Daily Challenge"
@@ -184,7 +212,7 @@ export default function Games({ onBack: _onBack, onGoToGame, onGoToArchive, onNa
               isNew
             />
           </AnimatedCard>
-          <AnimatedCard delay={880} style={styles.cardGridItem}>
+          <AnimatedCard delay={960} style={styles.cardGridItem}>
             <GameCard
               title="Auto Complete"
               subtitle="Daily Challenge"
