@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,24 @@ import { supabase } from '../../lib/supabase';
 import { getGamePlayers, type Player } from '../../lib/playersPool';
 import PrimaryButton from '../../screens/components/ui/PrimaryButton';
 import GhostButton from '../../screens/components/ui/GhostButton';
+
+// ── Online multiplayer imports ──
+import {
+  createLobby,
+  joinLobby,
+  leaveLobby,
+  getLobbyPlayers,
+  updateLobbySettings,
+  updateLobbyStatus,
+  togglePlayerReady,
+  type GameLobby,
+  type LobbyPlayer,
+  type GameType,
+} from '../../lib/multiplayer';
+import { useLobby, type PresencePlayer } from '../../hooks/useLobby';
+import { ModeToggle } from '../../components/multiplayer/ModeToggle';
+import { JoinLobby } from '../../components/multiplayer/JoinLobby';
+import { LobbyScreen } from '../../components/multiplayer/LobbyScreen';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,6 +98,73 @@ export default function ImposterScreen({ onBack }: Props) {
   const [cardFlipped, setCardFlipped] = useState(false);
   const [xpEarned, setXpEarned] = useState<number | null>(null);
 
+  // ── Online mode state ──
+  const [mode, setMode] = useState<'local' | 'online'>('local');
+  const [onlinePhase, setOnlinePhase] = useState<'choose' | 'join' | 'lobby' | 'playing'>('choose');
+  const [lobbyCode, setLobbyCode] = useState<string | null>(null);
+  const [lobbyId, setLobbyId] = useState<string | null>(null);
+  const [myPlayerIndex, setMyPlayerIndex] = useState(0);
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const [lobby, setLobby] = useState<GameLobby | null>(null);
+  const [lobbyPlayers, setLobbyPlayers] = useState<LobbyPlayer[]>([]);
+  const [isHost, setIsHost] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+  const [myRole, setMyRole] = useState<'detective' | 'imposter' | null>(null);
+  const [onlineLoading, setOnlineLoading] = useState(false);
+
+  // ── Auth state for online mode ──
+  const [userId, setUserId] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState('');
+
+  // Get user info on mount
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserId(user.id);
+        setDisplayName(user.user_metadata?.display_name || user.email?.split('@')[0] || 'Player');
+      }
+    });
+  }, []);
+
+  // ── useLobby hook for realtime ──
+  const { presencePlayers, isConnected, broadcast, onEvent } = useLobby({
+    code: lobbyCode,
+    displayName,
+    userId,
+    playerIndex: myPlayerIndex,
+  });
+
+  // ── Online event listeners ──
+  useEffect(() => {
+    if (mode !== 'online' || !lobbyCode) return;
+
+    const unsubRoles = onEvent('game:roles', (payload: any) => {
+      const myData = payload[myPlayerIndex];
+      if (myData) {
+        setMyRole(myData.role);
+        if (myData.athlete) {
+          setAthlete(myData.athlete);
+        }
+        setPhase('reveal');
+      }
+    });
+
+    const unsubReveal = onEvent('game:reveal', () => {
+      setPhase('results');
+    });
+
+    const unsubSettings = onEvent('lobby:settings', (payload: any) => {
+      if (payload.settings) {
+        setLobby(prev => prev ? { ...prev, settings: payload.settings } : prev);
+        if (payload.settings.league) setSelectedLeague(payload.settings.league);
+        if (payload.settings.difficulty) setSelectedDifficulty(payload.settings.difficulty);
+        if (payload.settings.imposterCount) setImposterCount(payload.settings.imposterCount);
+      }
+    });
+
+    return () => { unsubRoles(); unsubReveal(); unsubSettings(); };
+  }, [mode, lobbyCode, myPlayerIndex, onEvent]);
+
   // ─────────────────────────────────────────────────────────────────────────────
   // SETUP HANDLERS
   // ─────────────────────────────────────────────────────────────────────────────
@@ -144,6 +229,147 @@ export default function ImposterScreen({ onBack }: Props) {
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // ONLINE HANDLERS
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const handleCreateGame = useCallback(async () => {
+    if (!userId) return;
+    setOnlineLoading(true);
+    try {
+      const { code, lobbyId: id } = await createLobby('imposter', userId, displayName);
+      setLobbyCode(code);
+      setLobbyId(id);
+      setMyPlayerIndex(0);
+      setIsHost(true);
+      setOnlinePhase('lobby');
+      const players = await getLobbyPlayers(id);
+      setLobbyPlayers(players);
+      setMyPlayerId(players[0]?.id || null);
+      setLobby({
+        id,
+        code,
+        game_type: 'imposter',
+        host_user_id: userId,
+        status: 'waiting',
+        settings: {},
+        game_state: {},
+      });
+    } catch (e: any) {
+      console.error('Create lobby failed:', e.message);
+    } finally {
+      setOnlineLoading(false);
+    }
+  }, [userId, displayName]);
+
+  const handleJoinSuccess = useCallback(async (joinedLobbyId: string, joinedPlayerIndex: number) => {
+    setLobbyId(joinedLobbyId);
+    setMyPlayerIndex(joinedPlayerIndex);
+    setOnlinePhase('lobby');
+    const players = await getLobbyPlayers(joinedLobbyId);
+    setLobbyPlayers(players);
+    const me = players.find(p => p.player_index === joinedPlayerIndex);
+    setMyPlayerId(me?.id || null);
+    // Find the lobby code from the first player's lobby_id
+    if (players.length > 0) {
+      const lobbyRow = players[0];
+      setLobby({
+        id: joinedLobbyId,
+        code: lobbyCode || '',
+        game_type: 'imposter',
+        host_user_id: '',
+        status: 'waiting',
+        settings: {},
+        game_state: {},
+      });
+    }
+  }, [lobbyCode]);
+
+  const handleToggleReady = useCallback(async () => {
+    if (!myPlayerId) return;
+    const newReady = !isReady;
+    setIsReady(newReady);
+    await togglePlayerReady(myPlayerId, newReady);
+    broadcast('player:ready', { playerIndex: myPlayerIndex, isReady: newReady });
+    if (lobbyId) {
+      const players = await getLobbyPlayers(lobbyId);
+      setLobbyPlayers(players);
+    }
+  }, [myPlayerId, isReady, myPlayerIndex, broadcast, lobbyId]);
+
+  const handleOnlineStart = useCallback(async () => {
+    if (!isHost || !lobbyId) return;
+    const league = selectedLeague === 'ALL' ? 'NBA' : selectedLeague;
+    const pool = await getGamePlayers(league);
+    const fetched = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null;
+    if (!fetched) return;
+    const chosenAthlete: Athlete = {
+      name: fetched.name,
+      team: fetched.team,
+      league: (fetched.league as Exclude<LeagueOption, 'ALL'>) || 'NBA',
+      difficulty: selectedDifficulty,
+    };
+    const chosenImposters = pickUniqueIndices(imposterCount, lobbyPlayers.length);
+
+    setAthlete(chosenAthlete);
+    setImposterIndices(chosenImposters);
+
+    // Build roles map: { [playerIndex]: { role, athlete? } }
+    const roles: Record<number, { role: string; athlete?: Athlete }> = {};
+    lobbyPlayers.forEach(p => {
+      if (chosenImposters.includes(p.player_index)) {
+        roles[p.player_index] = { role: 'imposter' };
+      } else {
+        roles[p.player_index] = { role: 'detective', athlete: chosenAthlete };
+      }
+    });
+
+    await updateLobbyStatus(lobbyId, 'playing');
+    broadcast('game:roles', roles);
+
+    // Host also sets own role
+    const myData = roles[myPlayerIndex];
+    setMyRole(myData.role as 'detective' | 'imposter');
+    setPhase('reveal');
+  }, [isHost, lobbyId, selectedLeague, selectedDifficulty, imposterCount, lobbyPlayers, broadcast, myPlayerIndex]);
+
+  const handleOnlineReveal = useCallback(() => {
+    broadcast('game:reveal', {});
+    const xp = calculateMultiplayerXP(1);
+    setXpEarned(xp);
+    void (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await saveGameResult(user.id, 'imposter', xp, 1);
+        await updateUserXPAndStreak(user.id, xp, false);
+      }
+    })();
+    setPhase('results');
+  }, [broadcast]);
+
+  const handleLeaveOnline = useCallback(async () => {
+    if (lobbyId && myPlayerId) {
+      await leaveLobby(lobbyId, myPlayerId);
+    }
+    // Reset online state
+    setLobbyCode(null);
+    setLobbyId(null);
+    setMyPlayerId(null);
+    setLobby(null);
+    setLobbyPlayers([]);
+    setIsHost(false);
+    setIsReady(false);
+    setMyRole(null);
+    setOnlinePhase('choose');
+    setPhase('setup');
+  }, [lobbyId, myPlayerId]);
+
+  const handleUpdateSettings = useCallback(async (settings: Record<string, unknown>) => {
+    if (!lobbyId) return;
+    await updateLobbySettings(lobbyId, settings);
+    broadcast('lobby:settings', { settings });
+  }, [lobbyId, broadcast]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // REVEAL HANDLERS
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -182,6 +408,126 @@ export default function ImposterScreen({ onBack }: Props) {
   // ─────────────────────────────────────────────────────────────────────────────
 
   if (phase === 'setup') {
+    // ── Online mode: choose, join, or lobby sub-phases ──
+    if (mode === 'online') {
+      if (onlinePhase === 'join') {
+        return (
+          <SafeAreaView style={styles.root}>
+            <JoinLobby
+              onJoin={(joinedLobbyId, joinedPlayerIndex) => {
+                handleJoinSuccess(joinedLobbyId, joinedPlayerIndex);
+              }}
+              onBack={() => setOnlinePhase('choose')}
+            />
+          </SafeAreaView>
+        );
+      }
+
+      if (onlinePhase === 'lobby' && lobby) {
+        return (
+          <SafeAreaView style={styles.root}>
+            <LobbyScreen
+              lobby={lobby}
+              players={lobbyPlayers}
+              presencePlayers={presencePlayers}
+              isHost={isHost}
+              isReady={isReady}
+              onToggleReady={handleToggleReady}
+              onStart={handleOnlineStart}
+              onLeave={handleLeaveOnline}
+              onUpdateSettings={handleUpdateSettings}
+              renderSettings={(settings, isHostView) => (
+                <View style={{ gap: 12 }}>
+                  {/* League selector */}
+                  <Text style={styles.sectionLabel}>LEAGUE</Text>
+                  <View style={styles.pillRow}>
+                    {(['ALL', 'NBA', 'NFL', 'MLB', 'NHL'] as LeagueOption[]).map((lg) => (
+                      <Pressable
+                        key={lg}
+                        style={[styles.settingPill, selectedLeague === lg && styles.settingPillActive]}
+                        onPress={() => {
+                          if (!isHostView) return;
+                          setSelectedLeague(lg);
+                          handleUpdateSettings({ ...settings, league: lg });
+                        }}
+                        disabled={!isHostView}
+                      >
+                        <Text style={[styles.settingPillText, selectedLeague === lg && styles.settingPillTextActive]}>
+                          {lg}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  {/* Difficulty */}
+                  <Text style={styles.sectionLabel}>DIFFICULTY</Text>
+                  <View style={styles.pillRow}>
+                    {(['Normal', 'Legends', 'Ball Knowledge'] as Difficulty[]).map((d) => (
+                      <Pressable
+                        key={d}
+                        style={[styles.settingPill, selectedDifficulty === d && styles.settingPillActive]}
+                        onPress={() => {
+                          if (!isHostView) return;
+                          setSelectedDifficulty(d);
+                          handleUpdateSettings({ ...settings, difficulty: d });
+                        }}
+                        disabled={!isHostView}
+                      >
+                        <Text style={[styles.settingPillText, selectedDifficulty === d && styles.settingPillTextActive]}>
+                          {d}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  {/* Imposter count */}
+                  <Text style={styles.sectionLabel}>IMPOSTERS</Text>
+                  <View style={styles.pillRow}>
+                    {([1, 2] as const).map((n) => (
+                      <Pressable
+                        key={n}
+                        style={[styles.settingPill, imposterCount === n && styles.settingPillActive]}
+                        onPress={() => {
+                          if (!isHostView) return;
+                          setImposterCount(n);
+                          handleUpdateSettings({ ...settings, imposterCount: n });
+                        }}
+                        disabled={!isHostView}
+                      >
+                        <Text style={[styles.settingPillText, imposterCount === n && styles.settingPillTextActive]}>
+                          {n} {n === 1 ? 'Imposter' : 'Imposters'}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
+            />
+          </SafeAreaView>
+        );
+      }
+
+      // onlinePhase === 'choose' — show Create/Join buttons
+      return (
+        <SafeAreaView style={styles.root}>
+          <Zone1>
+            <Text style={styles.zone1Sub}>ONLINE</Text>
+          </Zone1>
+          <View style={[styles.zone2, styles.zone2Center, { paddingBottom: insets.bottom + 24 }]}>
+            <ModeToggle mode={mode} onModeChange={(m) => { setMode(m); setOnlinePhase('choose'); }} />
+            <View style={{ height: 32 }} />
+            <PrimaryButton label="CREATE GAME" onPress={handleCreateGame} disabled={!userId || onlineLoading} />
+            <View style={{ height: 12 }} />
+            <GhostButton label="JOIN GAME" onPress={() => setOnlinePhase('join')} />
+            {!userId && (
+              <Text style={styles.onlineSignInHint}>
+                Sign in to create a game. You can still join as a guest.
+              </Text>
+            )}
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    // ── LOCAL MODE — existing code unchanged ──
     const canStart = playerNames.length >= 3 && playerNames.every((n) => n.trim().length > 0);
 
     return (
@@ -195,6 +541,10 @@ export default function ImposterScreen({ onBack }: Props) {
           contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 24 }]}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Mode Toggle */}
+          <ModeToggle mode={mode} onModeChange={(m) => { setMode(m); setOnlinePhase('choose'); }} />
+          <View style={{ height: 16 }} />
+
           {/* PLAYERS */}
           <View style={styles.playerListHeader}>
             <Text style={styles.sectionLabel}>PLAYERS</Text>
@@ -315,6 +665,40 @@ export default function ImposterScreen({ onBack }: Props) {
   // ─────────────────────────────────────────────────────────────────────────────
 
   if (phase === 'reveal') {
+    // ── Online mode: show only this player's role card directly ──
+    if (mode === 'online') {
+      return (
+        <SafeAreaView style={styles.root}>
+          <Zone1>
+            <Text style={styles.zone1Sub}>YOUR ROLE</Text>
+          </Zone1>
+          <View style={[styles.zone2, styles.zone2Center, { paddingBottom: insets.bottom + 20 }]}>
+            {myRole === 'imposter' ? (
+              <View style={[styles.flipCard, styles.flipCardImposter]}>
+                <Text style={styles.flipCardRoleEmoji}>😈</Text>
+                <Text style={styles.flipCardRoleImposter}>IMPOSTER</Text>
+                <Text style={styles.flipCardAthleteUnknown}>You don't know who the athlete is!</Text>
+                <View style={styles.flipCardDivider} />
+                <Text style={styles.flipCardHint}>Listen carefully. Bluff convincingly.</Text>
+              </View>
+            ) : (
+              <View style={[styles.flipCard, styles.flipCardDetective]}>
+                <Text style={styles.flipCardRoleEmoji}>🕵️</Text>
+                <Text style={styles.flipCardRoleDetective}>DETECTIVE</Text>
+                <Text style={styles.flipCardAthleteName}>{athlete.name}</Text>
+                <Text style={styles.flipCardAthleteTeam}>{athlete.team}</Text>
+                <View style={styles.flipCardDivider} />
+                <Text style={styles.flipCardHint}>Give clues without being too obvious!</Text>
+              </View>
+            )}
+            <View style={{ height: 20 }} />
+            <GhostButton label="READY — START DISCUSSION" onPress={() => setPhase('discussion')} />
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    // ── Local mode: pass-the-phone reveal flow ──
     const currentPlayer = playerNames[currentRevealIndex];
     const isImposter = imposterIndices.includes(currentRevealIndex);
 
@@ -403,7 +787,13 @@ export default function ImposterScreen({ onBack }: Props) {
           </View>
 
           <View style={styles.discussBtnWrapper}>
-            <PrimaryButton label="REVEAL THE IMPOSTER" onPress={handleShowResults} />
+            {mode === 'online' && isHost ? (
+              <PrimaryButton label="REVEAL THE IMPOSTER" onPress={handleOnlineReveal} />
+            ) : mode === 'online' && !isHost ? (
+              <Text style={styles.onlineWaitingHint}>Waiting for the host to reveal...</Text>
+            ) : (
+              <PrimaryButton label="REVEAL THE IMPOSTER" onPress={handleShowResults} />
+            )}
           </View>
         </View>
       </SafeAreaView>
@@ -431,7 +821,13 @@ export default function ImposterScreen({ onBack }: Props) {
           </Text>
           <Text style={styles.imposterRevealEmoji}>😈</Text>
           <Text style={styles.imposterRevealName}>
-            {imposterIndices.map((i) => playerNames[i]).join(' & ')}
+            {mode === 'online'
+              ? imposterIndices.map((i) => {
+                  const p = lobbyPlayers.find(lp => lp.player_index === i);
+                  return p?.display_name ?? `Player ${i + 1}`;
+                }).join(' & ')
+              : imposterIndices.map((i) => playerNames[i]).join(' & ')
+            }
           </Text>
         </View>
 
@@ -451,9 +847,17 @@ export default function ImposterScreen({ onBack }: Props) {
           </View>
         )}
         <View style={{ height: 20 }} />
-        <PrimaryButton label="PLAY AGAIN" onPress={handleStartGame} />
-        <View style={{ height: 12 }} />
-        <GhostButton label="Back to Games" onPress={onBack} />
+        {mode === 'online' ? (
+          <>
+            <GhostButton label="LEAVE LOBBY" onPress={handleLeaveOnline} />
+          </>
+        ) : (
+          <>
+            <PrimaryButton label="PLAY AGAIN" onPress={handleStartGame} />
+            <View style={{ height: 12 }} />
+            <GhostButton label="Back to Games" onPress={onBack} />
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -958,5 +1362,21 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: 13,
     color: '#9A9A9A',
+  },
+
+  // ── Online mode ──
+  onlineSignInHint: {
+    fontFamily: fontFamily.regular,
+    fontSize: 13,
+    color: darkColors.textSecondary,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  onlineWaitingHint: {
+    fontFamily: fontFamily.regular,
+    fontSize: 15,
+    color: darkColors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
