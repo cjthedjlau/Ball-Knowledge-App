@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
 import { calculateMultiplayerXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { supabase } from '../../lib/supabase';
 import { getNormalPlayers, type Player } from '../../lib/playersPool';
@@ -155,6 +155,14 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
   const [isHost, setIsHost] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [onlineLoading, setOnlineLoading] = useState(false);
+
+  // ── Host disconnect detection ──
+  const [hostDisconnected, setHostDisconnected] = useState(false);
+  const [hostDisconnectTimer, setHostDisconnectTimer] = useState(60);
+
+  // ── Drafter disconnect detection (host only) ──
+  const [drafterDisconnected, setDrafterDisconnected] = useState(false);
+  const [drafterDisconnectTimer, setDrafterDisconnectTimer] = useState(30);
 
   // ── Auth state for online mode ──
   const [userId, setUserId] = useState<string | null>(null);
@@ -526,6 +534,82 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
     setPhase('setup');
   }, [lobbyId, myPlayerId]);
 
+  // ── Host disconnect detection ──
+  useEffect(() => {
+    if (mode !== 'online' || isHost || onlinePhase === 'lobby' || onlinePhase === 'choose' || onlinePhase === 'join') return;
+
+    const hostPlayer = lobbyPlayers.find(p => p.is_host);
+    if (!hostPlayer) return;
+
+    const hostPresent = presencePlayers.some(p => p.playerIndex === hostPlayer.player_index);
+
+    if (!hostPresent && !hostDisconnected) {
+      setHostDisconnected(true);
+      setHostDisconnectTimer(60);
+    } else if (hostPresent && hostDisconnected) {
+      setHostDisconnected(false);
+    }
+  }, [mode, isHost, onlinePhase, presencePlayers, lobbyPlayers, hostDisconnected]);
+
+  // Host disconnect countdown timer
+  useEffect(() => {
+    if (!hostDisconnected) return;
+    if (hostDisconnectTimer <= 0) {
+      handleLeaveOnline();
+      return;
+    }
+    const timer = setTimeout(() => setHostDisconnectTimer(t => t - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [hostDisconnected, hostDisconnectTimer, handleLeaveOnline]);
+
+  // ── Active drafter disconnect detection (host auto-skips after 30s) ──
+  useEffect(() => {
+    if (mode !== 'online' || !isHost || !onlineDraftStarted || onlinePhase !== 'draft') return;
+
+    const activeDrafterIndex = activeCurrentPickIndex < activeTotalPicks
+      ? activePickOrder[activeCurrentPickIndex]
+      : -1;
+    if (activeDrafterIndex < 0) return;
+
+    const drafterPresent = presencePlayers.some(p => p.playerIndex === activeDrafterIndex);
+
+    if (!drafterPresent && !drafterDisconnected) {
+      setDrafterDisconnected(true);
+      setDrafterDisconnectTimer(30);
+    } else if (drafterPresent && drafterDisconnected) {
+      setDrafterDisconnected(false);
+    }
+  }, [mode, isHost, onlineDraftStarted, onlinePhase, presencePlayers, activeCurrentPickIndex, activeTotalPicks, activePickOrder, drafterDisconnected]);
+
+  // Drafter disconnect countdown — auto-skip turn when timer expires
+  useEffect(() => {
+    if (!drafterDisconnected) return;
+    if (drafterDisconnectTimer <= 0) {
+      // Auto-skip: advance pick index without making a pick
+      const nextIndex = onlineCurrentPickIndex + 1;
+      const isLastPick = nextIndex >= onlinePickOrder.length;
+
+      setOnlineCurrentPickIndex(nextIndex);
+      broadcast('game:pick', {
+        athleteId: '__skipped__',
+        playerIndex: activePickOrder[onlineCurrentPickIndex] ?? 0,
+        nextPickIndex: nextIndex,
+        isLastPick,
+      });
+
+      if (isLastPick) {
+        broadcast('game:over', {});
+        setOnlinePhase('results');
+        setPhase('results');
+      }
+
+      setDrafterDisconnected(false);
+      return;
+    }
+    const timer = setTimeout(() => setDrafterDisconnectTimer(t => t - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [drafterDisconnected, drafterDisconnectTimer, onlineCurrentPickIndex, onlinePickOrder, activePickOrder, broadcast, onlinePhase]);
+
   const handleUpdateSettings = useCallback(async (settings: Record<string, unknown>) => {
     if (!lobbyId) return;
     await updateLobbySettings(lobbyId, settings);
@@ -548,6 +632,23 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
           </Pressable>
         </View>
       </View>
+    );
+  }
+
+  // ─── HOST DISCONNECT OVERLAY ──────────────────────────────────────────────────
+
+  if (mode === 'online' && hostDisconnected) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <View style={disconnectStyles.overlay}>
+          <Text style={disconnectStyles.title}>Host Disconnected</Text>
+          <Text style={disconnectStyles.subtitle}>Waiting for reconnect...</Text>
+          <Text style={disconnectStyles.timer}>{hostDisconnectTimer}s</Text>
+          <Pressable style={disconnectStyles.leaveBtn} onPress={handleLeaveOnline}>
+            <Text style={disconnectStyles.leaveBtnText}>LEAVE GAME</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -1543,5 +1644,44 @@ const onlineStyles = StyleSheet.create({
     color: darkColors.textSecondary,
     textAlign: 'center',
     letterSpacing: 0.5,
+  },
+});
+
+const disconnectStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: darkColors.background,
+    paddingHorizontal: spacing.lg,
+  },
+  title: {
+    fontFamily: fontFamily.bold,
+    fontSize: 24,
+    color: colors.white,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: darkColors.textSecondary,
+    marginBottom: spacing['2xl'],
+  },
+  timer: {
+    fontFamily: fontFamily.bold,
+    fontSize: 48,
+    color: colors.brand,
+    marginBottom: spacing['3xl'],
+  },
+  leaveBtn: {
+    backgroundColor: darkColors.surfaceElevated,
+    paddingHorizontal: spacing['3xl'],
+    paddingVertical: spacing.lg,
+    borderRadius: radius.secondary,
+  },
+  leaveBtnText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: colors.brand,
   },
 });

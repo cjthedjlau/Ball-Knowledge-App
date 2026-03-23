@@ -415,6 +415,10 @@ export default function WavelengthScreen({ onBack }: Props) {
   const [onlineLoading, setOnlineLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState('');
+
+  // ── Host disconnect detection ──
+  const [hostDisconnected, setHostDisconnected] = useState(false);
+  const [hostDisconnectTimer, setHostDisconnectTimer] = useState(60);
   // Online game state
   const [onlineClue, setOnlineClue] = useState('');
   const [allGuesses, setAllGuesses] = useState<Record<number, number>>({});
@@ -712,6 +716,34 @@ export default function WavelengthScreen({ onBack }: Props) {
     setPhase('lobby');
   }, [lobbyId, myPlayerId]);
 
+  // ── Host disconnect detection ──
+  useEffect(() => {
+    if (mode !== 'online' || isHost || onlinePhase === 'lobby' || onlinePhase === 'choose' || onlinePhase === 'join') return;
+
+    const hostPlayer = lobbyPlayers.find(p => p.is_host);
+    if (!hostPlayer) return;
+
+    const hostPresent = presencePlayers.some(p => p.playerIndex === hostPlayer.player_index);
+
+    if (!hostPresent && !hostDisconnected) {
+      setHostDisconnected(true);
+      setHostDisconnectTimer(60);
+    } else if (hostPresent && hostDisconnected) {
+      setHostDisconnected(false);
+    }
+  }, [mode, isHost, onlinePhase, presencePlayers, lobbyPlayers, hostDisconnected]);
+
+  // Host disconnect countdown timer
+  useEffect(() => {
+    if (!hostDisconnected) return;
+    if (hostDisconnectTimer <= 0) {
+      handleLeaveOnline();
+      return;
+    }
+    const timer = setTimeout(() => setHostDisconnectTimer(t => t - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [hostDisconnected, hostDisconnectTimer, handleLeaveOnline]);
+
   const handleUpdateSettings = useCallback(async (settings: Record<string, unknown>) => {
     if (!lobbyId) return;
     await updateLobbySettings(lobbyId, settings);
@@ -833,6 +865,23 @@ export default function WavelengthScreen({ onBack }: Props) {
             )}
           </View>
         </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── HOST DISCONNECT OVERLAY ──────────────────────────────────────────────
+
+  if (mode === 'online' && hostDisconnected) {
+    return (
+      <SafeAreaView edges={['top']} style={styles.root}>
+        <View style={disconnectStyles.overlay}>
+          <Text style={disconnectStyles.title}>Host Disconnected</Text>
+          <Text style={disconnectStyles.subtitle}>Waiting for reconnect...</Text>
+          <Text style={disconnectStyles.timer}>{hostDisconnectTimer}s</Text>
+          <Pressable style={disconnectStyles.leaveBtn} onPress={handleLeaveOnline}>
+            <Text style={disconnectStyles.leaveBtnText}>LEAVE GAME</Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
     );
   }
@@ -2148,5 +2197,44 @@ const onlineStyles = StyleSheet.create({
     color: darkColors.textSecondary,
     textAlign: 'center',
     paddingVertical: spacing.md,
+  },
+});
+
+const disconnectStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: darkColors.background,
+    paddingHorizontal: spacing.lg,
+  },
+  title: {
+    fontFamily: fontFamily.bold,
+    fontSize: 24,
+    color: colors.white,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: darkColors.textSecondary,
+    marginBottom: spacing['2xl'],
+  },
+  timer: {
+    fontFamily: fontFamily.bold,
+    fontSize: 48,
+    color: colors.brand,
+    marginBottom: spacing['3xl'],
+  },
+  leaveBtn: {
+    backgroundColor: darkColors.surfaceElevated,
+    paddingHorizontal: spacing['3xl'],
+    paddingVertical: spacing.lg,
+    borderRadius: radius.secondary,
+  },
+  leaveBtnText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: colors.brand,
   },
 });

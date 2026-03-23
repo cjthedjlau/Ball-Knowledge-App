@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
 import { calculateMultiplayerXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { supabase } from '../../lib/supabase';
 import { getGamePlayers, type Player } from '../../lib/playersPool';
@@ -111,6 +111,10 @@ export default function ImposterScreen({ onBack }: Props) {
   const [isReady, setIsReady] = useState(false);
   const [myRole, setMyRole] = useState<'detective' | 'imposter' | null>(null);
   const [onlineLoading, setOnlineLoading] = useState(false);
+
+  // ── Host disconnect detection ──
+  const [hostDisconnected, setHostDisconnected] = useState(false);
+  const [hostDisconnectTimer, setHostDisconnectTimer] = useState(60);
 
   // ── Auth state for online mode ──
   const [userId, setUserId] = useState<string | null>(null);
@@ -363,6 +367,34 @@ export default function ImposterScreen({ onBack }: Props) {
     setPhase('setup');
   }, [lobbyId, myPlayerId]);
 
+  // ── Host disconnect detection ──
+  useEffect(() => {
+    if (mode !== 'online' || isHost || onlinePhase === 'lobby' || onlinePhase === 'choose' || onlinePhase === 'join') return;
+
+    const hostPlayer = lobbyPlayers.find(p => p.is_host);
+    if (!hostPlayer) return;
+
+    const hostPresent = presencePlayers.some(p => p.playerIndex === hostPlayer.player_index);
+
+    if (!hostPresent && !hostDisconnected) {
+      setHostDisconnected(true);
+      setHostDisconnectTimer(60);
+    } else if (hostPresent && hostDisconnected) {
+      setHostDisconnected(false);
+    }
+  }, [mode, isHost, onlinePhase, presencePlayers, lobbyPlayers, hostDisconnected]);
+
+  // Host disconnect countdown timer
+  useEffect(() => {
+    if (!hostDisconnected) return;
+    if (hostDisconnectTimer <= 0) {
+      handleLeaveOnline();
+      return;
+    }
+    const timer = setTimeout(() => setHostDisconnectTimer(t => t - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [hostDisconnected, hostDisconnectTimer, handleLeaveOnline]);
+
   const handleUpdateSettings = useCallback(async (settings: Record<string, unknown>) => {
     if (!lobbyId) return;
     await updateLobbySettings(lobbyId, settings);
@@ -400,6 +432,25 @@ export default function ImposterScreen({ onBack }: Props) {
         <Text style={styles.gameTitle}>SPORTS IMPOSTER</Text>
         {children}
       </View>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // HOST DISCONNECT OVERLAY
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  if (mode === 'online' && hostDisconnected) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <View style={disconnectStyles.overlay}>
+          <Text style={disconnectStyles.title}>Host Disconnected</Text>
+          <Text style={disconnectStyles.subtitle}>Waiting for reconnect...</Text>
+          <Text style={disconnectStyles.timer}>{hostDisconnectTimer}s</Text>
+          <Pressable style={disconnectStyles.leaveBtn} onPress={handleLeaveOnline}>
+            <Text style={disconnectStyles.leaveBtnText}>LEAVE GAME</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -1378,5 +1429,44 @@ const styles = StyleSheet.create({
     color: darkColors.textSecondary,
     textAlign: 'center',
     marginTop: 8,
+  },
+});
+
+const disconnectStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: darkColors.background,
+    paddingHorizontal: spacing.lg,
+  },
+  title: {
+    fontFamily: fontFamily.bold,
+    fontSize: 24,
+    color: colors.white,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: darkColors.textSecondary,
+    marginBottom: spacing['2xl'],
+  },
+  timer: {
+    fontFamily: fontFamily.bold,
+    fontSize: 48,
+    color: colors.brand,
+    marginBottom: spacing['3xl'],
+  },
+  leaveBtn: {
+    backgroundColor: darkColors.surfaceElevated,
+    paddingHorizontal: spacing['3xl'],
+    paddingVertical: spacing.lg,
+    borderRadius: radius.secondary,
+  },
+  leaveBtnText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: colors.brand,
   },
 });
