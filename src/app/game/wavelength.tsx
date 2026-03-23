@@ -22,6 +22,23 @@ import GhostButton from '../../screens/components/ui/GhostButton';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import type { Tab } from '../components/ui/BottomNav';
 
+// ── Online multiplayer imports ──
+import {
+  createLobby,
+  joinLobby,
+  leaveLobby,
+  getLobbyPlayers,
+  updateLobbySettings,
+  updateLobbyStatus,
+  togglePlayerReady,
+  type GameLobby,
+  type LobbyPlayer,
+} from '../../lib/multiplayer';
+import { useLobby } from '../../hooks/useLobby';
+import { ModeToggle } from '../../components/multiplayer/ModeToggle';
+import { JoinLobby } from '../../components/multiplayer/JoinLobby';
+import { LobbyScreen } from '../../components/multiplayer/LobbyScreen';
+
 // ---------------------------------------------------------------------------
 // Data & constants
 // ---------------------------------------------------------------------------
@@ -384,6 +401,27 @@ export default function WavelengthScreen({ onBack }: Props) {
   const [gameOver, setGameOver] = useState(false);
   const [xpEarned, setXpEarned] = useState<number | null>(null);
 
+  // ── Online mode state ──
+  const [mode, setMode] = useState<'local' | 'online'>('local');
+  const [onlinePhase, setOnlinePhase] = useState<'choose' | 'join' | 'lobby' | 'playing'>('choose');
+  const [lobbyCode, setLobbyCode] = useState<string | null>(null);
+  const [lobbyId, setLobbyId] = useState<string | null>(null);
+  const [myPlayerIndex, setMyPlayerIndex] = useState(0);
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const [lobby, setLobby] = useState<GameLobby | null>(null);
+  const [lobbyPlayers, setLobbyPlayers] = useState<LobbyPlayer[]>([]);
+  const [isHost, setIsHost] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+  const [onlineLoading, setOnlineLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState('');
+  // Online game state
+  const [onlineClue, setOnlineClue] = useState('');
+  const [allGuesses, setAllGuesses] = useState<Record<number, number>>({});
+  const [waitingForClue, setWaitingForClue] = useState(false);
+  const [waitingForGuesses, setWaitingForGuesses] = useState(false);
+  const [myGuessLocked, setMyGuessLocked] = useState(false);
+
   // ── Player names for clue suggestions ──
   const [selectedLeague, setSelectedLeague] = useState('NBA');
   const [clueOptions, setClueOptions] = useState<string[]>([]);
@@ -400,6 +438,87 @@ export default function WavelengthScreen({ onBack }: Props) {
       setClueOptions([...players].sort(() => Math.random() - 0.5).slice(0, FETCH_COUNT).map((p) => p.name));
     });
   }, []);
+
+  // ── Auth for online mode ──
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setUserId(user.id);
+        setDisplayName(user.user_metadata?.display_name || user.email?.split('@')[0] || 'Player');
+      }
+    });
+  }, []);
+
+  // ── useLobby hook for realtime ──
+  const { presencePlayers, isConnected, broadcast, onEvent } = useLobby({
+    code: lobbyCode,
+    displayName,
+    userId,
+    playerIndex: myPlayerIndex,
+  });
+
+  // ── Online event listeners ──
+  useEffect(() => {
+    if (mode !== 'online' || !lobbyCode) return;
+
+    // Host broadcasts game config (round data)
+    const unsubConfig = onEvent('game:config', (payload: any) => {
+      if (payload.rounds) setRounds(payload.rounds);
+      setPhase('setup');
+    });
+
+    // Clue giver broadcasts clue
+    const unsubClue = onEvent('game:clue', (payload: any) => {
+      setOnlineClue(payload.clue);
+      setWaitingForClue(false);
+      setDialPosition(50);
+      setMyGuessLocked(false);
+      setPhase('guess');
+    });
+
+    // Players broadcast their guesses
+    const unsubGuess = onEvent('game:guess', (payload: any) => {
+      setAllGuesses(prev => ({ ...prev, [payload.playerIndex]: payload.position }));
+    });
+
+    // Host broadcasts reveal
+    const unsubReveal = onEvent('game:reveal', (payload: any) => {
+      if (payload.allGuesses) setAllGuesses(payload.allGuesses);
+      setPhase('reveal');
+    });
+
+    // Host broadcasts next round
+    const unsubNext = onEvent('game:next_round', (payload: any) => {
+      setRoundIndex(payload.roundIndex);
+      setClueText('');
+      setOnlineClue('');
+      setDialPosition(50);
+      setAllGuesses({});
+      setMyGuessLocked(false);
+      setWaitingForClue(false);
+      setPhase('setup');
+    });
+
+    // Host broadcasts game over
+    const unsubGameOver = onEvent('game:over', () => {
+      setGameOver(true);
+    });
+
+    const unsubSettings = onEvent('lobby:settings', (payload: any) => {
+      if (payload.settings) {
+        setLobby(prev => prev ? { ...prev, settings: payload.settings } : prev);
+        if (payload.settings.league) {
+          setSelectedLeague(payload.settings.league);
+          handleLeagueChange(payload.settings.league);
+        }
+      }
+    });
+
+    return () => {
+      unsubConfig(); unsubClue(); unsubGuess(); unsubReveal();
+      unsubNext(); unsubGameOver(); unsubSettings();
+    };
+  }, [mode, lobbyCode, onEvent]);
 
   const round = rounds[roundIndex];
   const clueGiverIndex = roundIndex % players.length;
@@ -430,6 +549,174 @@ export default function WavelengthScreen({ onBack }: Props) {
     setGameOver(false);
     setPhase('setup');
   }
+
+  // ── Online clue giver index (based on lobby players) ──
+  const onlineClueGiverIndex = lobbyPlayers.length > 0
+    ? roundIndex % lobbyPlayers.length
+    : 0;
+  const isOnlineClueGiver = mode === 'online' && myPlayerIndex === (lobbyPlayers[onlineClueGiverIndex]?.player_index ?? -1);
+  const onlineClueGiverName = lobbyPlayers[onlineClueGiverIndex]?.display_name || `Player ${onlineClueGiverIndex + 1}`;
+
+  // ── Online handlers ──────────────────────────────────────────────────────
+
+  const handleCreateGame = useCallback(async () => {
+    if (!userId) return;
+    setOnlineLoading(true);
+    try {
+      const { code, lobbyId: id } = await createLobby('wavelength', userId, displayName);
+      setLobbyCode(code);
+      setLobbyId(id);
+      setMyPlayerIndex(0);
+      setIsHost(true);
+      setOnlinePhase('lobby');
+      const lPlayers = await getLobbyPlayers(id);
+      setLobbyPlayers(lPlayers);
+      setMyPlayerId(lPlayers[0]?.id || null);
+      setLobby({
+        id,
+        code,
+        game_type: 'wavelength',
+        host_user_id: userId,
+        status: 'waiting',
+        settings: {},
+        game_state: {},
+      });
+    } catch (e: any) {
+      console.error('Create lobby failed:', e.message);
+    } finally {
+      setOnlineLoading(false);
+    }
+  }, [userId, displayName]);
+
+  const handleJoinSuccess = useCallback(async (joinedLobbyId: string, joinedPlayerIndex: number) => {
+    setLobbyId(joinedLobbyId);
+    setMyPlayerIndex(joinedPlayerIndex);
+    setOnlinePhase('lobby');
+    const lPlayers = await getLobbyPlayers(joinedLobbyId);
+    setLobbyPlayers(lPlayers);
+    const me = lPlayers.find(p => p.player_index === joinedPlayerIndex);
+    setMyPlayerId(me?.id || null);
+    if (lPlayers.length > 0) {
+      setLobby({
+        id: joinedLobbyId,
+        code: lobbyCode || '',
+        game_type: 'wavelength',
+        host_user_id: '',
+        status: 'waiting',
+        settings: {},
+        game_state: {},
+      });
+    }
+  }, [lobbyCode]);
+
+  const handleToggleReady = useCallback(async () => {
+    if (!myPlayerId) return;
+    const newReady = !isReady;
+    setIsReady(newReady);
+    await togglePlayerReady(myPlayerId, newReady);
+    broadcast('player:ready', { playerIndex: myPlayerIndex, isReady: newReady });
+    if (lobbyId) {
+      const lPlayers = await getLobbyPlayers(lobbyId);
+      setLobbyPlayers(lPlayers);
+    }
+  }, [myPlayerId, isReady, myPlayerIndex, broadcast, lobbyId]);
+
+  const handleOnlineStart = useCallback(async () => {
+    if (!isHost || !lobbyId) return;
+    const roundData = getRoundPrompts(selectedLeague);
+    setRounds(roundData);
+    setRoundIndex(0);
+    setRoundScores([]);
+    setGameOver(false);
+    setAllGuesses({});
+    setMyGuessLocked(false);
+    setOnlineClue('');
+    setClueText('');
+    await updateLobbyStatus(lobbyId, 'playing');
+    broadcast('game:config', { rounds: roundData });
+    setPhase('setup');
+  }, [isHost, lobbyId, selectedLeague, broadcast]);
+
+  const handleOnlineClue = useCallback(() => {
+    if (!clueText.trim()) return;
+    broadcast('game:clue', { clue: clueText.trim() });
+    // Clue giver also transitions to guess phase
+    setOnlineClue(clueText.trim());
+    setDialPosition(50);
+    setMyGuessLocked(false);
+    setPhase('guess');
+  }, [clueText, broadcast]);
+
+  const handleOnlineLockGuess = useCallback(() => {
+    setMyGuessLocked(true);
+    broadcast('game:guess', { playerIndex: myPlayerIndex, position: Math.round(dialPosition) });
+    setAllGuesses(prev => ({ ...prev, [myPlayerIndex]: Math.round(dialPosition) }));
+  }, [myPlayerIndex, dialPosition, broadcast]);
+
+  const handleOnlineReveal = useCallback(() => {
+    broadcast('game:reveal', { allGuesses });
+    setPhase('reveal');
+  }, [broadcast, allGuesses]);
+
+  const handleOnlineNextRound = useCallback(() => {
+    const score = calcScore(dialPosition, round.targetPosition);
+    const newScores = [...roundScores, score];
+    setRoundScores(newScores);
+
+    if (roundIndex >= rounds.length - 1) {
+      setGameOver(true);
+      broadcast('game:over', {});
+      const xp = calculateMultiplayerXP(newScores.length);
+      setXpEarned(xp);
+      void (async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await saveGameResult(user.id, 'wavelength', xp, newScores.reduce((a, b) => a + b, 0));
+          await updateUserXPAndStreak(user.id, xp, false);
+        }
+      })();
+    } else {
+      const nextRound = roundIndex + 1;
+      setRoundIndex(nextRound);
+      setClueText('');
+      setOnlineClue('');
+      setDialPosition(50);
+      setAllGuesses({});
+      setMyGuessLocked(false);
+      setWaitingForClue(false);
+      broadcast('game:next_round', { roundIndex: nextRound });
+      setPhase('setup');
+    }
+  }, [roundIndex, rounds.length, roundScores, dialPosition, round, broadcast]);
+
+  const handleLeaveOnline = useCallback(async () => {
+    if (lobbyId && myPlayerId) {
+      await leaveLobby(lobbyId, myPlayerId);
+    }
+    setLobbyCode(null);
+    setLobbyId(null);
+    setMyPlayerId(null);
+    setLobby(null);
+    setLobbyPlayers([]);
+    setIsHost(false);
+    setIsReady(false);
+    setOnlinePhase('choose');
+    setOnlineClue('');
+    setAllGuesses({});
+    setMyGuessLocked(false);
+    setWaitingForClue(false);
+    setWaitingForGuesses(false);
+    setRoundIndex(0);
+    setRoundScores([]);
+    setGameOver(false);
+    setPhase('lobby');
+  }, [lobbyId, myPlayerId]);
+
+  const handleUpdateSettings = useCallback(async (settings: Record<string, unknown>) => {
+    if (!lobbyId) return;
+    await updateLobbySettings(lobbyId, settings);
+    broadcast('lobby:settings', { settings });
+  }, [lobbyId, broadcast]);
 
   // ── Round handlers ────────────────────────────────────────────────────────
 
@@ -534,8 +821,16 @@ export default function WavelengthScreen({ onBack }: Props) {
 
             <View style={styles.divider} />
 
-            <PrimaryButton label="PLAY AGAIN" onPress={handlePlayAgain} />
-            <GhostButton label="BACK TO GAMES" onPress={onBack} />
+            {mode === 'online' ? (
+              <>
+                <GhostButton label="LEAVE LOBBY" onPress={handleLeaveOnline} />
+              </>
+            ) : (
+              <>
+                <PrimaryButton label="PLAY AGAIN" onPress={handlePlayAgain} />
+                <GhostButton label="BACK TO GAMES" onPress={onBack} />
+              </>
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -545,6 +840,91 @@ export default function WavelengthScreen({ onBack }: Props) {
   // ── LOBBY ─────────────────────────────────────────────────────────────────
 
   if (phase === 'lobby') {
+    // ── Online mode: choose, join, or lobby sub-phases ──
+    if (mode === 'online') {
+      if (onlinePhase === 'join') {
+        return (
+          <SafeAreaView edges={['top']} style={styles.root}>
+            <JoinLobby
+              onJoin={(joinedLobbyId, joinedPlayerIndex) => {
+                handleJoinSuccess(joinedLobbyId, joinedPlayerIndex);
+              }}
+              onBack={() => setOnlinePhase('choose')}
+            />
+          </SafeAreaView>
+        );
+      }
+
+      if (onlinePhase === 'lobby' && lobby) {
+        return (
+          <SafeAreaView edges={['top']} style={styles.root}>
+            <LobbyScreen
+              lobby={lobby}
+              players={lobbyPlayers}
+              presencePlayers={presencePlayers}
+              isHost={isHost}
+              isReady={isReady}
+              onToggleReady={handleToggleReady}
+              onStart={handleOnlineStart}
+              onLeave={handleLeaveOnline}
+              onUpdateSettings={handleUpdateSettings}
+              renderSettings={(settings, isHostView) => (
+                <View style={{ gap: 12 }}>
+                  <Text style={styles.cardHeaderText}>LEAGUE</Text>
+                  <View style={onlineStyles.pillRow}>
+                    {(['NBA', 'NFL', 'MLB', 'NHL'] as string[]).map((lg) => (
+                      <Pressable
+                        key={lg}
+                        style={[onlineStyles.settingPill, selectedLeague === lg && onlineStyles.settingPillActive]}
+                        onPress={() => {
+                          if (!isHostView) return;
+                          setSelectedLeague(lg);
+                          handleLeagueChange(lg);
+                          handleUpdateSettings({ ...settings, league: lg });
+                        }}
+                        disabled={!isHostView}
+                      >
+                        <Text style={[onlineStyles.settingPillText, selectedLeague === lg && onlineStyles.settingPillTextActive]}>
+                          {lg}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
+            />
+          </SafeAreaView>
+        );
+      }
+
+      // onlinePhase === 'choose' — show Create/Join buttons
+      return (
+        <SafeAreaView edges={['top']} style={styles.root}>
+          <View style={styles.zone1}>
+            <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
+              <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+            </Pressable>
+            <Text style={styles.zone1Title}>WAVELENGTH</Text>
+            <Text style={styles.zone1Sub}>ONLINE</Text>
+          </View>
+
+          <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} showsVerticalScrollIndicator={false}>
+            <ModeToggle mode={mode} onModeChange={(m) => { setMode(m); setOnlinePhase('choose'); }} />
+            <View style={{ height: 32 }} />
+            <PrimaryButton label="CREATE GAME" onPress={handleCreateGame} disabled={!userId || onlineLoading} />
+            <View style={{ height: 12 }} />
+            <GhostButton label="JOIN GAME" onPress={() => setOnlinePhase('join')} />
+            {!userId && (
+              <Text style={onlineStyles.signInHint}>
+                Sign in to create a game. You can still join as a guest.
+              </Text>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      );
+    }
+
+    // ── Local mode: existing lobby unchanged ──
     return (
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <SafeAreaView edges={['top']} style={styles.root}>
@@ -557,6 +937,9 @@ export default function WavelengthScreen({ onBack }: Props) {
           </View>
 
           <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {/* Mode Toggle */}
+            <ModeToggle mode={mode} onModeChange={(m) => { setMode(m); setOnlinePhase('choose'); }} />
+
             {/* League Switcher */}
             <LeagueSwitcher selected={selectedLeague} onChange={handleLeagueChange} />
 
@@ -613,6 +996,124 @@ export default function WavelengthScreen({ onBack }: Props) {
   // ── SETUP — pass device to clue-giver ─────────────────────────────────────
 
   if (phase === 'setup') {
+    // ── Online mode: clue giver sees target + input; others wait ──
+    if (mode === 'online') {
+      if (isOnlineClueGiver) {
+        // I am the clue giver — show target and clue input
+        return (
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <SafeAreaView edges={['top']} style={styles.root}>
+              <View style={styles.zone1}>
+                <Pressable onPress={handleLeaveOnline} style={styles.backBtn} hitSlop={8}>
+                  <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+                </Pressable>
+                <Text style={styles.zone1Title}>WAVELENGTH</Text>
+                <Text style={styles.zone1Round}>ROUND {roundIndex + 1} OF {rounds.length}</Text>
+                <View style={styles.dotsRow}>
+                  <RoundProgressDots total={rounds.length} current={roundIndex + 1} />
+                </View>
+              </View>
+
+              <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                <View style={styles.phaseTag}>
+                  <Text style={styles.phaseTagText}>YOU ARE THE CLUE-GIVER</Text>
+                </View>
+
+                <Text style={styles.instruction}>
+                  The target is highlighted on the spectrum below. Name an athlete who represents that position.
+                </Text>
+
+                <View style={styles.dialCard}>
+                  <Dial
+                    position={50}
+                    targetPosition={round.targetPosition}
+                    showTarget
+                    interactive={false}
+                    leftLabel={round.leftLabel}
+                    rightLabel={round.rightLabel}
+                  />
+                </View>
+
+                <View style={styles.card}>
+                  <Text style={styles.inputLabel}>YOUR CLUE (athlete name)</Text>
+                  <TextInput
+                    style={styles.clueInput}
+                    value={clueText}
+                    onChangeText={setClueText}
+                    placeholder="e.g. LeBron James..."
+                    placeholderTextColor={darkColors.textSecondary}
+                    autoCapitalize="words"
+                    returnKeyType="done"
+                    onSubmitEditing={handleOnlineClue}
+                  />
+
+                  {clueOptions.length > 0 && (
+                    <View style={styles.chipsWrap}>
+                      <Text style={styles.inputLabel}>OR TAP A PLAYER</Text>
+                      <View style={styles.chipsRow}>
+                        {clueOptions.map((name) => (
+                          <Pressable
+                            key={name}
+                            onPress={() => setClueText(name)}
+                            style={[styles.chip, clueText === name && styles.chipSelected]}
+                          >
+                            <Text
+                              style={[styles.chipText, clueText === name && styles.chipTextSelected]}
+                              numberOfLines={1}
+                            >
+                              {name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  <PrimaryButton
+                    label="GIVE CLUE"
+                    onPress={handleOnlineClue}
+                    disabled={!clueText.trim()}
+                  />
+                </View>
+              </ScrollView>
+            </SafeAreaView>
+          </KeyboardAvoidingView>
+        );
+      }
+
+      // I am NOT the clue giver — waiting screen
+      return (
+        <SafeAreaView edges={['top']} style={styles.root}>
+          <View style={styles.zone1}>
+            <Pressable onPress={handleLeaveOnline} style={styles.backBtn} hitSlop={8}>
+              <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+            </Pressable>
+            <Text style={styles.zone1Title}>WAVELENGTH</Text>
+            <Text style={styles.zone1Round}>ROUND {roundIndex + 1} OF {rounds.length}</Text>
+            <View style={styles.dotsRow}>
+              <RoundProgressDots total={rounds.length} current={roundIndex + 1} />
+            </View>
+          </View>
+
+          <View style={styles.zone2}>
+            <View style={styles.passInterstitial}>
+              <View style={styles.passAvatarRing}>
+                <Text style={styles.passAvatarInitial}>
+                  {onlineClueGiverName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.passLabel}>WAITING FOR</Text>
+              <Text style={styles.passName}>{onlineClueGiverName}</Text>
+              <Text style={styles.passCaption}>
+                The clue-giver is looking at the target and choosing a clue...
+              </Text>
+            </View>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    // ── Local mode: existing pass-the-phone flow ──
     return (
       <SafeAreaView edges={['top']} style={styles.root}>
         <View style={styles.zone1}>
@@ -743,6 +1244,77 @@ export default function WavelengthScreen({ onBack }: Props) {
   // ── GUESS — guessers interact with dial ───────────────────────────────────
 
   if (phase === 'guess') {
+    // ── Online mode: each player drags their own needle ──
+    if (mode === 'online') {
+      const lockedCount = Object.keys(allGuesses).length;
+      const totalGuessers = lobbyPlayers.length;
+      const allLocked = lockedCount >= totalGuessers;
+
+      return (
+        <SafeAreaView edges={['top']} style={styles.root}>
+          <View style={styles.zone1}>
+            <Pressable onPress={handleLeaveOnline} style={styles.backBtn} hitSlop={8}>
+              <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+            </Pressable>
+            <Text style={styles.zone1Title}>WAVELENGTH</Text>
+            <Text style={styles.zone1Round}>ROUND {roundIndex + 1} OF {rounds.length}</Text>
+            <View style={styles.dotsRow}>
+              <RoundProgressDots total={rounds.length} current={roundIndex + 1} />
+            </View>
+          </View>
+
+          <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} showsVerticalScrollIndicator={false}>
+            <View style={styles.phaseTag}>
+              <Text style={styles.phaseTagText}>DRAG YOUR GUESS</Text>
+            </View>
+
+            {/* Clue display */}
+            <View style={styles.clueDisplay}>
+              <Text style={styles.clueDisplayMeta}>THE CLUE</Text>
+              <Text style={styles.clueDisplayText}>{onlineClue}</Text>
+            </View>
+
+            {/* Interactive dial */}
+            <View style={styles.dialCard}>
+              <Dial
+                position={dialPosition}
+                showTarget={false}
+                interactive={!myGuessLocked}
+                leftLabel={round.leftLabel}
+                rightLabel={round.rightLabel}
+                onPositionChange={setDialPosition}
+              />
+            </View>
+
+            <Text style={styles.posDisplay}>{Math.round(dialPosition)}%</Text>
+
+            {/* Lock status */}
+            <Text style={onlineStyles.lockStatus}>
+              {lockedCount}/{totalGuessers} players locked in
+            </Text>
+
+            <View style={styles.actionRow}>
+              {myGuessLocked ? (
+                <View style={onlineStyles.lockedBadge}>
+                  <Text style={onlineStyles.lockedBadgeText}>LOCKED IN</Text>
+                </View>
+              ) : (
+                <PrimaryButton label="LOCK IN GUESS" onPress={handleOnlineLockGuess} />
+              )}
+            </View>
+
+            {/* Host can trigger reveal once all guesses are in */}
+            {isHost && allLocked && (
+              <View style={{ marginTop: spacing.md }}>
+                <PrimaryButton label="REVEAL RESULTS" onPress={handleOnlineReveal} />
+              </View>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      );
+    }
+
+    // ── Local mode: existing guess flow ──
     return (
       <SafeAreaView edges={['top']} style={styles.root}>
         <View style={styles.zone1}>
@@ -793,6 +1365,105 @@ export default function WavelengthScreen({ onBack }: Props) {
 
   if (phase === 'reveal') {
     const score = calcScore(dialPosition, round.targetPosition);
+
+    // ── Online mode: show all players' guesses ──
+    if (mode === 'online') {
+      return (
+        <SafeAreaView edges={['top']} style={styles.root}>
+          <View style={styles.zone1}>
+            <Pressable onPress={handleLeaveOnline} style={styles.backBtn} hitSlop={8}>
+              <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+            </Pressable>
+            <Text style={styles.zone1Title}>WAVELENGTH</Text>
+            <Text style={styles.zone1Round}>ROUND {roundIndex + 1} OF {rounds.length}</Text>
+            <View style={styles.dotsRow}>
+              <RoundProgressDots total={rounds.length} current={roundIndex + 1} />
+            </View>
+          </View>
+
+          <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} showsVerticalScrollIndicator={false}>
+            {/* Score badge for my guess */}
+            <View style={[
+              styles.scoreBadge,
+              score === 4 && styles.scoreBadgePerfect,
+              score <= 1 && styles.scoreBadgeLow,
+            ]}>
+              <Text style={[styles.scoreBadgePts, score === 4 && { color: colors.accentGreen }]}>
+                +{score} PTS
+              </Text>
+              <Text style={styles.scoreBadgeLabel}>{scoreLabel(score)}</Text>
+            </View>
+
+            {/* Dial with target */}
+            <View style={styles.dialCard}>
+              <Dial
+                position={dialPosition}
+                targetPosition={round.targetPosition}
+                showTarget
+                interactive={false}
+                leftLabel={round.leftLabel}
+                rightLabel={round.rightLabel}
+              />
+            </View>
+
+            {/* Legend */}
+            <View style={styles.legendRow}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: colors.brand }]} />
+                <Text style={styles.legendText}>Your guess ({Math.round(dialPosition)})</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: colors.accentGreen }]} />
+                <Text style={styles.legendText}>Target ({round.targetPosition})</Text>
+              </View>
+            </View>
+
+            {/* All players' guesses */}
+            <View style={styles.card}>
+              <Text style={styles.cardHeaderText}>ALL GUESSES</Text>
+              {lobbyPlayers.map((p) => {
+                const guess = allGuesses[p.player_index];
+                const pScore = guess != null ? calcScore(guess, round.targetPosition) : 0;
+                return (
+                  <View key={p.id} style={styles.resultRow}>
+                    <View style={styles.resultRowLeft}>
+                      <Text style={styles.resultRoundLabel}>
+                        {p.display_name}{p.player_index === myPlayerIndex ? ' (You)' : ''}
+                      </Text>
+                      <Text style={styles.resultRoundSpec}>
+                        Guess: {guess != null ? guess : '—'}
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.resultScorePill,
+                      pScore === 4 && styles.pillPerfect,
+                      pScore <= 1 && styles.pillLow,
+                    ]}>
+                      <Text style={styles.resultScorePillText}>{pScore} pt{pScore !== 1 ? 's' : ''}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+
+            <View style={styles.actionRow}>
+              {isHost ? (
+                <PrimaryButton
+                  label={roundIndex >= rounds.length - 1 ? 'SEE RESULTS' : 'NEXT ROUND'}
+                  onPress={handleOnlineNextRound}
+                />
+              ) : (
+                <Text style={onlineStyles.waitingHint}>
+                  {roundIndex >= rounds.length - 1 ? 'Waiting for host to show results...' : 'Waiting for host to start next round...'}
+                </Text>
+              )}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      );
+    }
+
+    // ── Local mode: existing reveal flow ──
     return (
       <SafeAreaView edges={['top']} style={styles.root}>
         <View style={styles.zone1}>
@@ -1408,5 +2079,74 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: 13,
     color: '#9A9A9A',
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Online mode styles
+// ---------------------------------------------------------------------------
+
+const onlineStyles = StyleSheet.create({
+  pillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  settingPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.chip,
+    backgroundColor: darkColors.background,
+    borderWidth: 1,
+    borderColor: darkColors.border,
+  },
+  settingPillActive: {
+    backgroundColor: colors.brandAlpha15,
+    borderColor: colors.brand,
+  },
+  settingPillText: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 13,
+    color: darkColors.textSecondary,
+  },
+  settingPillTextActive: {
+    color: colors.brand,
+  },
+  signInHint: {
+    fontFamily: fontFamily.regular,
+    fontSize: 13,
+    color: darkColors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
+  lockStatus: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 14,
+    color: darkColors.textSecondary,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  lockedBadge: {
+    backgroundColor: 'rgba(0,200,151,0.15)',
+    borderRadius: radius.chip,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  lockedBadgeText: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 15,
+    color: colors.accentGreen,
+    letterSpacing: 1.5,
+  },
+  waitingHint: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 14,
+    color: darkColors.textSecondary,
+    textAlign: 'center',
+    paddingVertical: spacing.md,
   },
 });
