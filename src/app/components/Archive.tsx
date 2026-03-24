@@ -56,10 +56,20 @@ const GAME_TYPES = [
   { id: 'auto-complete', gameType: 'auto-complete', label: 'AUTO COMPLETE', Icon: Type },
 ] as const;
 
+// ── Persist selected league across re-mounts ─────────────────────────────────
+// When a user plays a game and comes back to Archive, the league choice is
+// preserved so they don't get snapped back to the default.
+let _persistedLeague = 'NBA';
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function Archive({ onBack, onPlayArchiveGame }: Props) {
-  const [selectedLeague, setSelectedLeague] = useState('NBA');
+  const [selectedLeague, setSelectedLeague] = useState(_persistedLeague);
+
+  const handleLeagueChange = (league: string) => {
+    _persistedLeague = league;
+    setSelectedLeague(league);
+  };
   const [dates, setDates] = useState<DateRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -99,7 +109,7 @@ export default function Archive({ onBack, onPlayArchiveGame }: Props) {
         </View>
 
         <View style={styles.switcherRow}>
-          <LeagueSwitcher selected={selectedLeague} onChange={setSelectedLeague} />
+          <LeagueSwitcher selected={selectedLeague} onChange={handleLeagueChange} />
         </View>
       </View>
 
@@ -131,8 +141,8 @@ export default function Archive({ onBack, onPlayArchiveGame }: Props) {
                   ]}
                 >
                   <View style={styles.dateCardLeft}>
-                    <Text style={styles.dateLabel}>{row.label}</Text>
-                    <Text style={styles.daysAgo}>{row.subLabel}</Text>
+                    <Text style={styles.dateLabel} numberOfLines={1}>{row.label}</Text>
+                    <Text style={styles.daysAgo} numberOfLines={1}>{row.subLabel}</Text>
                   </View>
 
                   <View style={styles.dateCardRight}>
@@ -303,12 +313,13 @@ const styles = StyleSheet.create({
   },
   dateCardRight: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    flexShrink: 1,
+    gap: spacing.xs,
   },
   gameIconDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: 'rgba(252,52,92,0.12)',
     alignItems: 'center',
     justifyContent: 'center',

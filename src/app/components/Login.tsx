@@ -22,6 +22,46 @@ interface LoginProps {
   onLogin?: () => void;
 }
 
+/** Ensure a profile row exists for the current user. Called after every successful auth. */
+async function ensureProfile() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    if (!data) {
+      const username =
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split('@')[0] ||
+        'Player';
+
+      const { error } = await supabase.from('profiles').upsert({
+        id: user.id,
+        username,
+        lifetime_xp: 0,
+        weekly_xp: 0,
+        level: 1,
+        streak: 0,
+        streak_at_risk: false,
+        favorite_league: 'NBA',
+      });
+      if (error) {
+        console.error('[Login] Profile creation failed:', error.message);
+      } else {
+        console.log('[Login] Profile created for user:', user.id);
+      }
+    }
+  } catch (err) {
+    console.error('[Login] ensureProfile error:', err);
+  }
+}
+
 // ── Social icon SVGs ──────────────────────────────────────────────────────────
 
 function AppleIcon() {
@@ -63,11 +103,12 @@ export default function Login({ onLogin }: LoginProps) {
     setErrorMsg('');
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
     if (error) {
-      // Surface the real error so "Email not confirmed" etc. shows through
+      setLoading(false);
       setErrorMsg(error.message);
     } else {
+      await ensureProfile();
+      setLoading(false);
       onLogin?.();
     }
   }
@@ -76,10 +117,12 @@ export default function Login({ onLogin }: LoginProps) {
     setErrorMsg('');
     setLoading(true);
     const { error } = await supabase.auth.signInAnonymously();
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setErrorMsg(error.message);
     } else {
+      await ensureProfile();
+      setLoading(false);
       onLogin?.();
     }
   }
@@ -111,10 +154,12 @@ export default function Login({ onLogin }: LoginProps) {
     setErrorMsg('');
     setLoading(true);
     const { error } = await supabase.auth.signUp({ email, password });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setErrorMsg(error.message);
     } else {
+      await ensureProfile();
+      setLoading(false);
       onLogin?.();
     }
   }
@@ -527,6 +572,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: darkColors.textSecondary,
     opacity: 0.6,
-    marginTop: 2,
+    marginTop: 4,
   },
 });

@@ -155,6 +155,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
   const [isHost, setIsHost] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [onlineLoading, setOnlineLoading] = useState(false);
+  const [onlineError, setOnlineError] = useState<string | null>(null);
 
   // ── Host disconnect detection ──
   const [hostDisconnected, setHostDisconnected] = useState(false);
@@ -373,6 +374,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
   const handleCreateGame = useCallback(async () => {
     if (!userId) return;
     setOnlineLoading(true);
+    setOnlineError(null);
     try {
       const { code, lobbyId: id } = await createLobby('draft', userId, displayName);
       setLobbyCode(code);
@@ -394,6 +396,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
       });
     } catch (e: any) {
       console.error('Create lobby failed:', e.message);
+      setOnlineError(e.message || 'Failed to create lobby');
     } finally {
       setOnlineLoading(false);
     }
@@ -762,6 +765,9 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
               <Text style={onlineStyles.signInHint}>
                 Sign in to create a game. You can still join as a guest.
               </Text>
+            )}
+            {onlineError && (
+              <Text style={onlineStyles.errorText}>{onlineError}</Text>
             )}
           </ScrollView>
 
@@ -1629,6 +1635,13 @@ const onlineStyles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: 13,
     color: darkColors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
+  errorText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 13,
+    color: colors.brandDark,
     textAlign: 'center',
     marginTop: spacing.md,
   },

@@ -50,8 +50,14 @@ export default function useProfile(refreshTrigger?: number): UseProfileReturn {
 
       // Safety net: auto-create profile row if missing
       if ((!data || error) && !cancelled) {
-        const defaultUsername = user.email?.split('@')[0] ?? 'Player';
-        await supabase.from('profiles').upsert({
+        console.log('[useProfile] No profile found for user, creating one...', error?.message);
+        const defaultUsername =
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email?.split('@')[0] ||
+          'Player';
+
+        const { error: upsertError } = await supabase.from('profiles').upsert({
           id: user.id,
           username: defaultUsername,
           lifetime_xp: 0,
@@ -61,6 +67,21 @@ export default function useProfile(refreshTrigger?: number): UseProfileReturn {
           streak_at_risk: false,
           favorite_league: 'NBA',
         });
+
+        if (upsertError) {
+          console.error('[useProfile] Upsert failed:', upsertError.message, upsertError.details, upsertError.hint);
+          // Try a simpler insert with only columns that definitely exist
+          const { error: simpleError } = await supabase.from('profiles').upsert({
+            id: user.id,
+            display_name: defaultUsername,
+            xp: 0,
+            brain_level: 1,
+          });
+          if (simpleError) {
+            console.error('[useProfile] Simple upsert also failed:', simpleError.message);
+          }
+        }
+
         // Re-fetch after creation
         const refetched = await supabase
           .from('profiles')
@@ -69,15 +90,18 @@ export default function useProfile(refreshTrigger?: number): UseProfileReturn {
           .single();
         data = refetched.data;
         error = refetched.error;
+        if (error) {
+          console.error('[useProfile] Re-fetch after create failed:', error.message);
+        }
       }
 
       if (!cancelled) {
         if (!error && data) {
           setProfile({
-            username: data.username ?? 'SportsFan',
-            lifetime_xp: data.lifetime_xp ?? 0,
+            username: data.username || data.display_name || 'SportsFan',
+            lifetime_xp: data.lifetime_xp ?? data.xp ?? 0,
             weekly_xp: data.weekly_xp ?? 0,
-            level: data.level ?? 1,
+            level: data.level ?? data.brain_level ?? 1,
             streak: data.streak ?? 0,
             streak_at_risk: data.streak_at_risk ?? false,
             favorite_league: data.favorite_league ?? 'NBA',

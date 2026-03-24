@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenBase from './src/components/ScreenBase';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import { ThemeProvider, useTheme } from './src/hooks/useTheme';
 import { colors } from './src/styles/theme';
 import { supabase } from './src/lib/supabase';
 import Splash from './src/app/components/Splash';
@@ -42,6 +43,7 @@ import {
   scheduleDailyReminder,
   cancelAllNotifications,
 } from './src/lib/notifications';
+import { initAdsense } from './src/lib/adsense';
 import { getInviteCodeFromURL } from './src/lib/friends';
 
 type Screen = 'splash' | 'onboarding' | 'login' | 'home' | 'games' | 'game' | 'leaderboard' | 'profile' | 'archive' | 'settings' | 'favorite-teams' | 'achievements' | 'my-stats' | 'notifications' | 'game-intro' | 'auth-callback';
@@ -67,7 +69,14 @@ const GAME_SCREENS: Record<string, GameScreenComponent> = {
   'auto-complete': AutoCompleteScreen,
 };
 
-export default function App() {
+// Daily games return to home after completion; party/unlimited games return to games hub
+const DAILY_GAMES = new Set([
+  'player-guess', 'blind-rank-5', 'blind-showdown', 'trivia', 'power-play', 'auto-complete',
+]);
+
+function AppContent() {
+  const { isDark } = useTheme();
+  const statusBarStyle = isDark ? 'light' : 'dark';
   const [screen, setScreen] = useState<Screen>('splash');
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [archiveDate, setArchiveDate] = useState<string | null>(null);
@@ -89,6 +98,9 @@ export default function App() {
   });
 
   useEffect(() => {
+    // Initialize AdSense: first visit = no ads, return visits = ads enabled
+    initAdsense();
+
     Promise.all([
       supabase.auth.getSession(),
       AsyncStorage.getItem('onboarded'),
@@ -108,6 +120,32 @@ export default function App() {
         dest = 'leaderboard';
       } else if (onboarded && session) {
         dest = 'home';
+        // Ensure profile exists for returning users
+        const user = session.user;
+        if (user) {
+          supabase.from('profiles').select('id').eq('id', user.id).single().then(({ data }) => {
+            if (!data) {
+              const username =
+                user.user_metadata?.full_name ||
+                user.user_metadata?.name ||
+                user.email?.split('@')[0] ||
+                'Player';
+              supabase.from('profiles').upsert({
+                id: user.id,
+                username,
+                lifetime_xp: 0,
+                weekly_xp: 0,
+                level: 1,
+                streak: 0,
+                streak_at_risk: false,
+                favorite_league: 'NBA',
+              }).then(({ error }) => {
+                if (error) console.error('[App] Session restore profile creation failed:', error.message);
+                else console.log('[App] Profile created for returning user:', user.id);
+              });
+            }
+          });
+        }
         // Register for push notifications on session restore
         registerForPushNotifications().then(token => {
           if (token) {
@@ -166,11 +204,41 @@ export default function App() {
   // When auth state changes to SIGNED_IN while on callback screen, navigate home
   useEffect(() => {
     if (screen !== 'auth-callback') return;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       if (event === 'SIGNED_IN') {
         // Clear the hash so a page refresh doesn't re-trigger
         if (Platform.OS === 'web') {
           window.history.replaceState(null, '', window.location.pathname);
+        }
+        // Ensure profile row exists for OAuth users
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: existing } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('id', user.id)
+              .single();
+            if (!existing) {
+              const username =
+                user.user_metadata?.full_name ||
+                user.user_metadata?.name ||
+                user.email?.split('@')[0] ||
+                'Player';
+              await supabase.from('profiles').upsert({
+                id: user.id,
+                username,
+                lifetime_xp: 0,
+                weekly_xp: 0,
+                level: 1,
+                streak: 0,
+                streak_at_risk: false,
+                favorite_league: 'NBA',
+              });
+            }
+          }
+        } catch (e) {
+          console.error('[App] OAuth profile creation failed:', e);
         }
         setScreen('home');
       }
@@ -261,7 +329,7 @@ export default function App() {
       }
       return (
         <ScreenBase starCount={120}>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <Splash onFinish={handleSplashFinish} />
         </ScreenBase>
       );
@@ -281,7 +349,7 @@ export default function App() {
     if (screen === 'onboarding') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <Onboarding onFinish={() => {
             AsyncStorage.setItem('onboarded', 'true').then(() => {
               setScreen('login');
@@ -294,7 +362,7 @@ export default function App() {
     if (screen === 'game-intro') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <GameIntro
             onFinish={() => {
               void AsyncStorage.setItem('bk_intros_seen', 'true');
@@ -308,7 +376,7 @@ export default function App() {
     if (screen === 'auth-callback') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <AuthCallback error={authCallbackError} />
         </ScreenBase>
       );
@@ -317,7 +385,7 @@ export default function App() {
     if (screen === 'login') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <Login onLogin={() => setScreen('home')} />
         </ScreenBase>
       );
@@ -326,7 +394,7 @@ export default function App() {
     if (screen === 'leaderboard') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <Leaderboard
             onNavigate={handleNavigate}
             initialInviteCode={pendingInviteCode}
@@ -339,7 +407,7 @@ export default function App() {
     if (screen === 'profile') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <Profile onNavigate={handleNavigate} />
         </ScreenBase>
       );
@@ -348,7 +416,7 @@ export default function App() {
     if (screen === 'archive') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <Archive
             onBack={() => handleNavigate('home')}
             onNavigate={handleNavigate}
@@ -361,7 +429,7 @@ export default function App() {
     if (screen === 'my-stats') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <MyStats onBack={() => setScreen('profile')} />
         </ScreenBase>
       );
@@ -370,7 +438,7 @@ export default function App() {
     if (screen === 'favorite-teams') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <FavoriteTeams onBack={() => setScreen('profile')} />
         </ScreenBase>
       );
@@ -379,7 +447,7 @@ export default function App() {
     if (screen === 'achievements') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <Achievements onBack={() => setScreen('profile')} />
         </ScreenBase>
       );
@@ -388,7 +456,7 @@ export default function App() {
     if (screen === 'notifications') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <NotificationsScreen onBack={() => setScreen('profile')} />
         </ScreenBase>
       );
@@ -397,7 +465,7 @@ export default function App() {
     if (screen === 'settings') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <SettingsScreen onBack={() => setScreen('profile')} onNavigate={handleNavigate} />
         </ScreenBase>
       );
@@ -406,7 +474,7 @@ export default function App() {
     if (screen === 'games') {
       return (
         <ScreenBase>
-          <StatusBar style="light" />
+          <StatusBar style={statusBarStyle} />
           <Games
             onBack={() => handleNavigate('home')}
             onGoToGame={navigateToGame}
@@ -420,10 +488,10 @@ export default function App() {
     if (screen === 'game' && activeGame) {
       const GameScreen = GAME_SCREENS[activeGame];
       if (GameScreen) {
-        const backTarget = archiveDate ? 'archive' : 'games';
+        const backTarget = archiveDate ? 'archive' : (DAILY_GAMES.has(activeGame) ? 'home' : 'games');
         return (
           <ScreenBase>
-            <StatusBar style="light" />
+            <StatusBar style={statusBarStyle} />
             <GameScreen
               onBack={() => {
                 setActiveGame(null);
@@ -448,7 +516,7 @@ export default function App() {
 
     return (
       <ScreenBase>
-        <StatusBar style="light" />
+        <StatusBar style={statusBarStyle} />
         <Home onNavigate={handleNavigate} onGoToGame={navigateToGame} onGoToArchive={navigateToArchive} refreshTrigger={homeRefreshTrigger} />
       </ScreenBase>
     );
@@ -468,6 +536,14 @@ export default function App() {
         </Animated.View>
       </SafeAreaProvider>
     </ErrorBoundary>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

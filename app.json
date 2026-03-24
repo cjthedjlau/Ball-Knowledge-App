@@ -27,10 +27,17 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "plugins": [],
+    "plugins": [
+      "expo-web-browser"
+    ],
     "scheme": "ball-knowledge",
     "packagerOpts": {
-      "sourceExts": ["js", "jsx", "ts", "tsx"]
+      "sourceExts": [
+        "js",
+        "jsx",
+        "ts",
+        "tsx"
+      ]
     },
     "assetBundlePatterns": [
       "assets/**",

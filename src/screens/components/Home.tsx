@@ -15,6 +15,7 @@ import {
   fontFamily,
   spacing,
 } from '../../styles/theme';
+import AdBanner from '../../components/AdBanner';
 
 import {
   Search,
@@ -85,7 +86,7 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
           {/* Top row: greeting + notification bell */}
           <View style={styles.headerRow}>
             <View>
-              <Text style={styles.greeting}>Hi, {profile?.username ?? 'SportsFan'}</Text>
+              <Text style={styles.greeting} numberOfLines={1}>Hi, {profile?.username ?? 'SportsFan'}</Text>
               <Text style={styles.subGreeting}>Good Morning</Text>
             </View>
             <View style={styles.headerRightRow}>
@@ -197,6 +198,9 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
             </Pressable>
           </View>
 
+          {/* Ad Banner — only shows for returning visitors on web */}
+          <AdBanner style={{ marginVertical: spacing.lg }} />
+
           {/* Level Progression */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Your Level</Text>
@@ -250,7 +254,7 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
 
       {/* ── Question of the Day Sheet ── */}
       {qotdOpen && (
-        <View style={StyleSheet.absoluteFill}>
+        <View style={[StyleSheet.absoluteFill, { zIndex: 200 }]}>
           <QOTDSheet
             question={qotdQuestion}
             questionId={qotdQuestionId}
@@ -303,7 +307,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: 16,
     color: 'rgba(255,255,255,0.70)',
-    marginTop: 2,
+    marginTop: 4,
   },
   headerRightRow: {
     flexDirection: 'row',
@@ -402,7 +406,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginTop: 16,
-    gap: 10,
+    gap: 12,
   },
   multiplayerCtaText: {
     flex: 1,
@@ -475,7 +479,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     color: darkColors.textSecondary,
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 4,
   },
   levelNameCurrent: {
     color: colors.white,

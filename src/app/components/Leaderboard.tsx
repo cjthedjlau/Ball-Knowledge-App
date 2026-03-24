@@ -94,6 +94,15 @@ export default function Leaderboard({ onNavigate, initialInviteCode, onInviteCod
       const { data: { user } } = await supabase.auth.getUser();
       if (!cancelled) setCurrentUserId(user?.id ?? null);
 
+      // Helper: map a profile row to a LeaderboardEntry
+      const mapRow = (row: any, tab: LeaderboardTab): LeaderboardEntry => ({
+        id: row.id,
+        username: row.username || row.display_name || 'SportsFan',
+        xp: tab === 'weekly' ? (row.weekly_xp ?? row.xp ?? 0) : (row.lifetime_xp ?? row.xp ?? 0),
+        streak: row.streak ?? 0,
+        level: row.level ?? row.brain_level ?? 1,
+      });
+
       // Friends tab: try to load friend_ids from the user's profile
       if (activeTab === 'friends') {
         if (!user) {
@@ -115,46 +124,62 @@ export default function Leaderboard({ onNavigate, initialInviteCode, onInviteCod
 
         const { data, error: fetchError } = await supabase
           .from('profiles')
-          .select('id, username, weekly_xp, lifetime_xp, streak, level')
+          .select('*')
           .in('id', [...friendIds, user.id])
           .order('lifetime_xp', { ascending: false })
           .limit(20);
 
         if (!cancelled) {
           if (fetchError || !data) {
+            console.warn('[Leaderboard] Friends fetch error:', fetchError?.message);
             setEntries([]);
           } else {
-            setEntries(data.map(row => ({
-              id: row.id,
-              username: row.username ?? 'Unknown',
-              xp: row.lifetime_xp ?? 0,
-              streak: row.streak ?? 0,
-              level: row.level ?? 1,
-            })));
+            setEntries(data.map(row => mapRow(row, 'alltime')));
           }
           setLoading(false);
         }
         return;
       }
 
-      const xpField = activeTab === 'weekly' ? 'weekly_xp' : 'lifetime_xp';
+      // Weekly / All-Time tabs
+      // Use select('*') to work regardless of which columns exist in the DB
       const { data, error: fetchError } = await supabase
         .from('profiles')
-        .select('id, username, weekly_xp, lifetime_xp, streak, level')
-        .order(xpField, { ascending: false })
+        .select('*')
+        .order(activeTab === 'weekly' ? 'weekly_xp' : 'lifetime_xp', { ascending: false })
         .limit(10);
 
       if (!cancelled) {
-        if (fetchError || !data) {
-          setError(true);
+        if (fetchError) {
+          console.warn('[Leaderboard] Fetch error:', fetchError.message, fetchError.details);
+          // Fallback: try ordering by 'xp' column (original schema name)
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('profiles')
+            .select('*')
+            .order('xp', { ascending: false })
+            .limit(10);
+
+          if (fallbackError || !fallbackData || fallbackData.length === 0) {
+            console.warn('[Leaderboard] Fallback also failed:', fallbackError?.message);
+            // Last resort: just get all profiles without ordering
+            const { data: lastResort } = await supabase
+              .from('profiles')
+              .select('*')
+              .limit(10);
+
+            if (lastResort && lastResort.length > 0) {
+              setEntries(lastResort.map(row => mapRow(row, activeTab)));
+            } else {
+              setError(true);
+            }
+          } else {
+            setEntries(fallbackData.map(row => mapRow(row, activeTab)));
+          }
+        } else if (!data || data.length === 0) {
+          // No profiles at all — show empty state, not error
+          setEntries([]);
         } else {
-          setEntries(data.map(row => ({
-            id: row.id,
-            username: row.username ?? 'Unknown',
-            xp: activeTab === 'weekly' ? (row.weekly_xp ?? 0) : (row.lifetime_xp ?? 0),
-            streak: row.streak ?? 0,
-            level: row.level ?? 1,
-          })));
+          setEntries(data.map(row => mapRow(row, activeTab)));
         }
         setLoading(false);
       }
@@ -244,6 +269,11 @@ export default function Leaderboard({ onNavigate, initialInviteCode, onInviteCod
           </View>
         ) : activeTab === 'friends' && entries.length === 0 ? (
           <FriendsEmptyState onFriendAdded={() => setActiveTab('friends')} />
+        ) : activeTab !== 'friends' && entries.length === 0 ? (
+          <View style={styles.centerState}>
+            <Text style={[styles.errorText, { marginBottom: 8 }]}>No players yet</Text>
+            <Text style={[styles.errorText, { fontSize: 13 }]}>Play some games to get on the board!</Text>
+          </View>
         ) : (
           <>
             {/* Streak banner */}
@@ -645,8 +675,9 @@ const styles = StyleSheet.create({
   rankBadge: {
     position: 'absolute',
     bottom: -8,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    alignSelf: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 999,
     zIndex: 2,
   },
@@ -661,7 +692,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 10,
     color: colors.white,
-    marginTop: 10,
+    marginTop: 12,
     marginBottom: 2,
     textAlign: 'center',
   },
@@ -727,7 +758,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     marginBottom: spacing['2xl'],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

@@ -16,6 +16,7 @@ import GhostButton from '../../screens/components/ui/GhostButton';
 import { type Tab } from '../components/ui/BottomNav';
 import { calculateDailyGameXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { shareShowdown } from '../../lib/shareResults';
+import { notifyFriendsOfResult } from '../../lib/friends';
 import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { saveGameResult as saveCompletionResult, getGameResultToday } from '../../lib/gameResults';
@@ -72,6 +73,7 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
   const [loadError, setLoadError] = useState(false);
   const [playedTodayCache, setPlayedTodayCache] = useState<Record<string, { score: number; xp: number } | null>>({});
   const [communityVotes, setCommunityVotes] = useState<Record<string, { percentA: number; percentB: number } | null>>({});
+  const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
 
   useEffect(() => {
     setIsLoading(true);
@@ -320,6 +322,23 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
               }}
             >
               <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
+            </Pressable>
+
+            {/* Notify Friends button */}
+            <Pressable
+              style={({ pressed }) => [styles.notifyBtn, pressed && styles.notifyBtnPressed, notifyState === 'done' && styles.notifyBtnDone]}
+              onPress={() => { void (async () => {
+                if (notifyState !== 'idle') return;
+                setNotifyState('sending');
+                await notifyFriendsOfResult('Showdown', selectedLeague, selectedSide ? `Picked Player ${selectedSide}` : 'Played');
+                setNotifyState('done');
+                setTimeout(() => setNotifyState('idle'), 3000);
+              })(); }}
+              disabled={notifyState === 'sending'}
+            >
+              <Text style={styles.notifyBtnText}>
+                {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
+              </Text>
             </Pressable>
 
             {/* XP card */}
@@ -808,5 +827,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.white,
     letterSpacing: 1.5,
+  },
+  notifyBtn: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 12,
+    width: '100%',
+  },
+  notifyBtnPressed: {
+    opacity: 0.7,
+  },
+  notifyBtnDone: {
+    borderColor: 'rgba(0,200,151,0.40)',
+    backgroundColor: 'rgba(0,200,151,0.08)',
+  },
+  notifyBtnText: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900' as const,
+    fontSize: 15,
+    color: '#F5F5F5',
+    letterSpacing: 2,
   },
 });

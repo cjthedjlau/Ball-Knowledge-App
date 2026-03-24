@@ -115,7 +115,7 @@ export default function QOTDSheet({ question, questionId, onClose }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={onClose} hitSlop={8} style={styles.backBtn}>

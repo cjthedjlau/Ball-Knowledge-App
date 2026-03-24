@@ -70,9 +70,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(0,0,0,0.20)',
     borderRadius: 999,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    gap: 8,
   },
   count: {
     fontFamily: fontFamily.black,
@@ -93,8 +93,8 @@ const styles = StyleSheet.create({
   },
   warningDot: {
     position: 'absolute',
-    top: 6,
-    right: 6,
+    top: 4,
+    right: 4,
     width: 8,
     height: 8,
     borderRadius: 4,

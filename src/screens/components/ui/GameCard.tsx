@@ -83,6 +83,7 @@ export default function GameCard({
                   e.stopPropagation();
                   onArchivePress();
                 }}
+                hitSlop={8}
                 style={({ pressed: p }) => [
                   styles.badgeArchive,
                   p && styles.badgeArchivePressed,
@@ -133,12 +134,12 @@ const styles = StyleSheet.create({
   },
   newBadge: {
     position: 'absolute',
-    top: -1,
+    top: 0,
     left: 12,
     backgroundColor: colors.brand,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 4,
     zIndex: 10,
   },
@@ -167,11 +168,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     color: colors.white,
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   iconContainer: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   subtitleMobile: {
     fontFamily: fontFamily.medium,
@@ -214,7 +215,7 @@ const styles = StyleSheet.create({
   badgeRowDesktop: {
     flexDirection: 'column',
     alignItems: 'flex-end',
-    gap: 6,
+    gap: 8,
   },
 
   accentLine: {
@@ -226,8 +227,8 @@ const styles = StyleSheet.create({
   badgePlay: {
     backgroundColor: colors.brand,
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   badgePlayText: {
     fontFamily: fontFamily.black,
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
   badgeRow: {
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   badgeArchive: {
     borderRadius: 999,
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
     backgroundColor: darkColors.surfaceElevated,
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   badgeArchivePressed: {
     opacity: 0.7,
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
     backgroundColor: darkColors.surfaceElevated,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   badgeMultiplayerText: {
     fontFamily: fontFamily.medium,

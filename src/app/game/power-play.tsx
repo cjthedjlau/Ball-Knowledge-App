@@ -26,6 +26,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { updatePlayHour } from '../../lib/notifications';
 import { sharePowerPlay } from '../../lib/shareResults';
+import { notifyFriendsOfResult } from '../../lib/friends';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ type Phase = 'loading' | 'intro' | 'playing' | 'results';
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const TOTAL_TIME = 60;
-const TARGET_SCORE = 500;
+const WIN_SCORE = 125;
 const NUM_QUESTIONS = 5;
 
 // ── Answer matching ────────────────────────────────────────────────────────────
@@ -151,6 +152,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
   const [totalScore, setTotalScore] = useState(0);
   const [revealedCount, setRevealedCount] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
+  const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
 
   // Animations
   const timerBarWidth = useRef(new Animated.Value(1)).current;
@@ -389,7 +391,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
         <View style={styles.alreadyPlayedCard}>
           <Text style={styles.alreadyBadge}>ALREADY PLAYED TODAY</Text>
           <Text style={styles.alreadyScore}>{alreadyPlayed.score}</Text>
-          <Text style={styles.alreadyScoreLabel}>out of {TARGET_SCORE}</Text>
+          <Text style={styles.alreadyScoreLabel}>pts scored today</Text>
           <View style={styles.alreadyDivider} />
           <View style={styles.alreadyXpRow}>
             <Text style={styles.alreadyXpLabel}>XP EARNED</Text>
@@ -542,7 +544,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
   function renderResults() {
     if (!gameData) return null;
-    const hitTarget = totalScore >= TARGET_SCORE;
+    const hitWin = totalScore >= WIN_SCORE;
 
     return (
       <ScrollView
@@ -552,12 +554,17 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
       >
         {/* Score header */}
         <View style={styles.scoreHeader}>
+          {hitWin && (
+            <View style={styles.winBanner}>
+              <Zap size={16} color={colors.white} strokeWidth={2} fill={colors.white} />
+              <Text style={styles.winBannerText}>YOU WIN!</Text>
+              <Zap size={16} color={colors.white} strokeWidth={2} fill={colors.white} />
+            </View>
+          )}
           <Text style={styles.scoreLabel}>FINAL SCORE</Text>
-          <Text style={[styles.scoreBig, hitTarget && styles.scoreBigHit]}>
+          <Text style={[styles.scoreBig, hitWin && styles.scoreBigHit]}>
             {totalScore}
           </Text>
-          <Text style={styles.scoreTarget}>out of {TARGET_SCORE}</Text>
-          {hitTarget && <Text style={styles.perfectLabel}>PERFECT GAME!</Text>}
         </View>
 
         {/* Question results */}
@@ -653,13 +660,32 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
               sharePowerPlay(
                 selectedLeague,
                 totalScore,
-                TARGET_SCORE,
+                WIN_SCORE,
                 matchResults.filter(r => r.points > 0).length,
                 NUM_QUESTIONS,
               )
             }
           >
             <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
+          </Pressable>
+        )}
+
+        {/* Notify Friends button */}
+        {revealedCount === NUM_QUESTIONS && (
+          <Pressable
+            style={({ pressed }) => [styles.notifyBtn, pressed && styles.notifyBtnPressed, notifyState === 'done' && styles.notifyBtnDone]}
+            onPress={() => { void (async () => {
+              if (notifyState !== 'idle') return;
+              setNotifyState('sending');
+              await notifyFriendsOfResult('Power Play', selectedLeague, `${totalScore} pts · ${matchResults.filter(r => r.points > 0).length}/${NUM_QUESTIONS} hit`);
+              setNotifyState('done');
+              setTimeout(() => setNotifyState('idle'), 3000);
+            })(); }}
+            disabled={notifyState === 'sending'}
+          >
+            <Text style={styles.notifyBtnText}>
+              {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
+            </Text>
           </Pressable>
         )}
 
@@ -691,7 +717,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
             <Zap size={20} color={colors.white} strokeWidth={2} fill={colors.white} />
             <Text style={styles.zone1Title}>POWER PLAY</Text>
           </View>
-          <Text style={styles.zone1Sub}>Fast Money · {TARGET_SCORE} points to win</Text>
+          <Text style={styles.zone1Sub}>Fast Money · Score 125+ to win</Text>
         </View>
         {isArchive ? (
           <View style={styles.archiveBanner}>
@@ -1153,20 +1179,22 @@ const styles = StyleSheet.create({
   scoreBigHit: {
     color: colors.brand,
   },
-  scoreTarget: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 15,
-    color: darkColors.textSecondary,
-    marginTop: spacing.xs,
+  winBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.brand,
+    borderRadius: 12,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
   },
-  perfectLabel: {
+  winBannerText: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
-    fontSize: 18,
-    color: colors.brand,
-    letterSpacing: 2,
-    marginTop: spacing.md,
+    fontSize: 16,
+    color: colors.white,
+    letterSpacing: 3,
   },
   resultsList: {
     gap: spacing.sm,
@@ -1395,6 +1423,29 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 15,
     color: colors.white,
+    letterSpacing: 2,
+  },
+  notifyBtn: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 12,
+  },
+  notifyBtnPressed: {
+    opacity: 0.7,
+  },
+  notifyBtnDone: {
+    borderColor: 'rgba(0,200,151,0.40)',
+    backgroundColor: 'rgba(0,200,151,0.08)',
+  },
+  notifyBtnText: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900' as const,
+    fontSize: 15,
+    color: '#F5F5F5',
     letterSpacing: 2,
   },
 });

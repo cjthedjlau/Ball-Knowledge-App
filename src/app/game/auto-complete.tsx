@@ -26,6 +26,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { updatePlayHour } from '../../lib/notifications';
 import { shareAutoComplete } from '../../lib/shareResults';
+import { notifyFriendsOfResult } from '../../lib/friends';
 
 // -- Types --------------------------------------------------------------------
 
@@ -147,6 +148,7 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
   const [totalScore, setTotalScore] = useState(0);
   const [revealedCount, setRevealedCount] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
+  const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
 
   // Animations
   const promptSlide = useRef(new Animated.Value(0)).current;
@@ -158,6 +160,7 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
   const answerFlash = useRef(
     Array.from({ length: NUM_ANSWERS_PER_PROMPT }, () => new Animated.Value(0)),
   ).current;
+  const wrongFlash = useRef(new Animated.Value(0)).current;
 
   // -- Load game data ---------------------------------------------------------
 
@@ -281,10 +284,17 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
         setTimeout(() => advanceOrFinish(), 800);
       }
     } else {
-      // Wrong guess — add a strike
+      // Wrong guess — add a strike + flash red X
       const newStrikes = strikes + 1;
       setStrikes(newStrikes);
       setCurrentInput('');
+
+      // Big red X flash overlay
+      wrongFlash.setValue(0);
+      Animated.sequence([
+        Animated.timing(wrongFlash, { toValue: 1, duration: 80, useNativeDriver: true }),
+        Animated.timing(wrongFlash, { toValue: 0, duration: 380, useNativeDriver: true }),
+      ]).start();
 
       if (newStrikes >= MAX_STRIKES_PER_PROMPT) {
         // Prompt over — reveal remaining answers, wait for user to press NEXT
@@ -713,6 +723,25 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
           </Pressable>
         )}
 
+        {/* Notify Friends button */}
+        {revealedCount === NUM_PROMPTS && (
+          <Pressable
+            style={({ pressed }) => [styles.notifyBtn, pressed && styles.notifyBtnPressed, notifyState === 'done' && styles.notifyBtnDone]}
+            onPress={() => { void (async () => {
+              if (notifyState !== 'idle') return;
+              setNotifyState('sending');
+              await notifyFriendsOfResult('Auto Complete', selectedLeague, `${totalScore} pts`);
+              setNotifyState('done');
+              setTimeout(() => setNotifyState('idle'), 3000);
+            })(); }}
+            disabled={notifyState === 'sending'}
+          >
+            <Text style={styles.notifyBtnText}>
+              {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
+            </Text>
+          </Pressable>
+        )}
+
         {revealedCount === NUM_PROMPTS && (
           <Pressable
             style={({ pressed }) => [styles.doneBtn, pressed && styles.doneBtnPressed]}
@@ -761,6 +790,18 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
         {phase === 'playing' && renderPlaying()}
         {phase === 'results' && renderResults()}
       </View>
+
+      {/* Wrong guess overlay — big red X flash */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          styles.wrongOverlay,
+          { opacity: wrongFlash },
+        ]}
+      >
+        <Text style={styles.wrongOverlayX}>✕</Text>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -771,6 +812,20 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  wrongOverlay: {
+    backgroundColor: 'rgba(220,30,50,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
+  wrongOverlayX: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900',
+    fontSize: 160,
+    color: colors.white,
+    lineHeight: 180,
+    textAlign: 'center',
   },
 
   // Zone 1
@@ -1593,6 +1648,29 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 15,
     color: darkColors.textSecondary,
+    letterSpacing: 2,
+  },
+  notifyBtn: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 12,
+  },
+  notifyBtnPressed: {
+    opacity: 0.7,
+  },
+  notifyBtnDone: {
+    borderColor: 'rgba(0,200,151,0.40)',
+    backgroundColor: 'rgba(0,200,151,0.08)',
+  },
+  notifyBtnText: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900' as const,
+    fontSize: 15,
+    color: '#F5F5F5',
     letterSpacing: 2,
   },
 });

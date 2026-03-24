@@ -19,6 +19,7 @@ import GhostButton from '../../screens/components/ui/GhostButton';
 import { type Tab } from '../components/ui/BottomNav';
 import { calculateDailyGameXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { shareTrivia } from '../../lib/shareResults';
+import { notifyFriendsOfResult } from '../../lib/friends';
 import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { saveGameResult as saveCompletionResult, getGameResultToday } from '../../lib/gameResults';
@@ -87,6 +88,7 @@ export default function TriviaScreen({ onBack, archiveDate }: Props) {
   const [score, setScore] = useState(0);
   const [gameComplete, setGameComplete] = useState(false);
   const [xpEarned, setXpEarned] = useState<number | null>(null);
+  const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
   const [playedTodayCache, setPlayedTodayCache] = useState<Record<string, { score: number; xp: number } | null>>({});
 
   useEffect(() => {
@@ -325,6 +327,22 @@ export default function TriviaScreen({ onBack, archiveDate }: Props) {
                 onPress={() => shareTrivia(selectedLeague, score, questions.length, 0)}
               >
                 <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
+              </Pressable>
+              {/* Notify Friends button */}
+              <Pressable
+                style={({ pressed }) => [styles.notifyBtn, pressed && styles.notifyBtnPressed, notifyState === 'done' && styles.notifyBtnDone]}
+                onPress={() => { void (async () => {
+                  if (notifyState !== 'idle') return;
+                  setNotifyState('sending');
+                  await notifyFriendsOfResult('Trivia', selectedLeague, `${score}/${questions.length} correct`);
+                  setNotifyState('done');
+                  setTimeout(() => setNotifyState('idle'), 3000);
+                })(); }}
+                disabled={notifyState === 'sending'}
+              >
+                <Text style={styles.notifyBtnText}>
+                  {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
+                </Text>
               </Pressable>
               {!isArchive && (
                 <GhostButton label="PLAY ARCHIVE" onPress={() => onNavigate('archive' as Tab)} />
@@ -867,5 +885,28 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
+  },
+  notifyBtn: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 12,
+  },
+  notifyBtnPressed: {
+    opacity: 0.7,
+  },
+  notifyBtnDone: {
+    borderColor: 'rgba(0,200,151,0.40)',
+    backgroundColor: 'rgba(0,200,151,0.08)',
+  },
+  notifyBtnText: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900' as const,
+    fontSize: 15,
+    color: '#F5F5F5',
+    letterSpacing: 2,
   },
 });

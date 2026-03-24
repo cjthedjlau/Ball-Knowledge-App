@@ -111,6 +111,7 @@ export default function ImposterScreen({ onBack }: Props) {
   const [isReady, setIsReady] = useState(false);
   const [myRole, setMyRole] = useState<'detective' | 'imposter' | null>(null);
   const [onlineLoading, setOnlineLoading] = useState(false);
+  const [onlineError, setOnlineError] = useState<string | null>(null);
 
   // ── Host disconnect detection ──
   const [hostDisconnected, setHostDisconnected] = useState(false);
@@ -239,6 +240,7 @@ export default function ImposterScreen({ onBack }: Props) {
   const handleCreateGame = useCallback(async () => {
     if (!userId) return;
     setOnlineLoading(true);
+    setOnlineError(null);
     try {
       const { code, lobbyId: id } = await createLobby('imposter', userId, displayName);
       setLobbyCode(code);
@@ -260,6 +262,7 @@ export default function ImposterScreen({ onBack }: Props) {
       });
     } catch (e: any) {
       console.error('Create lobby failed:', e.message);
+      setOnlineError(e.message || 'Failed to create lobby');
     } finally {
       setOnlineLoading(false);
     }
@@ -572,6 +575,9 @@ export default function ImposterScreen({ onBack }: Props) {
               <Text style={styles.onlineSignInHint}>
                 Sign in to create a game. You can still join as a guest.
               </Text>
+            )}
+            {onlineError && (
+              <Text style={styles.onlineErrorText}>{onlineError}</Text>
             )}
           </View>
         </SafeAreaView>
@@ -1420,6 +1426,13 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: 13,
     color: darkColors.textSecondary,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  onlineErrorText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 13,
+    color: colors.brandDark,
     marginTop: 12,
     textAlign: 'center',
   },

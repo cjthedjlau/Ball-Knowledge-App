@@ -24,6 +24,7 @@ import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { getGameResultToday } from '../../lib/gameResults';
 import { updatePlayHour } from '../../lib/notifications';
 import { shareRank5 } from '../../lib/shareResults';
+import { notifyFriendsOfResult } from '../../lib/friends';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -278,9 +279,10 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
         <View style={styles.zone1Center}>
           <Text style={styles.zone1Title}>BLIND RANK 5</Text>
           {leagueData && (
-            <Text style={styles.zone1Category}>
-              RANK BY {leagueData.categoryPrompt}
-            </Text>
+            <View style={styles.zone1CategoryBanner}>
+              <Text style={styles.zone1CategoryLabel}>RANK BY</Text>
+              <Text style={styles.zone1CategoryValue}>{leagueData.categoryPrompt}</Text>
+            </View>
           )}
           {!isCompleted && !alreadyPlayedToday && leagueData && (
             <>
@@ -404,6 +406,8 @@ function ResultsView({
   onNavigate: (tab: Tab) => void;
   selectedLeague: string;
 }) {
+  const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
+
   const matchCount = result.communitySlots
     ? result.placements.reduce<number>((count, name, idx) => {
         if (!name) return count;
@@ -479,6 +483,22 @@ function ResultsView({
         >
           <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
         </Pressable>
+        {/* Notify Friends button */}
+        <Pressable
+          style={({ pressed }) => [styles.notifyBtn, pressed && styles.notifyBtnPressed, notifyState === 'done' && styles.notifyBtnDone]}
+          onPress={() => { void (async () => {
+            if (notifyState !== 'idle') return;
+            setNotifyState('sending');
+            await notifyFriendsOfResult('Blind Rank 5', selectedLeague, `${matchCount}/${TOTAL_PLAYERS} crowd matches`);
+            setNotifyState('done');
+            setTimeout(() => setNotifyState('idle'), 3000);
+          })(); }}
+          disabled={notifyState === 'sending'}
+        >
+          <Text style={styles.notifyBtnText}>
+            {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
+          </Text>
+        </Pressable>
         <GhostButton label="Back to Games" onPress={onBack} />
         {!isArchive && (
           <GhostButton label="PLAY ARCHIVE" onPress={() => onNavigate('archive' as Tab)} />
@@ -528,12 +548,30 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     textAlign: 'center',
   },
-  zone1Category: {
-    fontFamily: fontFamily.medium,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.65)',
+  zone1CategoryBanner: {
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginTop: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.20)',
+  },
+  zone1CategoryLabel: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.60)',
+    letterSpacing: 2,
+    marginBottom: 2,
+  },
+  zone1CategoryValue: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900',
+    fontSize: 18,
+    color: colors.white,
     letterSpacing: 1,
-    marginTop: 4,
     textAlign: 'center',
   },
   dotsRow: {
@@ -939,6 +977,29 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: 14,
     color: colors.white,
+    letterSpacing: 2,
+  },
+  notifyBtn: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 12,
+  },
+  notifyBtnPressed: {
+    opacity: 0.7,
+  },
+  notifyBtnDone: {
+    borderColor: 'rgba(0,200,151,0.40)',
+    backgroundColor: 'rgba(0,200,151,0.08)',
+  },
+  notifyBtnText: {
+    fontFamily: fontFamily.black,
+    fontWeight: '900' as const,
+    fontSize: 15,
+    color: '#F5F5F5',
     letterSpacing: 2,
   },
 });

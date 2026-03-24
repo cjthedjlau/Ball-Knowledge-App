@@ -110,6 +110,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+    zIndex: 100,
     pointerEvents: 'box-none' as any,
   },
   navPill: {
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.05)',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
   tabItemWrap: {
     flex: 1,
     alignSelf: 'stretch',
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   navItem: {
     flex: 1,

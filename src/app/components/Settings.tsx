@@ -18,6 +18,8 @@ import {
   Globe,
   Trash2,
   LogOut,
+  Sun,
+  Moon,
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
@@ -26,6 +28,7 @@ import ListRow from '../../screens/components/ui/ListRow';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import PrimaryButton from '../../screens/components/ui/PrimaryButton';
 import { type Tab } from './ui/BottomNav';
+import { useTheme } from '../../hooks/useTheme';
 
 interface Props {
   onBack: () => void;
@@ -40,6 +43,7 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
   const [favoriteLeague, setFavoriteLeague] = useState('NBA');
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+  const { theme, toggleTheme, isDark } = useTheme();
 
   useEffect(() => {
     let cancelled = false;
@@ -226,6 +230,15 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
             </View>
 
             <View style={styles.menuGroup}>
+              <ListRow
+                icon={isDark
+                  ? <Moon color={colors.brand} size={20} strokeWidth={2} />
+                  : <Sun color={colors.brand} size={20} strokeWidth={2} />
+                }
+                label="Appearance"
+                value={isDark ? 'Dark' : 'Light'}
+                onPress={toggleTheme}
+              />
               <ListRow
                 icon={<Trash2 color={colors.brand} size={20} strokeWidth={2} />}
                 label="Clear Game Cache"

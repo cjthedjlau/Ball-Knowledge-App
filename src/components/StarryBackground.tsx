@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { Animated, Platform, View, StyleSheet, Easing } from 'react-native';
+import { useTheme } from '../hooks/useTheme';
 
 const useNative = Platform.OS !== 'web';
 
@@ -9,16 +10,16 @@ interface StarData {
   yPct: number;
   size: number;
   baseOpacity: number;
-  color: string;
+  colorType: 'white' | 'cyan' | 'brand'; // resolved at render time based on theme
   twinkleDuration: number; // ms per twinkle cycle
   driftX: number; // max drift in % units
   driftY: number;
   driftDuration: number; // ms per drift cycle
 }
 
-const COLORS = [
-  '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF',
-  '#FFFFFF', '#FFFFFF', '#07bccc', '#07bccc', '#FC345C',
+const COLOR_TYPES: StarData['colorType'][] = [
+  'white', 'white', 'white', 'white', 'white',
+  'white', 'white', 'cyan', 'cyan', 'brand',
 ];
 
 function buildStars(count: number): StarData[] {
@@ -28,7 +29,7 @@ function buildStars(count: number): StarData[] {
     yPct: Math.random() * 96 + 2,
     size: Math.random() * 3.5 + 2,
     baseOpacity: Math.random() * 0.2 + 0.8, // 0.8–1.0 (very bright)
-    color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    colorType: COLOR_TYPES[Math.floor(Math.random() * COLOR_TYPES.length)],
     twinkleDuration: 2000 + Math.random() * 4000, // 2–6s
     driftX: (Math.random() - 0.5) * 1.2, // ±0.6% drift
     driftY: (Math.random() - 0.5) * 1.2,
@@ -38,8 +39,19 @@ function buildStars(count: number): StarData[] {
 
 const DEFAULT_STARS = buildStars(100);
 
+function resolveColor(colorType: StarData['colorType'], isDark: boolean): string {
+  switch (colorType) {
+    case 'white':
+      return isDark ? '#FFFFFF' : '#000000';
+    case 'cyan':
+      return '#07bccc';
+    case 'brand':
+      return '#FC345C';
+  }
+}
+
 /* ── Animated Star ── */
-function AnimatedStar({ star }: { star: StarData }) {
+function AnimatedStar({ star, isDark }: { star: StarData; isDark: boolean }) {
   const opacity = useRef(new Animated.Value(star.baseOpacity)).current;
   const driftX = useRef(new Animated.Value(0)).current;
   const driftY = useRef(new Animated.Value(0)).current;
@@ -122,6 +134,8 @@ function AnimatedStar({ star }: { star: StarData }) {
         marginTop: driftY,
       };
 
+  const color = resolveColor(star.colorType, isDark);
+
   return (
     <Animated.View
       style={[
@@ -132,7 +146,7 @@ function AnimatedStar({ star }: { star: StarData }) {
           width: star.size,
           height: star.size,
           borderRadius: star.size / 2,
-          backgroundColor: star.color,
+          backgroundColor: color,
         },
         animatedStyle,
       ]}
@@ -141,10 +155,12 @@ function AnimatedStar({ star }: { star: StarData }) {
 }
 
 /* ── Shooting Star ── */
-function ShootingStar() {
+function ShootingStar({ isDark }: { isDark: boolean }) {
   const posX = useRef(new Animated.Value(0)).current;
   const posY = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+
+  const starColor = isDark ? '#FFFFFF' : '#000000';
 
   useEffect(() => {
     function launchStar() {
@@ -229,9 +245,9 @@ function ShootingStar() {
           width: 2,
           height: 2,
           borderRadius: 1,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: starColor,
           // Tail glow
-          shadowColor: '#FFFFFF',
+          shadowColor: starColor,
           shadowOffset: { width: -4, height: -2 },
           shadowOpacity: 0.9,
           shadowRadius: 6,
@@ -248,6 +264,8 @@ interface Props {
 }
 
 export default function StarryBackground({ starCount }: Props) {
+  const { isDark } = useTheme();
+
   const stars = useMemo(
     () => (starCount ? buildStars(starCount) : DEFAULT_STARS),
     [starCount],
@@ -263,10 +281,10 @@ export default function StarryBackground({ starCount }: Props) {
       }
     >
       {stars.map(star => (
-        <AnimatedStar key={star.id} star={star} />
+        <AnimatedStar key={star.id} star={star} isDark={isDark} />
       ))}
-      <ShootingStar />
-      <ShootingStar />
+      <ShootingStar isDark={isDark} />
+      <ShootingStar isDark={isDark} />
     </View>
   );
 }

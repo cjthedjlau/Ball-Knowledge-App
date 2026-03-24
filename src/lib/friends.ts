@@ -115,6 +115,74 @@ export async function addFriendByCode(code: string) {
   return acceptInvite(code.trim().toUpperCase());
 }
 
+/**
+ * Send a push notification to all friends with the current user's game result.
+ * Silently no-ops if the user has no friends or none have push tokens.
+ * Returns the number of friends notified.
+ */
+export async function notifyFriendsOfResult(
+  gameLabel: string,
+  league: string,
+  resultSummary: string,
+): Promise<number> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
+
+  // Get sender's display name
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .single();
+  const senderName: string = (profile as any)?.display_name ?? 'A friend';
+
+  // Collect friend IDs from both sides of the friendship
+  const [{ data: asA }, { data: asB }] = await Promise.all([
+    supabase.from('friendships').select('user_b').eq('user_a', user.id),
+    supabase.from('friendships').select('user_a').eq('user_b', user.id),
+  ]);
+
+  const friendIds = [
+    ...((asA ?? []).map((r: any) => r.user_b as string)),
+    ...((asB ?? []).map((r: any) => r.user_a as string)),
+  ];
+  if (friendIds.length === 0) return 0;
+
+  // Fetch push tokens for friends who have them
+  const { data: friendProfiles } = await supabase
+    .from('profiles')
+    .select('push_token')
+    .in('id', friendIds)
+    .not('push_token', 'is', null);
+
+  const tokens = (friendProfiles ?? [])
+    .map((p: any) => p.push_token as string)
+    .filter(Boolean);
+
+  if (tokens.length === 0) return 0;
+
+  // Send via Expo Push API (fire-and-forget — non-critical)
+  const messages = tokens.map(token => ({
+    to: token,
+    title: `${senderName} just played ${gameLabel}`,
+    body: `${league} · ${resultSummary}`,
+    sound: 'default',
+    data: { type: 'friend_result', gameLabel, league },
+  }));
+
+  try {
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(messages),
+    });
+  } catch {
+    // Push send failed — non-critical, swallow silently
+  }
+
+  return tokens.length;
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function generateCode(): string {
