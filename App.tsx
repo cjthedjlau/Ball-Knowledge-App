@@ -37,6 +37,8 @@ import Achievements from './src/app/components/Achievements';
 import NotificationsScreen from './src/app/components/Notifications';
 import SettingsScreen from './src/app/components/Settings';
 import AuthCallback from './src/app/components/AuthCallback';
+import WaitlistScreen from './src/app/components/WaitlistScreen';
+import WaitlistPill from './src/app/components/WaitlistPill';
 import {
   registerForPushNotifications,
   savePushToken,
@@ -46,7 +48,13 @@ import {
 import { initAdsense } from './src/lib/adsense';
 import { getInviteCodeFromURL } from './src/lib/friends';
 
-type Screen = 'splash' | 'onboarding' | 'login' | 'home' | 'games' | 'game' | 'leaderboard' | 'profile' | 'archive' | 'settings' | 'favorite-teams' | 'achievements' | 'my-stats' | 'notifications' | 'game-intro' | 'auth-callback';
+type Screen = 'splash' | 'onboarding' | 'login' | 'home' | 'games' | 'game' | 'leaderboard' | 'profile' | 'archive' | 'settings' | 'favorite-teams' | 'achievements' | 'my-stats' | 'notifications' | 'game-intro' | 'auth-callback' | 'waitlist';
+
+// Screens where the floating waitlist pill is visible (no pill on game/auth/splash/waitlist screens)
+const PILL_SCREENS = new Set<Screen>([
+  'home', 'games', 'leaderboard', 'profile', 'settings',
+  'favorite-teams', 'achievements', 'my-stats', 'notifications', 'archive',
+]);
 
 type GameScreenComponent = React.ComponentType<{
   onBack: () => void;
@@ -84,6 +92,9 @@ function AppContent() {
   const [homeRefreshTrigger, setHomeRefreshTrigger] = useState(0);
   const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
   const [authCallbackError, setAuthCallbackError] = useState<string | null>(null);
+  // Default true to avoid a flash of the pill before AsyncStorage loads
+  const [waitlistDismissed, setWaitlistDismissed] = useState(true);
+  const waitlistDismissedRef = useRef(true);
 
   // Splash routing: store destination here; splash navigates when both
   // the animation AND the session check are done (whichever finishes last).
@@ -100,6 +111,13 @@ function AppContent() {
   useEffect(() => {
     // Initialize AdSense: first visit = no ads, return visits = ads enabled
     initAdsense();
+
+    // Load waitlist dismissed state (separate from main init — non-blocking)
+    AsyncStorage.getItem('bk_waitlist_done').then(val => {
+      const dismissed = !!val;
+      setWaitlistDismissed(dismissed);
+      waitlistDismissedRef.current = dismissed;
+    });
 
     Promise.all([
       supabase.auth.getSession(),
@@ -302,6 +320,13 @@ function AppContent() {
     }
   }
 
+  async function dismissWaitlist() {
+    await AsyncStorage.setItem('bk_waitlist_done', 'true');
+    setWaitlistDismissed(true);
+    waitlistDismissedRef.current = true;
+    setScreen('home');
+  }
+
   function navigateToGame(gameId: string) {
     setArchiveDate(null);
     setActiveGame(gameId);
@@ -485,6 +510,15 @@ function AppContent() {
       );
     }
 
+    if (screen === 'waitlist') {
+      return (
+        <ScreenBase>
+          <StatusBar style={statusBarStyle} />
+          <WaitlistScreen onDismiss={() => void dismissWaitlist()} />
+        </ScreenBase>
+      );
+    }
+
     if (screen === 'game' && activeGame) {
       const GameScreen = GAME_SCREENS[activeGame];
       if (GameScreen) {
@@ -494,16 +528,28 @@ function AppContent() {
             <StatusBar style={statusBarStyle} />
             <GameScreen
               onBack={() => {
+                const wasDaily = archiveDate === null && DAILY_GAMES.has(activeGame ?? '');
                 setActiveGame(null);
                 setArchiveDate(null);
-                // After game, check if user has been onboarded
-                AsyncStorage.getItem('onboarded').then(val => {
+                AsyncStorage.getItem('onboarded').then(async val => {
                   if (!val) {
                     setScreen('onboarding');
-                  } else {
-                    setHomeRefreshTrigger(prev => prev + 1);
-                    setScreen(backTarget as Screen);
+                    return;
                   }
+                  setHomeRefreshTrigger(prev => prev + 1);
+                  // Track daily game completions for waitlist auto-trigger
+                  if (wasDaily && !waitlistDismissedRef.current) {
+                    const today = new Date().toISOString().split('T')[0];
+                    const key = `bk_games_today_${today}`;
+                    const prev = parseInt((await AsyncStorage.getItem(key)) ?? '0');
+                    const next = prev + 1;
+                    await AsyncStorage.setItem(key, String(next));
+                    if (next >= 3) {
+                      setScreen('waitlist');
+                      return;
+                    }
+                  }
+                  setScreen(backTarget as Screen);
                 });
               }}
               onNavigate={handleNavigate}
@@ -525,15 +571,20 @@ function AppContent() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <Animated.View
-          style={{
-            flex: 1,
-            opacity: screenOpacity,
-            transform: [{ translateY: screenTranslateY }],
-          }}
-        >
-          {renderScreen()}
-        </Animated.View>
+        <View style={{ flex: 1 }}>
+          <Animated.View
+            style={{
+              flex: 1,
+              opacity: screenOpacity,
+              transform: [{ translateY: screenTranslateY }],
+            }}
+          >
+            {renderScreen()}
+          </Animated.View>
+          {!waitlistDismissed && PILL_SCREENS.has(screen) && (
+            <WaitlistPill onPress={() => setScreen('waitlist')} />
+          )}
+        </View>
       </SafeAreaProvider>
     </ErrorBoundary>
   );
