@@ -103,20 +103,23 @@ export default function Leaderboard({ onNavigate, initialInviteCode, onInviteCod
         level: row.level ?? row.brain_level ?? 1,
       });
 
-      // Friends tab: try to load friend_ids from the user's profile
+      // Friends tab: load friend IDs from the friendships table (both directions)
       if (activeTab === 'friends') {
         if (!user) {
           if (!cancelled) { setEntries([]); setLoading(false); }
           return;
         }
-        // Query for friends — uses friend_ids array on profile if available
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('friend_ids')
-          .eq('id', user.id)
-          .single();
 
-        const friendIds: string[] = (profile as any)?.friend_ids ?? [];
+        const [{ data: asA }, { data: asB }] = await Promise.all([
+          supabase.from('friendships').select('user_b').eq('user_a', user.id),
+          supabase.from('friendships').select('user_a').eq('user_b', user.id),
+        ]);
+
+        const friendIds: string[] = [
+          ...((asA ?? []).map((r: any) => r.user_b as string)),
+          ...((asB ?? []).map((r: any) => r.user_a as string)),
+        ];
+
         if (friendIds.length === 0) {
           if (!cancelled) { setEntries([]); setLoading(false); }
           return;

@@ -92,16 +92,20 @@ export async function acceptInvite(code: string): Promise<{ success: boolean; er
   if (!inviter) return { success: false, error: 'Invalid invite code' };
   if (inviter.id === user.id) return { success: false, error: "You can't add yourself" };
 
-  // Add friend bidirectionally using the RPC function
-  const { error } = await supabase.rpc('add_friend', {
-    user_a: user.id,
-    user_b: inviter.id,
-  });
+  // Check if already friends (query both directions)
+  const [{ data: existsA }, { data: existsB }] = await Promise.all([
+    supabase.from('friendships').select('user_a').eq('user_a', user.id).eq('user_b', inviter.id).maybeSingle(),
+    supabase.from('friendships').select('user_a').eq('user_a', inviter.id).eq('user_b', user.id).maybeSingle(),
+  ]);
+  if (existsA || existsB) return { success: false, error: 'Already friends!' };
+
+  // Insert a single directed row; queries check both directions
+  const { error } = await supabase
+    .from('friendships')
+    .insert({ user_a: user.id, user_b: inviter.id });
 
   if (error) {
-    if (error.message.includes('already friends')) {
-      return { success: false, error: 'Already friends!' };
-    }
+    if (error.code === '23505') return { success: false, error: 'Already friends!' };
     return { success: false, error: 'Could not add friend' };
   }
 
