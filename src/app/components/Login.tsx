@@ -142,10 +142,14 @@ export default function Login({ onLogin }: LoginProps) {
   async function handleGoogleSignIn() {
     setErrorMsg('');
     setSocialLoading(true);
-    const { error } = await signInWithGoogle();
+    const result = await signInWithGoogle();
     setSocialLoading(false);
-    if (error) {
-      setErrorMsg(error.message);
+    if (result.error) {
+      setErrorMsg(result.error.message);
+    } else if (result.data?.session) {
+      // Native: in-app browser OAuth completed and session is established
+      await ensureProfile();
+      onLogin?.();
     }
     // On web, the page redirects — onLogin is handled by AuthCallback / App.tsx
   }

@@ -8,6 +8,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -20,6 +22,8 @@ import {
   LogOut,
   Sun,
   Moon,
+  Bug,
+  Send,
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
@@ -43,6 +47,9 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
   const [favoriteLeague, setFavoriteLeague] = useState('NBA');
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+  const [reportingBug, setReportingBug] = useState(false);
+  const [bugDescription, setBugDescription] = useState('');
+  const [sendingReport, setSendingReport] = useState(false);
   const { theme, toggleTheme, isDark } = useTheme();
 
   useEffect(() => {
@@ -140,6 +147,36 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
     }
     await AsyncStorage.multiRemove(cacheKeys);
     Alert.alert('Cache Clear', `Cleared ${cacheKeys.length} cached game state(s).`);
+  }
+
+  async function handleSendBugReport() {
+    const desc = bugDescription.trim();
+    if (!desc) {
+      Alert.alert('Empty Report', 'Please describe the bug before sending.');
+      return;
+    }
+    setSendingReport(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const meta = [
+      `Platform: ${Platform.OS}`,
+      `User ID: ${user?.id ?? 'guest'}`,
+      `Date: ${new Date().toISOString()}`,
+    ].join('\n');
+    const subject = encodeURIComponent('Bug Report — Ball Knowledge');
+    const body = encodeURIComponent(`${desc}\n\n---\n${meta}`);
+    const mailUrl = `mailto:ballknowingdevelopers@gmail.com?subject=${subject}&body=${body}`;
+    const supported = await Linking.canOpenURL(mailUrl);
+    setSendingReport(false);
+    if (supported) {
+      await Linking.openURL(mailUrl);
+      setBugDescription('');
+      setReportingBug(false);
+    } else {
+      Alert.alert(
+        'No Email App',
+        'Could not open a mail app. Please email ballknowingdevelopers@gmail.com directly.',
+      );
+    }
   }
 
   async function handleLogOut() {
@@ -244,7 +281,44 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
                 label="Clear Game Cache"
                 onPress={handleClearCache}
               />
+              <ListRow
+                icon={<Bug color={colors.brand} size={20} strokeWidth={2} />}
+                label="Report a Bug"
+                onPress={() => { setReportingBug(v => !v); setBugDescription(''); }}
+              />
             </View>
+
+            {reportingBug && (
+              <View style={styles.bugCard}>
+                <Text style={styles.bugLabel}>DESCRIBE THE ISSUE</Text>
+                <TextInput
+                  style={styles.bugInput}
+                  value={bugDescription}
+                  onChangeText={setBugDescription}
+                  placeholder="What happened? Steps to reproduce…"
+                  placeholderTextColor={darkColors.textSecondary}
+                  multiline
+                  maxLength={1000}
+                  autoFocus
+                  textAlignVertical="top"
+                />
+                <Text style={styles.bugCharCount}>{bugDescription.length}/1000</Text>
+                <Pressable
+                  style={[styles.bugSendBtn, sendingReport && styles.bugSendBtnDisabled]}
+                  onPress={handleSendBugReport}
+                  disabled={sendingReport}
+                >
+                  {sendingReport ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : (
+                    <>
+                      <Send color={colors.white} size={16} strokeWidth={2} />
+                      <Text style={styles.bugSendBtnText}>SEND REPORT</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
+            )}
 
             {/* Danger Zone */}
             <Text style={[styles.sectionHeader, { marginTop: spacing['2xl'] }]}>DANGER ZONE</Text>
@@ -377,5 +451,61 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.accentGreen,
     textAlign: 'center',
+  },
+  bugCard: {
+    backgroundColor: darkColors.surfaceElevated,
+    borderRadius: 16,
+    padding: spacing.lg,
+    gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderBottomWidth: 2,
+    borderBottomColor: 'rgba(0,0,0,0.5)',
+  },
+  bugLabel: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 11,
+    letterSpacing: 2,
+    color: darkColors.textSecondary,
+  },
+  bugInput: {
+    backgroundColor: darkColors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: darkColors.border,
+    minHeight: 100,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontFamily: fontFamily.medium,
+    fontSize: 15,
+    color: darkColors.text,
+    lineHeight: 22,
+  },
+  bugCharCount: {
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    color: darkColors.textSecondary,
+    textAlign: 'right',
+    marginTop: -spacing.sm,
+  },
+  bugSendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.brand,
+  },
+  bugSendBtnDisabled: {
+    opacity: 0.6,
+  },
+  bugSendBtnText: {
+    fontFamily: fontFamily.bold,
+    fontWeight: '700',
+    fontSize: 14,
+    letterSpacing: 1,
+    color: colors.white,
   },
 });
