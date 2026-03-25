@@ -17,6 +17,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
 import { supabase, signInWithGoogle } from '../../lib/supabase';
 import useZoneEntrance from '../../hooks/useZoneEntrance';
+import { useUserAnalytics } from '../../lib/analytics';
 
 interface LoginProps {
   onLogin?: () => void;
@@ -90,6 +91,7 @@ function GoogleIcon() {
 
 export default function Login({ onLogin }: LoginProps) {
   const { zone1Style, zone2Style } = useZoneEntrance();
+  const { trackLogin, trackSignup } = useUserAnalytics();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -102,11 +104,12 @@ export default function Login({ onLogin }: LoginProps) {
   async function handleLogin() {
     setErrorMsg('');
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setLoading(false);
       setErrorMsg(error.message);
     } else {
+      if (data.user) trackLogin('email', data.user.id);
       await ensureProfile();
       setLoading(false);
       onLogin?.();
@@ -148,6 +151,7 @@ export default function Login({ onLogin }: LoginProps) {
       setErrorMsg(result.error.message);
     } else if (result.data?.session) {
       // Native: in-app browser OAuth completed and session is established
+      trackLogin('google', result.data.session.user.id);
       await ensureProfile();
       onLogin?.();
     }
@@ -162,6 +166,7 @@ export default function Login({ onLogin }: LoginProps) {
       setLoading(false);
       setErrorMsg(error.message);
     } else {
+      trackSignup('email');
       await ensureProfile();
       setLoading(false);
       onLogin?.();

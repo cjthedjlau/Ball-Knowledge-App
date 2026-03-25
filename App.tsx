@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { PostHogProvider, usePostHog } from 'posthog-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { View, Animated, Easing, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useFonts } from 'expo-font';
@@ -84,6 +85,7 @@ const DAILY_GAMES = new Set([
 
 function AppContent() {
   const { isDark } = useTheme();
+  const posthog = usePostHog();
   const statusBarStyle = isDark ? 'light' : 'dark';
   const [screen, setScreen] = useState<Screen>('splash');
   const [activeGame, setActiveGame] = useState<string | null>(null);
@@ -107,6 +109,15 @@ function AppContent() {
   const [fontsLoaded] = useFonts({
     'Chillax-Bold': require('./assets/fonts/Chillax-Bold.otf'),
   });
+
+  useEffect(() => {
+    // Identify user in PostHog once session is known
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        posthog?.identify(session.user.id, { email: session.user.email });
+      }
+    });
+  }, []);
 
   useEffect(() => {
     // Initialize AdSense: first visit = no ads, return visits = ads enabled
@@ -592,9 +603,18 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <PostHogProvider
+      apiKey={process.env.EXPO_PUBLIC_POSTHOG_API_KEY!}
+      options={{
+        host: process.env.EXPO_PUBLIC_POSTHOG_HOST,
+        captureScreens: true,
+        captureLifecycleEvents: true,
+      }}
+    >
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </PostHogProvider>
   );
 }
 

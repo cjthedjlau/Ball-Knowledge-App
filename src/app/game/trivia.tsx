@@ -24,6 +24,7 @@ import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { saveGameResult as saveCompletionResult, getGameResultToday } from '../../lib/gameResults';
 import { updatePlayHour } from '../../lib/notifications';
+import { useGameAnalytics } from '../../lib/analytics';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -79,6 +80,7 @@ function difficultyColor(d: Question['difficulty']): string {
 
 export default function TriviaScreen({ onBack, archiveDate }: Props) {
   const isArchive = !!archiveDate;
+  const { trackGameStart, trackGameComplete, trackGameAbandoned } = useGameAnalytics();
   const [selectedLeague, setSelectedLeague] = useState('NBA');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,6 +92,10 @@ export default function TriviaScreen({ onBack, archiveDate }: Props) {
   const [xpEarned, setXpEarned] = useState<number | null>(null);
   const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
   const [playedTodayCache, setPlayedTodayCache] = useState<Record<string, { score: number; xp: number } | null>>({});
+
+  useEffect(() => {
+    trackGameStart('trivia', selectedLeague);
+  }, [selectedLeague]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -134,6 +140,7 @@ export default function TriviaScreen({ onBack, archiveDate }: Props) {
       const xp = calculateDailyGameXP('trivia', { correctAnswers: finalScore });
       setXpEarned(xp);
       setGameComplete(true);
+      trackGameComplete('trivia', selectedLeague, finalScore, xp);
       if (!isArchive) {
         void (async () => {
           const { data: { user } } = await supabase.auth.getUser();
@@ -201,7 +208,7 @@ export default function TriviaScreen({ onBack, archiveDate }: Props) {
       {/* ── Zone 1 ── */}
       <View style={styles.zone1}>
         <View style={styles.zone1TopRow}>
-          <Pressable onPress={onBack} hitSlop={8} style={styles.backBtn}>
+          <Pressable onPress={() => { if (!gameComplete) trackGameAbandoned('trivia', selectedLeague); onBack(); }} hitSlop={8} style={styles.backBtn}>
             <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
           </Pressable>
 

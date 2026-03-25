@@ -25,6 +25,7 @@ import { getGameResultToday } from '../../lib/gameResults';
 import { updatePlayHour } from '../../lib/notifications';
 import { shareRank5 } from '../../lib/shareResults';
 import { notifyFriendsOfResult } from '../../lib/friends';
+import { useGameAnalytics } from '../../lib/analytics';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -106,6 +107,7 @@ function initActiveState(ld: LeagueData) {
 
 export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Props) {
   const isArchive = !!archiveDate;
+  const { trackGameStart, trackGameComplete, trackGameAbandoned } = useGameAnalytics();
   const [selectedLeague, setSelectedLeague] = useState('NBA');
 
   // Active game state — resets on league switch
@@ -122,6 +124,10 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [playedTodayCache, setPlayedTodayCache] = useState<Record<string, { score: number; xp: number } | null>>({});
+
+  useEffect(() => {
+    trackGameStart('blind-rank-5', selectedLeague);
+  }, [selectedLeague]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -216,6 +222,7 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
   const finishGame = async (finalPlacements: (string | null)[], ld: LeagueData) => {
     const rankingResult = finalPlacements.join(',');
     const today = new Date().toISOString().split('T')[0];
+    trackGameComplete('blind-rank-5', selectedLeague, 1, FLAT_XP);
 
     // Set result immediately with null community while we fetch
     setCompletedResults(prev => ({
@@ -271,7 +278,7 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
       {/* ── Zone 1 ── */}
       <View style={styles.zone1}>
         <View style={styles.zone1TopRow}>
-          <Pressable onPress={onBack} hitSlop={8} style={styles.backBtn}>
+          <Pressable onPress={() => { if (!gameComplete) trackGameAbandoned('blind-rank-5', selectedLeague); onBack(); }} hitSlop={8} style={styles.backBtn}>
             <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
           </Pressable>
         </View>

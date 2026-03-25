@@ -21,6 +21,7 @@ import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { saveGameResult as saveCompletionResult, getGameResultToday } from '../../lib/gameResults';
 import { updatePlayHour } from '../../lib/notifications';
+import { useGameAnalytics } from '../../lib/analytics';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,7 @@ function buildMatchupFromData(data: any): Matchup {
 
 export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
   const isArchive = !!archiveDate;
+  const { trackGameStart, trackGameComplete, trackGameAbandoned } = useGameAnalytics();
   const [selectedLeague, setSelectedLeague] = useState('NBA');
   // Per-league pick: null = not picked, 'A' | 'B' = picked
   const [picks, setPicks] = useState<Record<string, 'A' | 'B'>>({});
@@ -74,6 +76,10 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
   const [playedTodayCache, setPlayedTodayCache] = useState<Record<string, { score: number; xp: number } | null>>({});
   const [communityVotes, setCommunityVotes] = useState<Record<string, { percentA: number; percentB: number } | null>>({});
   const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
+
+  useEffect(() => {
+    trackGameStart('blind-showdown', selectedLeague);
+  }, [selectedLeague]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -120,6 +126,7 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
       const xp = calculateDailyGameXP('showdown', { correctPick: false });
       setXpEarnedMap(prev => ({ ...prev, [selectedLeague]: xp }));
       const pickedScore = selectedSide === 'A' ? 0 : 1;
+      trackGameComplete('blind-showdown', selectedLeague, pickedScore, xp);
       if (!isArchive) {
         void (async () => {
           const { data: { user } } = await supabase.auth.getUser();
@@ -228,7 +235,7 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
       {/* ── Zone 1 ── */}
       <View style={styles.zone1}>
         <View style={styles.zone1TopRow}>
-          <Pressable onPress={onBack} hitSlop={8} style={styles.backBtn}>
+          <Pressable onPress={() => { if (!picks[selectedLeague]) trackGameAbandoned('blind-showdown', selectedLeague); onBack(); }} hitSlop={8} style={styles.backBtn}>
             <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
           </Pressable>
         </View>

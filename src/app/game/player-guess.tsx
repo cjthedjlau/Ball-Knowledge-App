@@ -30,6 +30,7 @@ import { saveGameResult as saveCompletionResult, getGameResultToday } from '../.
 import { updatePlayHour } from '../../lib/notifications';
 import { shareGuesser } from '../../lib/shareResults';
 import { notifyFriendsOfResult } from '../../lib/friends';
+import { useGameAnalytics } from '../../lib/analytics';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -357,6 +358,7 @@ function evaluateGuessForLeague(
 
 export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
   const isArchive = !!archiveDate;
+  const { trackGameStart, trackGameComplete, trackGameAbandoned } = useGameAnalytics();
   const [guesses, setGuesses] = useState<TileData[][]>([]);
   const [guessedNames, setGuessedNames] = useState<Set<string>>(new Set());
   const [searchText, setSearchText] = useState('');
@@ -370,6 +372,10 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
   const [loadError, setLoadError] = useState(false);
   const [playedTodayCache, setPlayedTodayCache] = useState<Record<string, { score: number; xp: number } | null>>({});
   const [playerPool, setPlayerPool] = useState<string[]>([]);
+
+  useEffect(() => {
+    trackGameStart('player-guess', activeLeague);
+  }, [activeLeague]);
 
   useEffect(() => {
     loadPlayerPool(activeLeague).then(setPlayerPool);
@@ -553,6 +559,7 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
       const xp = calculateDailyGameXP('mystery-player', { guessesRemaining });
       setXpEarned(xp);
       setGameState(won ? 'won' : 'lost');
+      trackGameComplete('player-guess', activeLeague, won ? newGuesses.length : 0, xp);
       if (!isArchive) {
         void (async () => {
           const { data: { user } } = await supabase.auth.getUser();
@@ -579,7 +586,7 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
         <View style={styles.zone1}>
           {/* Back button row */}
           <View style={styles.zone1TopRow}>
-            <Pressable onPress={onBack} hitSlop={8} style={styles.backBtn}>
+            <Pressable onPress={() => { if (gameState === 'playing') trackGameAbandoned('player-guess', activeLeague); onBack(); }} hitSlop={8} style={styles.backBtn}>
               <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
             </Pressable>
           </View>

@@ -27,6 +27,7 @@ import { supabase } from '../../lib/supabase';
 import { updatePlayHour } from '../../lib/notifications';
 import { sharePowerPlay } from '../../lib/shareResults';
 import { notifyFriendsOfResult } from '../../lib/friends';
+import { useGameAnalytics } from '../../lib/analytics';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -131,6 +132,7 @@ function matchAnswer(
 
 export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
   const isArchive = !!archiveDate;
+  const { trackGameStart, trackPowerPlayScore, trackGameAbandoned } = useGameAnalytics();
   const [selectedLeague, setSelectedLeague] = useState('NBA');
   const [phase, setPhase] = useState<Phase>('loading');
   const [gameData, setGameData] = useState<PowerPlayData | null>(null);
@@ -164,6 +166,10 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
     new Animated.Value(0),
     new Animated.Value(0),
   ]).current;
+
+  useEffect(() => {
+    trackGameStart('power-play', selectedLeague);
+  }, [selectedLeague]);
 
   // ── Load game data ──────────────────────────────────────────────────────────
 
@@ -346,6 +352,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
     setTotalScore(score);
     setXpEarned(xp);
     setPhase('results');
+    trackPowerPlayScore(selectedLeague, score, score >= WIN_SCORE);
 
     // Persist result
     if (!isArchive) {
@@ -708,7 +715,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
       {/* Zone 1 */}
       <View style={styles.zone1}>
         <View style={styles.zone1TopRow}>
-          <Pressable onPress={onBack} hitSlop={8} style={styles.backBtn}>
+          <Pressable onPress={() => { if (phase === 'playing') trackGameAbandoned('power-play', selectedLeague); onBack(); }} hitSlop={8} style={styles.backBtn}>
             <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
           </Pressable>
         </View>

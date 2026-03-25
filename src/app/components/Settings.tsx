@@ -33,6 +33,7 @@ import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import PrimaryButton from '../../screens/components/ui/PrimaryButton';
 import { type Tab } from './ui/BottomNav';
 import { useTheme } from '../../hooks/useTheme';
+import { useUserAnalytics } from '../../lib/analytics';
 
 interface Props {
   onBack: () => void;
@@ -51,6 +52,7 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
   const [bugDescription, setBugDescription] = useState('');
   const [sendingReport, setSendingReport] = useState(false);
   const { theme, toggleTheme, isDark } = useTheme();
+  const { trackLogout } = useUserAnalytics();
 
   useEffect(() => {
     let cancelled = false;
@@ -182,6 +184,7 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
   async function handleLogOut() {
     if (signingOut) return;
     setSigningOut(true);
+    trackLogout();
     await supabase.auth.signOut();
     setSigningOut(false);
     onNavigate('logout');
