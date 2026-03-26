@@ -8,6 +8,7 @@ export type Player = {
   position: string;
   season: string;
   tier: 'normal' | 'ball_knowledge' | 'legend';
+  status: 'active' | 'retired' | 'legend';
 };
 
 // Cache to avoid repeat queries in the same session
@@ -18,7 +19,7 @@ async function fetchPlayers(league: string): Promise<Player[]> {
 
   const { data, error } = await supabase
     .from('players_pool')
-    .select('id, name, team, league, position, tier, season')
+    .select('id, name, team, league, position, tier, season, status')
     .eq('league', league);
 
   if (error || !data) {
@@ -37,7 +38,7 @@ function shuffle<T>(arr: T[]): T[] {
 /** Active players only — for Mystery Player autocomplete, Custom Mystery, Daily games */
 export async function getActivePlayers(league: string): Promise<Player[]> {
   const players = await fetchPlayers(league);
-  return players.filter(p => p.tier === 'normal' || p.tier === 'ball_knowledge');
+  return players.filter(p => (p.tier === 'normal' || p.tier === 'ball_knowledge') && p.status === 'active');
 }
 
 /** Normal tier only — for Trivia, Blind Showdown, Blind Rank 5 seed suggestions */

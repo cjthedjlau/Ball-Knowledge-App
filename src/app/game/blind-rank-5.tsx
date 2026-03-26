@@ -21,7 +21,7 @@ import { type Tab } from '../components/ui/BottomNav';
 import { updateUserXPAndStreak } from '../../lib/xp';
 import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
-import { getGameResultToday } from '../../lib/gameResults';
+import { getGameResultToday, saveGameResult as saveCompletionResult, getTodayEST } from '../../lib/gameResults';
 import { updatePlayHour } from '../../lib/notifications';
 import { shareRank5 } from '../../lib/shareResults';
 import { notifyFriendsOfResult } from '../../lib/friends';
@@ -211,7 +211,11 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
     if (isLast) {
       setGameComplete(true);
       await finishGame(newPlacements, leagueData);
-      if (!isArchive) void updatePlayHour();
+      // Mark as played immediately so re-mount shows "already played"
+      if (!isArchive) {
+        setPlayedTodayCache(prev => ({ ...prev, [selectedLeague]: { score: 1, xp: FLAT_XP } }));
+        void updatePlayHour();
+      }
     } else {
       setCurrentIndex(prev => prev + 1);
     }
@@ -221,7 +225,7 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
 
   const finishGame = async (finalPlacements: (string | null)[], ld: LeagueData) => {
     const rankingResult = finalPlacements.join(',');
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayEST();
     trackGameComplete('blind-rank-5', selectedLeague, 1, FLAT_XP);
 
     // Set result immediately with null community while we fetch
@@ -241,13 +245,16 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
             league: selectedLeague,
             date: today,
             score: 1,
-            xp: FLAT_XP,
+            xp_earned: FLAT_XP,
+            completed: true,
             ranking_result: rankingResult,
           },
           { onConflict: 'user_id,game_type,league,date' },
         );
         await updateUserXPAndStreak(user.id, FLAT_XP, true);
       }
+      // Also save via standard completion path for Home screen detection
+      void saveCompletionResult(selectedLeague, 'blind-rank-5', 1, FLAT_XP);
     }
 
     // Fetch community distribution
@@ -608,7 +615,7 @@ const styles = StyleSheet.create({
   zone2Content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing['2xl'],
-    paddingBottom: spacing['4xl'],
+    paddingBottom: 120,
     gap: spacing.md,
   },
 
