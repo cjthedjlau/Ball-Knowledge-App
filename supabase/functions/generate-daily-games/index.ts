@@ -222,12 +222,12 @@ async function generateGameForDate(date: string, league: string): Promise<{ stat
     return { status: 'already_exists' }
   }
 
-  // Fetch player pool — active players only, ordered by tier so normal players are preferred
+  // Fetch player pool — ordered by tier so normal players are preferred
+  // NOTE: Add .eq('status', 'active') after running the 20260326_players_pool_status migration
   const { data: players, error } = await supabaseAdmin
     .from('players_pool')
     .select('id, name, team, position, tier')
     .eq('league', league)
-    .eq('status', 'active')
     .in('tier', ['normal', 'ball_knowledge'])
 
   if (error || !players?.length) {

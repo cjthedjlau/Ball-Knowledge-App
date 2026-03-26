@@ -17,28 +17,17 @@ const cache: Record<string, Player[]> = {};
 async function fetchPlayers(league: string): Promise<Player[]> {
   if (cache[league]) return cache[league];
 
-  // Try with status column first; fall back without it if the column doesn't exist yet
-  let { data, error } = await supabase
+  const { data, error } = await supabase
     .from('players_pool')
-    .select('id, name, team, league, position, tier, season, status')
+    .select('id, name, team, league, position, tier, season')
     .eq('league', league);
-
-  if (error) {
-    // status column may not exist yet — retry without it
-    const fallback = await supabase
-      .from('players_pool')
-      .select('id, name, team, league, position, tier, season')
-      .eq('league', league);
-    data = fallback.data;
-    error = fallback.error;
-  }
 
   if (error || !data) {
     console.error('Failed to fetch players:', error?.message);
     return [];
   }
 
-  // Default status to 'active' if column doesn't exist yet
+  // Default status to 'active' — status column will be added via migration later
   cache[league] = (data as any[]).map(p => ({ ...p, status: p.status ?? 'active' })) as Player[];
   return cache[league];
 }
