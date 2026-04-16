@@ -2,26 +2,78 @@
   "expo": {
     "name": "Ball Knowledge",
     "slug": "ball-knowledge",
+    "description": "Daily sports games, leaderboards, and multiplayer party games for NFL, NBA, MLB & NHL fans. Test your sports knowledge with Mystery Player, Blind Showdown, Trivia, and more.",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/bk-logo.png",
+    "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/bk-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#121212"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ballknowledge.bk",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "Ball Knowledge uses this to personalize your experience and show relevant content.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "35F9.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "E174.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
+          }
+        ],
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeDeviceID",
+            "NSPrivacyCollectedDataTypeLinked": false,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAnalytics"
+            ]
+          }
+        ],
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": []
+      }
     },
     "android": {
+      "package": "com.ballknowledge.bk",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": true
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -29,20 +81,28 @@
     },
     "plugins": [
       "expo-web-browser",
-      "expo-localization"
+      "expo-localization",
+      "expo-secure-store",
+      "expo-apple-authentication",
+      "expo-tracking-transparency",
+      "expo-notifications",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "iosAppId": "ca-app-pub-1818161492484327~4897353088",
+          "androidAppId": "ca-app-pub-1818161492484327~7332147991"
+        }
+      ]
     ],
     "scheme": "ball-knowledge",
-    "packagerOpts": {
-      "sourceExts": [
-        "js",
-        "jsx",
-        "ts",
-        "tsx"
-      ]
-    },
     "assetBundlePatterns": [
       "assets/**",
       "src/**"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1dbc4798-f862-4290-bf99-4ae99b723aad"
+      }
+    }
   }
 }
