@@ -10,14 +10,16 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Search } from 'lucide-react-native';
 import MidnightCountdown from '../../components/MidnightCountdown';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, fonts, colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { getActivePlayers } from '../../lib/playersPool';
-import { NBA_ATTRS, NFL_ATTRS, MLB_ATTRS, NHL_ATTRS, type NBAAttrs, type NFLAttrs, type MLBAttrs, type NHLAttrs, type PlayerAttrs } from '../../lib/playerAttrs';
+import { type NBAAttrs, type NFLAttrs, type MLBAttrs, type NHLAttrs, type PlayerAttrs, getLeagueAttrs } from '../../lib/playerAttrsDB';
+import { NBA_ATTRS, NFL_ATTRS, MLB_ATTRS, NHL_ATTRS } from '../../lib/playerAttrs';
 import GuessGridTile from '../../screens/components/ui/GuessGridTile';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import PrimaryButton from '../../screens/components/ui/PrimaryButton';
@@ -26,7 +28,7 @@ import { type Tab } from '../components/ui/BottomNav';
 import { calculateDailyGameXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
-import { saveGameResult as saveCompletionResult, getGameResultToday } from '../../lib/gameResults';
+import { saveGameResult as saveCompletionResult, getGameResultToday, getTodayEST } from '../../lib/gameResults';
 import { updatePlayHour } from '../../lib/notifications';
 import { shareGuesser } from '../../lib/shareResults';
 import { notifyFriendsOfResult } from '../../lib/friends';
@@ -51,14 +53,31 @@ type League = 'NBA' | 'NFL' | 'MLB' | 'NHL';
 
 // ── Player Pool (only players with complete attribute data) ─────────────────
 
+// Positions excluded from Guesser — these make poor mystery players because
+// fans can't distinguish them by the attributes shown (height/jersey/college/age).
+const EXCLUDED_GUESSER_POSITIONS: Partial<Record<League, Set<string>>> = {
+  NFL: new Set(['OT', 'OG', 'C', 'K', 'P']),
+};
+
 async function loadPlayerPool(league: League): Promise<string[]> {
-  const attrMap = league === 'NBA' ? NBA_ATTRS : league === 'NFL' ? NFL_ATTRS : league === 'MLB' ? MLB_ATTRS : NHL_ATTRS;
-  const players = await getActivePlayers(league);
-  return players.map(p => p.name).filter(name => name in attrMap);
+  const [attrMap, players] = await Promise.all([
+    getLeagueAttrs(league),
+    getActivePlayers(league),
+  ]);
+  const excluded = EXCLUDED_GUESSER_POSITIONS[league];
+  return players.map(p => p.name).filter(name => {
+    if (!(name in attrMap)) return false;
+    if (excluded) {
+      const pos = (attrMap[name] as any).position;
+      if (pos && excluded.has(pos)) return false;
+    }
+    return true;
+  });
 }
 
 
-function getPlayerAttrs(name: string, league: League): PlayerAttrs | null {
+// Synchronous local-only lookup (used as fallback for mystery player supplementation)
+function getPlayerAttrsLocal(name: string, league: League): PlayerAttrs | null {
   if (league === 'NBA') return NBA_ATTRS[name] ?? null;
   if (league === 'NFL') return NFL_ATTRS[name] ?? null;
   if (league === 'MLB') return MLB_ATTRS[name] ?? null;
@@ -226,6 +245,67 @@ function isSameContinent(a: string, b: string): boolean {
   return ca === cb && ca !== a; // only match if actually mapped
 }
 
+// ── College → Conference mapping (2024-25 alignments) ───────────────────────
+
+const COLLEGE_CONFERENCE: Record<string, string> = {
+  // SEC
+  'Alabama': 'SEC', 'Arkansas': 'SEC', 'Auburn': 'SEC', 'Florida': 'SEC',
+  'Georgia': 'SEC', 'Kentucky': 'SEC', 'LSU': 'SEC', 'Mississippi': 'SEC',
+  'Mississippi State': 'SEC', 'Missouri': 'SEC', 'Oklahoma': 'SEC',
+  'South Carolina': 'SEC', 'Tennessee': 'SEC', 'Texas': 'SEC',
+  'Texas A&M': 'SEC', 'Vanderbilt': 'SEC',
+  // Big Ten
+  'Illinois': 'Big Ten', 'Indiana': 'Big Ten', 'Iowa': 'Big Ten',
+  'Maryland': 'Big Ten', 'Michigan': 'Big Ten', 'Michigan State': 'Big Ten',
+  'Nebraska': 'Big Ten', 'Ohio State': 'Big Ten', 'Oregon': 'Big Ten',
+  'Penn State': 'Big Ten', 'Purdue': 'Big Ten', 'Rutgers': 'Big Ten',
+  'UCLA': 'Big Ten', 'USC': 'Big Ten', 'Washington': 'Big Ten',
+  'Wisconsin': 'Big Ten',
+  // ACC
+  'Boston College': 'ACC', 'California': 'ACC', 'Clemson': 'ACC',
+  'Duke': 'ACC', 'Florida State': 'ACC', 'Louisville': 'ACC',
+  'Miami (FL)': 'ACC', 'North Carolina': 'ACC', 'Notre Dame': 'ACC',
+  'Pittsburgh': 'ACC', 'SMU': 'ACC', 'Stanford': 'ACC', 'Syracuse': 'ACC',
+  'Virginia': 'ACC', 'Wake Forest': 'ACC',
+  // Big 12
+  'Arizona': 'Big 12', 'Arizona State': 'Big 12', 'Baylor': 'Big 12',
+  'BYU': 'Big 12', 'Cincinnati': 'Big 12', 'Colorado': 'Big 12',
+  'Houston': 'Big 12', 'Iowa State': 'Big 12', 'Kansas': 'Big 12',
+  'Kansas State': 'Big 12', 'Oklahoma State': 'Big 12', 'TCU': 'Big 12',
+  'Texas Tech': 'Big 12', 'Utah': 'Big 12', 'West Virginia': 'Big 12',
+  // Mountain West
+  'Colorado State': 'Mountain West', 'Fresno State': 'Mountain West',
+  'San Diego State': 'Mountain West', 'Utah State': 'Mountain West',
+  'Wyoming': 'Mountain West',
+  // Big East
+  'Marquette': 'Big East', 'Villanova': 'Big East',
+  // American Athletic
+  'East Carolina': 'AAC', 'Memphis': 'AAC', 'Temple': 'AAC',
+  'Tulane': 'AAC', 'UTEP': 'AAC', 'Wichita State': 'AAC',
+  // West Coast
+  'Gonzaga': 'WCC', 'Santa Clara': 'WCC',
+  // Missouri Valley / FCS
+  'Murray State': 'MVC', 'North Dakota State': 'MVC',
+  'South Dakota State': 'MVC',
+  // Big Sky
+  'Eastern Washington': 'Big Sky', 'Weber State': 'Big Sky',
+  // MAC
+  'Eastern Michigan': 'MAC', 'Toledo': 'MAC',
+  // Sun Belt
+  'Arkansas State': 'Sun Belt',
+  // Pac-12 (remnant)
+  'Oregon State': 'Pac-12', 'Washington State': 'Pac-12',
+  // A-10
+  'Davidson': 'A-10',
+  // Independents / Other
+  'Middle Tennessee': 'CUSA', 'Lehigh': 'Patriot',
+};
+
+function getCollegeConference(college: string | undefined): string | null {
+  if (!college) return null;
+  return COLLEGE_CONFERENCE[college] ?? null;
+}
+
 // ── Comparison logic ─────────────────────────────────────────────────────────
 
 const MAX_GUESSES = 8;
@@ -299,8 +379,38 @@ function compareTile(
     return guessConf === mysteryConf ? 'close' : 'wrong';
   }
 
+  if (attribute === 'college') {
+    const guessConf = getCollegeConference(guessVal as string);
+    const mysteryConf = getCollegeConference(mysteryVal as string);
+    if (guessConf && mysteryConf && guessConf === mysteryConf) return 'close';
+    return 'wrong';
+  }
+
   if (attribute === 'country') {
     return 'wrong';
+  }
+
+  // Position grouping — yellow if same position group, gray if different group
+  if (attribute === 'position') {
+    const g = String(guessVal);
+    const m = String(mysteryVal);
+    const group = (pos: string): string => {
+      // NFL groups
+      if (['CB', 'S'].includes(pos)) return 'DB';
+      if (['EDGE', 'DT'].includes(pos)) return 'DL';
+      if (['OT', 'OG', 'C'].includes(pos)) return 'OL';
+      // NBA groups
+      if (['PG', 'SG'].includes(pos)) return 'Guard';
+      if (['SF', 'PF'].includes(pos)) return 'Forward';
+      // MLB groups
+      if (['LF', 'CF', 'RF'].includes(pos)) return 'OF';
+      if (['1B', '2B', '3B', 'SS'].includes(pos)) return 'IF';
+      if (['SP', 'RP'].includes(pos)) return 'P';
+      // NHL groups
+      if (['LW', 'RW'].includes(pos)) return 'Wing';
+      return pos;
+    };
+    return group(g) === group(m) ? 'close' : 'wrong';
   }
 
   return 'wrong';
@@ -313,7 +423,12 @@ function evaluateGuessForLeague(
   league: League,
 ): TileData[] {
   const nameState: TileState = guessName === mystery.name ? 'correct' : 'wrong';
-  const nameDisplay = guessName.split(' ').slice(-1)[0];
+  const suffixes = new Set(['Jr.', 'Sr.', 'II', 'III', 'IV', 'V']);
+  const parts = guessName.split(' ');
+  const lastPart = parts[parts.length - 1];
+  const nameDisplay = parts.length > 1 && suffixes.has(lastPart)
+    ? parts.slice(-2).join(' ')
+    : lastPart;
 
   if (league === 'MLB') {
     const g = guessAttrs as MLBAttrs;
@@ -358,6 +473,9 @@ function evaluateGuessForLeague(
 
 export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
   const isArchive = !!archiveDate;
+  const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
+  const s = createStyles(isDark);
   const { trackGameStart, trackGameComplete, trackGameAbandoned } = useGameAnalytics();
   const [guesses, setGuesses] = useState<TileData[][]>([]);
   const [guessedNames, setGuessedNames] = useState<Set<string>>(new Set());
@@ -372,6 +490,7 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
   const [loadError, setLoadError] = useState(false);
   const [playedTodayCache, setPlayedTodayCache] = useState<Record<string, { score: number; xp: number } | null>>({});
   const [playerPool, setPlayerPool] = useState<string[]>([]);
+  const [attrsMap, setAttrsMap] = useState<Record<string, PlayerAttrs>>({});
 
   useEffect(() => {
     trackGameStart('player-guess', activeLeague);
@@ -379,11 +498,12 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
 
   useEffect(() => {
     loadPlayerPool(activeLeague).then(setPlayerPool);
+    getLeagueAttrs(activeLeague).then(setAttrsMap);
   }, [activeLeague]);
 
   // ── AsyncStorage persistence helpers ──────────────────────────────────────
   const getStorageKey = useCallback((league: League) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayEST();
     return `mystery-player-state-${league}-${today}`;
   }, []);
 
@@ -410,7 +530,9 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
     const fetchResult = isArchive
       ? Promise.resolve(null)
       : getGameResultToday(activeLeague, 'mystery-player');
+    let isMounted = true;
     void Promise.all([fetchGame, fetchResult]).then(async ([data, priorResult]) => {
+      if (!isMounted) return;
       setIsLoading(false);
       if (!isArchive) setPlayedTodayCache(prev => ({ ...prev, [activeLeague]: priorResult }));
       if (!data?.mystery_player) { setLoadError(true); return; }
@@ -443,7 +565,7 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
       // Supplement any missing attrs from the local playerAttrs cache.
       // Auto-generated games may only store name/team/position in the DB;
       // the local tables have full attribute data for all known players.
-      const localAttrs = getPlayerAttrs(raw.name, activeLeague);
+      const localAttrs = getPlayerAttrsLocal(raw.name, activeLeague);
       if (localAttrs) {
         if (activeLeague === 'MLB') {
           const a = localAttrs as MLBAttrs;
@@ -504,16 +626,24 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
         }
       }
     });
+    return () => { isMounted = false; };
   }, [activeLeague]);
 
   const cols = LEAGUE_COLS[activeLeague];
 
+  const [debouncedSearchText, setDebouncedSearchText] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchText(searchText), 200);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
   const searchResults =
-    searchText.length >= 2
+    debouncedSearchText.length >= 2
       ? playerPool
           .filter(
             name =>
-              name.toLowerCase().includes(searchText.toLowerCase()) &&
+              name.toLowerCase().includes(debouncedSearchText.toLowerCase()) &&
               !guessedNames.has(name),
           )
           .slice(0, 8)
@@ -521,7 +651,7 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
 
   const submitGuess = (playerName: string) => {
     if (!mystery) return;
-    const attrs = getPlayerAttrs(playerName, activeLeague);
+    const attrs = attrsMap[playerName] ?? null;
     if (!attrs) return;
 
     const row = evaluateGuessForLeague(attrs, playerName, mystery, activeLeague);
@@ -577,40 +707,40 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
   const canGuess = gameState === 'playing' && searchResults.length > 0 && mystery !== null;
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={s.root}>
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* ── Zone 1 ── */}
-        <View style={styles.zone1}>
+        <View style={[s.zone1, { paddingTop: insets.top + 16 }]}>
           {/* Back button row */}
-          <View style={styles.zone1TopRow}>
-            <Pressable onPress={() => { if (gameState === 'playing') trackGameAbandoned('player-guess', activeLeague); onBack(); }} hitSlop={8} style={styles.backBtn}>
+          <View style={s.zone1TopRow}>
+            <Pressable onPress={() => { if (gameState === 'playing') trackGameAbandoned('player-guess', activeLeague); onBack(); }} hitSlop={8} style={s.backBtn}>
               <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
             </Pressable>
           </View>
 
           {/* Title block */}
-          <View style={styles.zone1Center}>
-            <Text style={styles.zone1Title}>MYSTERY PLAYER</Text>
-            <Text style={styles.zone1Sub}>Guess the mystery athlete in {MAX_GUESSES} tries</Text>
+          <View style={s.zone1Center}>
+            <Text style={s.zone1Title}>MYSTERY PLAYER</Text>
+            <Text style={s.zone1Sub}>Guess the mystery athlete in {MAX_GUESSES} tries</Text>
 
             {/* Guess counter */}
-            <View style={styles.counterRow}>
-              <Text style={styles.counterCurrent}>{guesses.length}</Text>
-              <Text style={styles.counterDivider}> / </Text>
-              <Text style={styles.counterTotal}>{MAX_GUESSES}</Text>
+            <View style={s.counterRow}>
+              <Text style={s.counterCurrent}>{guesses.length}</Text>
+              <Text style={s.counterDivider}> / </Text>
+              <Text style={s.counterTotal}>{MAX_GUESSES}</Text>
             </View>
           </View>
 
           {/* League switcher / Archive banner */}
           {isArchive ? (
-            <View style={styles.archiveBanner}>
-              <Text style={styles.archiveBannerText}>ARCHIVE — {archiveDate}</Text>
+            <View style={s.archiveBanner}>
+              <Text style={s.archiveBannerText}>ARCHIVE — {archiveDate}</Text>
             </View>
           ) : (
-            <View style={styles.leagueSwitcherRow}>
+            <View style={s.leagueSwitcherRow}>
               <LeagueSwitcher selected={activeLeague} onChange={l => setActiveLeague(l as League)} />
             </View>
           )}
@@ -618,94 +748,94 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
           {/* Bottom fade overlay */}
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.3)']}
-            style={styles.zone1Gradient}
+            style={s.zone1Gradient}
             pointerEvents="none"
           />
         </View>
 
         {/* ── Zone 2 ── */}
-        <View style={styles.zone2}>
+        <View style={s.zone2}>
           {isLoading ? (
-            <View style={styles.centerState}>
-              <ActivityIndicator size="large" color="#FC345C" />
+            <View style={s.centerState}>
+              <ActivityIndicator size="large" color={brand.primary} />
             </View>
           ) : (loadError || !mystery) ? (
-            <View style={styles.centerState}>
-              <Text style={styles.errorText}>No game available today</Text>
+            <View style={s.centerState}>
+              <Text style={s.errorText}>No game available today</Text>
             </View>
           ) : (!isArchive && playedTodayCache[activeLeague]) ? (
-            <View style={styles.alreadyPlayedWrapper}>
-              <View style={styles.alreadyPlayedCard}>
-                <Text style={styles.alreadyPlayedBadge}>ALREADY PLAYED TODAY</Text>
-                <Text style={styles.alreadyPlayedScore}>{playedTodayCache[activeLeague]!.score}</Text>
-                <View style={styles.alreadyPlayedXpRow}>
-                  <Text style={styles.alreadyPlayedXpLabel}>XP EARNED</Text>
-                  <Text style={styles.alreadyPlayedXp}>+{playedTodayCache[activeLeague]!.xp}</Text>
+            <View style={s.alreadyPlayedWrapper}>
+              <View style={s.alreadyPlayedCard}>
+                <Text style={s.alreadyPlayedBadge}>ALREADY PLAYED TODAY</Text>
+                <Text style={s.alreadyPlayedScore}>{playedTodayCache[activeLeague]!.score}</Text>
+                <View style={s.alreadyPlayedXpRow}>
+                  <Text style={s.alreadyPlayedXpLabel}>XP EARNED</Text>
+                  <Text style={s.alreadyPlayedXp}>+{playedTodayCache[activeLeague]!.xp}</Text>
                 </View>
-                <View style={styles.alreadyPlayedDivider} />
-                <Text style={styles.alreadyPlayedCta}>COME BACK TOMORROW</Text>
-                <Text style={styles.alreadyPlayedSub}>A new game drops every day. Switch leagues to play more.</Text>
+                <View style={s.alreadyPlayedDivider} />
+                <Text style={s.alreadyPlayedCta}>COME BACK TOMORROW</Text>
+                <Text style={s.alreadyPlayedSub}>A new game drops every day. Switch leagues to play more.</Text>
                 <MidnightCountdown />
                 <GhostButton label="VIEW ARCHIVE" onPress={() => onNavigate('archive' as Tab)} />
               </View>
             </View>
           ) : (
           <ScrollView
-            style={styles.gameScrollView}
-            contentContainerStyle={styles.gameScrollContent}
+            style={s.gameScrollView}
+            contentContainerStyle={s.gameScrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
           {/* Column headers */}
-          <View style={styles.headerRow}>
+          <View style={s.headerRow}>
             {cols.map((col, i) => (
-              <View key={col} style={[styles.headerCell, { flex: i === 0 ? 2 : 1 }]}>
-                <Text style={styles.headerText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{col}</Text>
+              <View key={col} style={[s.headerCell, { flex: i === 0 ? 2 : 1 }]}>
+                <Text style={s.headerText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{col}</Text>
               </View>
             ))}
           </View>
 
           {/* Result banner */}
           {gameState === 'won' && (
-            <View style={styles.banner}>
-              <Text style={styles.bannerText} numberOfLines={2}>You got it! {mystery.name}</Text>
+            <View style={s.banner}>
+              <Text style={s.bannerText} numberOfLines={2}>You got it! {mystery.name}</Text>
             </View>
           )}
           {gameState === 'lost' && (
-            <View style={[styles.banner, styles.bannerLost]}>
-              <Text style={styles.bannerText} numberOfLines={2}>The answer was {mystery.name}</Text>
+            <View style={[s.banner, s.bannerLost]}>
+              <Text style={s.bannerText} numberOfLines={2}>The answer was {mystery.name}</Text>
             </View>
           )}
 
           {/* XP card */}
           {xpEarned !== null && !isArchive && (
-            <View style={styles.xpCard}>
-              <Text style={styles.xpCardLabel}>XP EARNED</Text>
-              <Text style={styles.xpCardTotal}>+{xpEarned}</Text>
-              <Text style={styles.xpCardBreakdown}>
+            <View style={s.xpCard}>
+              <Text style={s.xpCardLabel}>XP EARNED</Text>
+              <Text style={s.xpCardTotal}>+{xpEarned}</Text>
+              <Text style={s.xpCardBreakdown}>
                 Base: 500 XP + Bonus: {xpEarned - 500} XP
               </Text>
             </View>
           )}
           {isArchive && gameState !== 'playing' && (
-            <Text style={styles.archiveNotice}>ARCHIVE MODE — Results not saved</Text>
+            <Text style={s.archiveNotice}>ARCHIVE MODE — Results not saved</Text>
           )}
 
           {/* Post-game actions (daily only) */}
           {!isArchive && gameState !== 'playing' && (
             <>
               <MidnightCountdown />
-              <View style={styles.postGameActions}>
+              <View style={s.postGameActions}>
                 <PrimaryButton label="PLAY ANOTHER DAILY GAME" onPress={onBack} />
                 <Pressable
-                  style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
+                  style={({ pressed }) => [s.shareBtn, pressed && s.shareBtnPressed]}
                   onPress={() => shareGuesser(activeLeague, gameState === 'won', guesses.length, MAX_GUESSES)}
                 >
-                  <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
+                  <Text style={s.shareBtnText}>SHARE RESULTS</Text>
                 </Pressable>
                 {/* Notify Friends button */}
                 <Pressable
-                  style={({ pressed }) => [styles.notifyBtn, pressed && styles.notifyBtnPressed, notifyState === 'done' && styles.notifyBtnDone]}
+                  style={({ pressed }) => [s.notifyBtn, pressed && s.notifyBtnPressed, notifyState === 'done' && s.notifyBtnDone]}
                   onPress={() => { void (async () => {
                     if (notifyState !== 'idle') return;
                     setNotifyState('sending');
@@ -715,7 +845,7 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
                   })(); }}
                   disabled={notifyState === 'sending'}
                 >
-                  <Text style={styles.notifyBtnText}>
+                  <Text style={s.notifyBtnText}>
                     {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
                   </Text>
                 </Pressable>
@@ -725,11 +855,11 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
           )}
 
           {/* Guess grid */}
-          <View style={styles.gridContent}>
+          <View style={s.gridContent}>
             {guesses.map((row, i) => {
               const isNewest = i === guesses.length - 1;
               return (
-                <View key={i} style={styles.gridRow}>
+                <View key={i} style={s.gridRow}>
                   {row.map((tile, j) => (
                     <GuessGridTile
                       key={j}
@@ -746,33 +876,33 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
 
           {/* ── Search area ── */}
           {gameState === 'playing' && (
-            <View style={styles.searchArea}>
+            <View style={s.searchArea}>
               {/* Dropdown (above search bar) */}
               {showDropdown && searchResults.length > 0 && (
-                <View style={styles.dropdown}>
+                <View style={s.dropdown}>
                   {searchResults.map((name, i) => (
                     <Pressable
                       key={name}
                       onPress={() => submitGuess(name)}
                       style={({ pressed }) => [
-                        styles.dropdownItem,
-                        i < searchResults.length - 1 && styles.dropdownItemBorder,
-                        pressed && styles.dropdownItemPressed,
+                        s.dropdownItem,
+                        i < searchResults.length - 1 && s.dropdownItemBorder,
+                        pressed && s.dropdownItemPressed,
                       ]}
                     >
-                      <Text style={styles.dropdownText} numberOfLines={1}>{name}</Text>
+                      <Text style={s.dropdownText} numberOfLines={1}>{name}</Text>
                     </Pressable>
                   ))}
                 </View>
               )}
 
               {/* Search bar */}
-              <View style={styles.searchBar}>
-                <Search size={18} color="#9A9A9A" strokeWidth={2} />
+              <View style={s.searchBar}>
+                <Search size={18} color={isDark ? dark.textSecondary : light.textSecondary} strokeWidth={2} />
                 <TextInput
-                  style={styles.searchInput}
+                  style={s.searchInput}
                   placeholder="Search for a player..."
-                  placeholderTextColor="#9A9A9A"
+                  placeholderTextColor={isDark ? dark.textSecondary : light.textSecondary}
                   value={searchText}
                   onChangeText={t => {
                     setSearchText(t);
@@ -800,441 +930,103 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
           )}
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  flex: {
-    flex: 1,
-  },
+function createStyles(isDark: boolean) {
+  const txt = isDark ? dark.textPrimary : light.textPrimary;
+  const txtSec = isDark ? dark.textSecondary : light.textSecondary;
+  const cardBg = isDark ? dark.card : light.card;
+  const surfaceBg = isDark ? dark.surface : light.surface;
+  const borderCol = isDark ? dark.cardBorder : light.cardBorder;
+  const dividerCol = isDark ? dark.divider : light.divider;
+  const inputBg = isDark ? dark.inputBg : light.inputBg;
 
-  // Zone 1 ─────────────────────────────────────────────────────────────────
-  zone1: {
-    backgroundColor: colors.brand,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing['2xl'],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 12,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-  },
-  zone1TopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  backBtn: {
-    padding: spacing.sm,
-    marginLeft: -spacing.sm,
-  },
-  zone1Center: {
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  zone1Title: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 26,
-    color: colors.white,
-    letterSpacing: 3,
-    textAlign: 'center',
-  },
-  zone1Sub: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.65)',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  counterRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginTop: spacing.sm,
-  },
-  counterCurrent: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 36,
-    color: colors.white,
-    lineHeight: 40,
-  },
-  counterDivider: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 22,
-    color: 'rgba(255,255,255,0.45)',
-  },
-  counterTotal: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 22,
-    color: 'rgba(255,255,255,0.55)',
-  },
-  leagueSwitcherRow: {
-    marginTop: spacing.md,
-  },
-  archiveBanner: {
-    marginTop: spacing.md,
-    backgroundColor: 'rgba(0,0,0,0.20)',
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-  },
-  archiveBannerText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.80)',
-    letterSpacing: 1.5,
-  },
-  zone1Gradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 40,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-  },
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: 'transparent' },
+    flex: { flex: 1 },
 
-  // Zone 2 ─────────────────────────────────────────────────────────────────
-  zone2: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -32,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.10)',
-    paddingHorizontal: spacing.sm,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
+    // Zone 1
+    zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing['2xl'], borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+    zone1TopRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
+    backBtn: { padding: spacing.sm, marginLeft: -spacing.sm },
+    zone1Center: { alignItems: 'center', marginTop: spacing.xs },
+    zone1Title: { fontFamily: fonts.display, fontSize: 26, color: '#FFFFFF', letterSpacing: 3, textAlign: 'center' },
+    zone1Sub: { fontFamily: fonts.bodyMedium, fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 4, textAlign: 'center' },
+    counterRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.sm },
+    counterCurrent: { fontFamily: fonts.display, fontSize: 36, color: '#FFFFFF', lineHeight: 40 },
+    counterDivider: { fontFamily: fonts.bodyMedium, fontSize: 22, color: 'rgba(255,255,255,0.45)' },
+    counterTotal: { fontFamily: fonts.display, fontSize: 22, color: 'rgba(255,255,255,0.55)' },
+    leagueSwitcherRow: { marginTop: spacing.md },
+    archiveBanner: { marginTop: spacing.md, backgroundColor: 'rgba(0,0,0,0.20)', borderRadius: 8, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, alignItems: 'center' },
+    archiveBannerText: { fontFamily: fonts.bodySemiBold, fontSize: 11, color: 'rgba(255,255,255,0.80)', letterSpacing: 1.5 },
+    zone1Gradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
 
-  // Column headers
-  headerRow: {
-    flexDirection: 'row',
-    marginBottom: spacing.sm,
-    gap: 3,
-  },
-  headerCell: {
-    alignItems: 'center',
-  },
-  headerText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 8,
-    letterSpacing: 0.5,
-    color: colors.accentCyan,
-    textAlign: 'center',
-  },
+    // Zone 2
+    zone2: { flex: 1, backgroundColor: 'transparent', borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -32, borderTopWidth: 1, borderTopColor: dividerCol, paddingHorizontal: spacing.sm, paddingTop: spacing.lg, paddingBottom: spacing.lg },
 
-  // Result banner
-  banner: {
-    backgroundColor: '#00C897',
-    borderRadius: 12,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
-  },
-  bannerLost: {
-    backgroundColor: colors.accentRed,
-  },
-  bannerText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 15,
-    color: colors.white,
-    textAlign: 'center',
-  },
+    // Column headers
+    headerRow: { flexDirection: 'row', marginBottom: spacing.sm, gap: 3 },
+    headerCell: { alignItems: 'center' },
+    headerText: { fontFamily: fonts.bodySemiBold, fontSize: 8, letterSpacing: 0.5, color: colors.accentCyan, textAlign: 'center' },
 
-  // Outer game scroll
-  gameScrollView: {
-    flex: 1,
-  },
-  gameScrollContent: {
-    paddingBottom: 100,
-  },
+    // Result banner
+    banner: { backgroundColor: colors.accentGreen, borderRadius: radius.primary, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md, alignItems: 'center' },
+    bannerLost: { backgroundColor: colors.accentRed },
+    bannerText: { fontFamily: fonts.bodySemiBold, fontSize: 15, color: '#FFFFFF', textAlign: 'center' },
 
-  // Grid
-  gridContent: {
-    gap: spacing.xs,
-    paddingBottom: spacing.sm,
-  },
-  gridRow: {
-    flexDirection: 'row',
-    gap: 3,
-  },
+    // Outer game scroll
+    gameScrollView: { flex: 1 },
+    gameScrollContent: { paddingBottom: 120 },
 
-  // Search area
-  searchArea: {
-    paddingTop: spacing.md,
-    paddingHorizontal: spacing.sm,
-    gap: spacing.md,
-  },
-  dropdown: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-    overflow: 'hidden',
-  },
-  dropdownItem: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  dropdownItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
-  },
-  dropdownItemPressed: {
-    backgroundColor: 'rgba(252,52,92,0.12)',
-  },
-  dropdownText: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 15,
-    color: colors.white,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 12,
-    paddingHorizontal: spacing.md,
-    height: 48,
-    gap: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 15,
-    color: colors.white,
-    height: '100%' as any,
-  },
+    // Grid
+    gridContent: { gap: spacing.xs, paddingBottom: spacing.sm },
+    gridRow: { flexDirection: 'row', gap: 3 },
 
-  // Loading / error
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
-  },
-  errorText: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 15,
-    color: '#9A9A9A',
-    textAlign: 'center',
-  },
+    // Search area
+    searchArea: { paddingTop: spacing.md, paddingHorizontal: spacing.sm, gap: spacing.md },
+    dropdown: { backgroundColor: cardBg, borderRadius: radius.primary, borderWidth: 1, borderColor: borderCol, overflow: 'hidden' },
+    dropdownItem: { paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
+    dropdownItemBorder: { borderBottomWidth: 1, borderBottomColor: dividerCol },
+    dropdownItemPressed: { backgroundColor: colors.brandAlpha15 },
+    dropdownText: { fontFamily: fonts.bodyMedium, fontSize: 15, color: txt },
+    searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: inputBg, borderRadius: radius.primary, paddingHorizontal: spacing.md, height: 48, gap: spacing.sm, borderWidth: 1, borderColor: isDark ? dark.inputBorder : light.inputBorder },
+    searchInput: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 15, color: txt, height: '100%' as any },
 
-  // Already played today
-  alreadyPlayedWrapper: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing['2xl'],
-    paddingBottom: spacing.lg,
-  },
-  alreadyPlayedCard: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 24,
-    padding: spacing['3xl'],
-    alignItems: 'center',
-    gap: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  alreadyPlayedBadge: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 10,
-    letterSpacing: 2,
-    color: colors.brand,
-    textAlign: 'center',
-  },
-  alreadyPlayedScore: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 72,
-    color: colors.white,
-    lineHeight: 78,
-  },
-  alreadyPlayedXpRow: {
-    alignItems: 'center',
-  },
-  alreadyPlayedXpLabel: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 10,
-    letterSpacing: 2,
-    color: '#9A9A9A',
-  },
-  alreadyPlayedXp: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 32,
-    color: colors.brand,
-    lineHeight: 38,
-  },
-  alreadyPlayedDivider: {
-    width: '100%' as any,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    marginVertical: spacing.xs,
-  },
-  alreadyPlayedCta: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 18,
-    color: colors.white,
-    letterSpacing: 2,
-    textAlign: 'center',
-  },
-  alreadyPlayedSub: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 13,
-    color: '#9A9A9A',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+    // Loading / error
+    centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+    errorText: { fontFamily: fonts.bodyMedium, fontSize: 15, color: txtSec, textAlign: 'center' },
 
-  // XP card
-  xpCard: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 16,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  xpCardLabel: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 13,
-    color: '#9A9A9A',
-    letterSpacing: 1,
-    marginBottom: spacing.xs,
-  },
-  xpCardTotal: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 48,
-    color: colors.brand,
-    lineHeight: 54,
-  },
-  xpCardBreakdown: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 13,
-    color: '#9A9A9A',
-    marginTop: spacing.xs,
-  },
-  archiveNotice: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 13,
-    color: '#9A9A9A',
-    textAlign: 'center',
-    marginTop: spacing.md,
-    letterSpacing: 0.5,
-  },
-  postGameActions: {
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  shareBtn: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 12,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-  },
-  shareBtnPressed: {
-    opacity: 0.7,
-  },
-  shareBtnText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 13,
-    letterSpacing: 1.5,
-    color: colors.white,
-  },
-  notifyBtn: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    marginBottom: 12,
-  },
-  notifyBtnPressed: {
-    opacity: 0.7,
-  },
-  notifyBtnDone: {
-    borderColor: 'rgba(0,200,151,0.40)',
-    backgroundColor: 'rgba(0,200,151,0.08)',
-  },
-  notifyBtnText: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900' as const,
-    fontSize: 15,
-    color: '#F5F5F5',
-    letterSpacing: 2,
-  },
-});
+    // Already played
+    alreadyPlayedWrapper: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing['2xl'], paddingBottom: 120 },
+    alreadyPlayedCard: { backgroundColor: cardBg, borderRadius: 24, padding: spacing['3xl'], alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: borderCol },
+    alreadyPlayedBadge: { fontFamily: fonts.bodySemiBold, fontSize: 10, letterSpacing: 2, color: brand.primary, textAlign: 'center' },
+    alreadyPlayedScore: { fontFamily: fonts.display, fontSize: 72, color: txt, lineHeight: 78 },
+    alreadyPlayedXpRow: { alignItems: 'center' },
+    alreadyPlayedXpLabel: { fontFamily: fonts.bodySemiBold, fontSize: 10, letterSpacing: 2, color: txtSec },
+    alreadyPlayedXp: { fontFamily: fonts.display, fontSize: 32, color: brand.primary, lineHeight: 38 },
+    alreadyPlayedDivider: { width: '100%' as any, height: 1, backgroundColor: dividerCol, marginVertical: spacing.xs },
+    alreadyPlayedCta: { fontFamily: fonts.display, fontSize: 18, color: txt, letterSpacing: 2, textAlign: 'center' },
+    alreadyPlayedSub: { fontFamily: fonts.bodyMedium, fontSize: 13, color: txtSec, textAlign: 'center', lineHeight: 20 },
+
+    // XP card
+    xpCard: { backgroundColor: cardBg, borderRadius: radius.primary, paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, alignItems: 'center', marginBottom: spacing.md, borderWidth: 1, borderColor: borderCol },
+    xpCardLabel: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: txtSec, letterSpacing: 1, marginBottom: spacing.xs },
+    xpCardTotal: { fontFamily: fonts.display, fontSize: 48, color: brand.primary, lineHeight: 54 },
+    xpCardBreakdown: { fontFamily: fonts.bodyMedium, fontSize: 13, color: txtSec, marginTop: spacing.xs },
+    archiveNotice: { fontFamily: fonts.bodyMedium, fontSize: 13, color: txtSec, textAlign: 'center', marginTop: spacing.md, letterSpacing: 0.5 },
+    postGameActions: { gap: spacing.md, marginBottom: spacing.lg },
+    shareBtn: { backgroundColor: cardBg, borderRadius: radius.primary, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, alignItems: 'center', justifyContent: 'center', minHeight: 48, borderWidth: 1, borderColor: borderCol },
+    shareBtnPressed: { opacity: 0.7 },
+    shareBtnText: { fontFamily: fonts.bodySemiBold, fontSize: 13, letterSpacing: 1.5, color: txt },
+    notifyBtn: { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderRadius: radius.primary, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: borderCol, marginBottom: 12 },
+    notifyBtnPressed: { opacity: 0.7 },
+    notifyBtnDone: { borderColor: 'rgba(0,200,151,0.40)', backgroundColor: 'rgba(0,200,151,0.08)' },
+    notifyBtnText: { fontFamily: fonts.display, fontSize: 15, color: txt, letterSpacing: 2 },
+  });
+}
+
+const styles = createStyles(true);
