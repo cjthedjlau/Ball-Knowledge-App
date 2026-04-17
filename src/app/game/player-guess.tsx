@@ -966,7 +966,7 @@ function createStyles(isDark: boolean) {
     zone1Gradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
 
     // Zone 2
-    zone2: { flex: 1, backgroundColor: 'transparent', borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -32, borderTopWidth: 1, borderTopColor: dividerCol, paddingHorizontal: spacing.sm, paddingTop: spacing.lg, paddingBottom: spacing.lg },
+    zone2: { flex: 1, backgroundColor: 'transparent', borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -32, paddingHorizontal: spacing.sm, paddingTop: spacing.lg, paddingBottom: spacing.lg },
 
     // Column headers
     headerRow: { flexDirection: 'row', marginBottom: spacing.sm, gap: 3 },

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, memo } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,18 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import { fontFamily } from '../../styles/theme';
+import { brand, dark, light, fonts, colors, fontFamily } from '../../styles/theme';
 
 const { width: W, height: H } = Dimensions.get('window');
 const CX = W / 2;
 const CY = H / 2;
 const MAX_R = Math.sqrt(CX * CX + CY * CY);
 
-const BRAND     = '#FC345C';
-const BRAND_MID = '#FD8FAA';
-const CYAN      = '#07bccc';
+const BRAND     = brand.primary;
+const BRAND_MID = colors.brandMid;
+const CYAN      = brand.teal;
 const PINK      = '#e601c0';
-const WHITE     = '#FFFFFF';
+const WHITE     = dark.textPrimary;
 
 function seeded(seed: number, offset: number = 0): number {
   const x = Math.sin(seed * 127.1 + offset * 311.7) * 43758.5453;
@@ -58,11 +58,6 @@ const RINGS = [
   { color: PINK,  startAt: 0.12, speedMult: 0.66 },
 ];
 
-function easeOutCubic(t: number): number {
-  const c = Math.min(Math.max(t, 0), 1);
-  return 1 - Math.pow(1 - c, 3);
-}
-
 const DURATION_MS = 2500;
 
 interface ParticleAnims {
@@ -72,8 +67,6 @@ interface ParticleAnims {
 }
 
 // ── Memoized particle layer — never re-renders after initial mount ─────────────
-// Particles run on the native/UI thread via useNativeDriver, completely
-// decoupled from the JS-thread progress loop that drives rings + flash.
 const ParticlesLayer = memo(function ParticlesLayer({ anims }: { anims: ParticleAnims[] }) {
   return (
     <>
@@ -87,7 +80,6 @@ const ParticlesLayer = memo(function ParticlesLayer({ anims }: { anims: Particle
         const trailTransY = trailPos.interpolate({ inputRange: [0, 1], outputRange: [0, finalY] });
 
         const trailSize = p.size * 0.45;
-        // Trail opacity is 32% of main opacity — interpolate to scale it
         const trailOpacity = opacity.interpolate({
           inputRange:  [0, p.maxOpacity],
           outputRange: [0, p.maxOpacity * 0.32],
@@ -95,7 +87,6 @@ const ParticlesLayer = memo(function ParticlesLayer({ anims }: { anims: Particle
 
         return (
           <React.Fragment key={i}>
-            {/* Trail dot */}
             <Animated.View
               style={{
                 position:        'absolute',
@@ -109,7 +100,6 @@ const ParticlesLayer = memo(function ParticlesLayer({ anims }: { anims: Particle
                 transform:       [{ translateX: trailTransX }, { translateY: trailTransY }],
               }}
             />
-            {/* Main dot */}
             <Animated.View
               style={{
                 position:        'absolute',
@@ -130,23 +120,45 @@ const ParticlesLayer = memo(function ParticlesLayer({ anims }: { anims: Particle
   );
 });
 
+// ── Memoized ring layer — all native-driven, zero JS re-renders ───────────────
+const RingsLayer = memo(function RingsLayer({ anims }: { anims: { scale: Animated.Value; opacity: Animated.Value }[] }) {
+  return (
+    <>
+      {RINGS.map((ring, i) => {
+        const fullRadius = MAX_R * 1.1 * ring.speedMult;
+        const fullDiam = fullRadius * 2;
+        return (
+          <Animated.View
+            key={i}
+            style={{
+              position:     'absolute',
+              left:         CX - fullRadius,
+              top:          CY - fullRadius,
+              width:        fullDiam,
+              height:       fullDiam,
+              borderRadius: fullRadius,
+              borderWidth:  2,
+              borderColor:  ring.color,
+              opacity:      anims[i].opacity,
+              transform:    [{ scale: anims[i].scale }],
+            }}
+          />
+        );
+      })}
+    </>
+  );
+});
+
 // ── Component ─────────────────────────────────────────────────────────────────
 interface SplashProps {
   onFinish?: () => void;
 }
 
 export default function Splash({ onFinish }: SplashProps) {
-  // JS-thread progress: drives only the 3 rings + 1 flash (4 views total)
-  const [progress, setProgress] = useState(0);
-
   // Title (native driver — smooth spring + fade)
   const titleScale    = useRef(new Animated.Value(0)).current;
   const titleAlpha    = useRef(new Animated.Value(0)).current;
   const subtitleAlpha = useRef(new Animated.Value(0)).current;
-
-  const titleStarted    = useRef(false);
-  const subtitleStarted = useRef(false);
-  const finishFired     = useRef(false);
 
   // Per-particle animated values — created once, never recreated
   const particleAnims = useRef<ParticleAnims[]>(
@@ -157,157 +169,138 @@ export default function Splash({ onFinish }: SplashProps) {
     }))
   ).current;
 
+  // Per-ring animated values — native-driven scale + opacity (no JS re-renders)
+  const ringAnims = useRef(
+    RINGS.map(() => ({
+      scale:   new Animated.Value(0),
+      opacity: new Animated.Value(0),
+    }))
+  ).current;
+
+  // Flash animated values — native-driven
+  const flashScale   = useRef(new Animated.Value(0)).current;
+  const flashOpacity = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    // ── Launch all particle animations on native thread ────────────────────
+    // ── Particles — native thread ─────────────────────────────────────────
     PARTICLES.forEach((p, i) => {
       const delayMs    = p.delay * DURATION_MS;
       const durationMs = DURATION_MS * (1 - p.delay);
       const { pos, trailPos, opacity } = particleAnims[i];
 
-      // Position: easeOutCubic burst from center
       Animated.timing(pos, {
-        toValue:         1,
-        delay:           delayMs,
-        duration:        durationMs,
-        easing:          Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        toValue: 1, delay: delayMs, duration: durationMs,
+        easing: Easing.out(Easing.cubic), useNativeDriver: true,
       }).start();
 
-      // Trail: same curve but 60ms lag behind main dot
       Animated.timing(trailPos, {
-        toValue:         1,
-        delay:           delayMs + 60,
-        duration:        durationMs,
-        easing:          Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        toValue: 1, delay: delayMs + 60, duration: durationMs,
+        easing: Easing.out(Easing.cubic), useNativeDriver: true,
       }).start();
 
-      // Opacity: fade in (9%) → hold (71%) → fade out (20%)
       Animated.sequence([
         Animated.delay(delayMs),
         Animated.timing(opacity, {
-          toValue:         p.maxOpacity,
-          duration:        durationMs * 0.09,
-          easing:          Easing.linear,
-          useNativeDriver: true,
+          toValue: p.maxOpacity, duration: durationMs * 0.09,
+          easing: Easing.linear, useNativeDriver: true,
         }),
         Animated.delay(durationMs * 0.71),
         Animated.timing(opacity, {
-          toValue:         0,
-          duration:        durationMs * 0.20,
-          easing:          Easing.linear,
-          useNativeDriver: true,
+          toValue: 0, duration: durationMs * 0.20,
+          easing: Easing.linear, useNativeDriver: true,
         }),
       ]).start();
     });
 
-    // ── RAF loop: drives rings + flash (JS-thread, only 4 views) ──────────
-    const startTime = Date.now();
-    let raf: number;
+    // ── Rings — native thread (no RAF loop, no setProgress, no re-renders) ─
+    RINGS.forEach((ring, i) => {
+      const delayMs    = ring.startAt * DURATION_MS;
+      const durationMs = DURATION_MS * (1 - ring.startAt);
 
-    const loop = () => {
-      const elapsed = Date.now() - startTime;
-      const p = Math.min(elapsed / DURATION_MS, 1);
-      setProgress(p);
+      Animated.timing(ringAnims[i].scale, {
+        toValue: 1, delay: delayMs, duration: durationMs,
+        easing: Easing.out(Easing.cubic), useNativeDriver: true,
+      }).start();
 
-      if (p >= 0.32 && !titleStarted.current) {
-        titleStarted.current = true;
-        Animated.parallel([
-          Animated.spring(titleScale, {
-            toValue:         1,
-            tension:         75,
-            friction:        8,
-            useNativeDriver: true,
-          }),
-          Animated.timing(titleAlpha, {
-            toValue:         1,
-            duration:        280,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }
+      // Opacity: fade in 12% → hold → fade out 28%
+      Animated.sequence([
+        Animated.delay(delayMs),
+        Animated.timing(ringAnims[i].opacity, {
+          toValue: 0.75, duration: durationMs * 0.12,
+          easing: Easing.linear, useNativeDriver: true,
+        }),
+        Animated.delay(durationMs * 0.60),
+        Animated.timing(ringAnims[i].opacity, {
+          toValue: 0, duration: durationMs * 0.28,
+          easing: Easing.linear, useNativeDriver: true,
+        }),
+      ]).start();
+    });
 
-      if (p >= 0.55 && !subtitleStarted.current) {
-        subtitleStarted.current = true;
-        Animated.timing(subtitleAlpha, {
-          toValue:         1,
-          duration:        380,
-          useNativeDriver: true,
-        }).start();
-      }
+    // ── Flash — native thread ─────────────────────────────────────────────
+    Animated.sequence([
+      Animated.timing(flashScale, {
+        toValue: 1, duration: DURATION_MS * 0.12,
+        easing: Easing.out(Easing.cubic), useNativeDriver: true,
+      }),
+      Animated.timing(flashOpacity, {
+        toValue: 0, duration: DURATION_MS * 0.26,
+        easing: Easing.linear, useNativeDriver: true,
+      }),
+    ]).start();
+    flashOpacity.setValue(0.85);
 
-      if (p >= 1 && !finishFired.current) {
-        finishFired.current = true;
-        setTimeout(() => onFinish?.(), 350);
-        return; // stop loop
-      }
+    // ── Title — delayed native-thread animations (no RAF polling) ─────────
+    const titleDelay    = DURATION_MS * 0.32; // 800ms
+    const subtitleDelay = DURATION_MS * 0.55; // 1375ms
 
-      raf = requestAnimationFrame(loop);
-    };
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.spring(titleScale, {
+          toValue: 1, tension: 75, friction: 8, useNativeDriver: true,
+        }),
+        Animated.timing(titleAlpha, {
+          toValue: 1, duration: 280, useNativeDriver: true,
+        }),
+      ]).start();
+    }, titleDelay);
 
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    setTimeout(() => {
+      Animated.timing(subtitleAlpha, {
+        toValue: 1, duration: 380, useNativeDriver: true,
+      }).start();
+    }, subtitleDelay);
+
+    // ── Finish callback ───────────────────────────────────────────────────
+    const finishTimer = setTimeout(() => onFinish?.(), DURATION_MS + 350);
+    return () => clearTimeout(finishTimer);
   }, []);
+
+  const FLASH_SIZE = 280;
 
   return (
     <View style={styles.container} pointerEvents="none">
 
-      {/* Expanding rings — JS-thread, only 3 views, fast to compute */}
-      {RINGS.map((ring, i) => {
-        const localP  = Math.max(0, (progress - ring.startAt) / (1 - ring.startAt));
-        const easedP  = easeOutCubic(localP);
-        const radius  = easedP * MAX_R * 1.1 * ring.speedMult;
-        const borderW = Math.max(1, 5 - easedP * 4);
-        const alpha   =
-          localP < 0.12 ? (localP / 0.12) * 0.75
-          : localP > 0.72 ? ((1 - localP) / 0.28) * 0.75
-          : 0.75;
+      {/* Expanding rings — native thread, zero re-renders */}
+      <RingsLayer anims={ringAnims} />
 
-        if (radius < 1) return null;
-
-        return (
-          <View
-            key={i}
-            style={{
-              position:     'absolute',
-              left:         CX - radius,
-              top:          CY - radius,
-              width:        radius * 2,
-              height:       radius * 2,
-              borderRadius: radius,
-              borderWidth:  borderW,
-              borderColor:  ring.color,
-              opacity:      alpha,
-            }}
-          />
-        );
-      })}
-
-      {/* Particles — native thread, memoized, zero re-renders */}
+      {/* Particles — native thread, memoized */}
       <ParticlesLayer anims={particleAnims} />
 
-      {/* Center white flash — JS-thread, 1 view, exits early */}
-      {progress < 0.38 && (() => {
-        const fp  = Math.min(progress / 0.12, 1);
-        const fp2 = Math.max(0, (progress - 0.12) / 0.26);
-        const size  = easeOutCubic(fp) * 280;
-        const alpha = fp < 1 ? fp * 0.85 : Math.max(0, (1 - fp2) * 0.85);
-        if (size < 1 || alpha <= 0) return null;
-        return (
-          <View
-            style={{
-              position:        'absolute',
-              left:            CX - size / 2,
-              top:             CY - size / 2,
-              width:           size,
-              height:          size,
-              borderRadius:    size / 2,
-              backgroundColor: WHITE,
-              opacity:         alpha,
-            }}
-          />
-        );
-      })()}
+      {/* Center white flash — native thread */}
+      <Animated.View
+        style={{
+          position:        'absolute',
+          left:            CX - FLASH_SIZE / 2,
+          top:             CY - FLASH_SIZE / 2,
+          width:           FLASH_SIZE,
+          height:          FLASH_SIZE,
+          borderRadius:    FLASH_SIZE / 2,
+          backgroundColor: WHITE,
+          opacity:         flashOpacity,
+          transform:       [{ scale: flashScale }],
+        }}
+      />
 
       {/* Title — native thread */}
       <Animated.View
@@ -343,7 +336,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   titleLine: {
-    fontFamily:       fontFamily.black,
+    fontFamily:       fonts.display,
     fontWeight:       '900',
     fontSize:         52,
     fontStyle:        'italic',
@@ -356,10 +349,10 @@ const styles = StyleSheet.create({
     textShadowRadius: 18,
   },
   tagline: {
-    fontFamily:    fontFamily.medium,
+    fontFamily:    fonts.bodyMedium,
     fontSize:      15,
     letterSpacing: 8,
-    color:         'rgba(255,255,255,0.40)',
+    color:         dark.textMuted,
     textAlign:     'center',
     marginTop:     18,
   },

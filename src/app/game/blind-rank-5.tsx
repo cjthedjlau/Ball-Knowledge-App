@@ -10,10 +10,11 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import MidnightCountdown from '../../components/MidnightCountdown';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, fonts, colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import RoundProgressDots from '../../screens/components/ui/RoundProgressDots';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import GhostButton from '../../screens/components/ui/GhostButton';
@@ -107,6 +108,9 @@ function initActiveState(ld: LeagueData) {
 
 export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Props) {
   const isArchive = !!archiveDate;
+  const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
+  const s = createStyles(isDark);
   const { trackGameStart, trackGameComplete, trackGameAbandoned } = useGameAnalytics();
   const [selectedLeague, setSelectedLeague] = useState('NBA');
 
@@ -281,29 +285,29 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={s.root}>
       {/* ── Zone 1 ── */}
-      <View style={styles.zone1}>
-        <View style={styles.zone1TopRow}>
-          <Pressable onPress={() => { if (!gameComplete) trackGameAbandoned('blind-rank-5', selectedLeague); onBack(); }} hitSlop={8} style={styles.backBtn}>
+      <View style={[s.zone1, { paddingTop: insets.top + 16 }]}>
+        <View style={s.zone1TopRow}>
+          <Pressable onPress={() => { if (!gameComplete) trackGameAbandoned('blind-rank-5', selectedLeague); onBack(); }} hitSlop={8} style={s.backBtn}>
             <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
           </Pressable>
         </View>
 
-        <View style={styles.zone1Center}>
-          <Text style={styles.zone1Title}>BLIND RANK 5</Text>
+        <View style={s.zone1Center}>
+          <Text style={s.zone1Title}>BLIND RANK 5</Text>
           {leagueData && (
-            <View style={styles.zone1CategoryBanner}>
-              <Text style={styles.zone1CategoryLabel}>RANK BY</Text>
-              <Text style={styles.zone1CategoryValue}>{leagueData.categoryPrompt}</Text>
+            <View style={s.zone1CategoryBanner}>
+              <Text style={s.zone1CategoryLabel}>RANK BY</Text>
+              <Text style={s.zone1CategoryValue}>{leagueData.categoryPrompt}</Text>
             </View>
           )}
           {!isCompleted && !alreadyPlayedToday && leagueData && (
             <>
-              <View style={styles.dotsRow}>
+              <View style={s.dotsRow}>
                 <RoundProgressDots total={TOTAL_PLAYERS} current={currentIndex + 1} />
               </View>
-              <Text style={styles.zone1Counter}>
+              <Text style={s.zone1Counter}>
                 PLAYER {currentIndex + 1} OF {TOTAL_PLAYERS}
               </Text>
             </>
@@ -311,11 +315,11 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
         </View>
 
         {isArchive ? (
-          <View style={styles.archiveBanner}>
-            <Text style={styles.archiveBannerText}>ARCHIVE — {archiveDate}</Text>
+          <View style={s.archiveBanner}>
+            <Text style={s.archiveBannerText}>ARCHIVE — {archiveDate}</Text>
           </View>
         ) : (
-          <View style={styles.switcherRow}>
+          <View style={s.switcherRow}>
             <LeagueSwitcher selected={selectedLeague} onChange={handleLeagueChange} />
           </View>
         )}
@@ -323,27 +327,27 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
 
       {/* ── Zone 2 ── */}
       <ScrollView
-        style={styles.zone2}
-        contentContainerStyle={styles.zone2Content}
+        style={s.zone2}
+        contentContainerStyle={s.zone2Content}
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
-          <View style={styles.centerState}>
+          <View style={s.centerState}>
             <ActivityIndicator size="large" color={colors.brand} />
           </View>
 
         ) : (loadError || !leagueData) ? (
-          <View style={styles.centerState}>
-            <Text style={styles.errorText}>No game available today</Text>
+          <View style={s.centerState}>
+            <Text style={s.errorText}>No game available today</Text>
           </View>
 
         ) : (!isArchive && alreadyPlayedToday) ? (
-          <View style={styles.alreadyPlayedCard}>
-            <Text style={styles.alreadyPlayedBadge}>ALREADY PLAYED TODAY</Text>
-            <Text style={styles.alreadyPlayedXp}>+{playedTodayCache[selectedLeague]!.xp} XP</Text>
-            <View style={styles.alreadyPlayedDivider} />
-            <Text style={styles.alreadyPlayedCta}>COME BACK TOMORROW</Text>
-            <Text style={styles.alreadyPlayedSub}>
+          <View style={s.alreadyPlayedCard}>
+            <Text style={s.alreadyPlayedBadge}>ALREADY PLAYED TODAY</Text>
+            <Text style={s.alreadyPlayedXp}>+{playedTodayCache[selectedLeague]!.xp} XP</Text>
+            <View style={s.alreadyPlayedDivider} />
+            <Text style={s.alreadyPlayedCta}>COME BACK TOMORROW</Text>
+            <Text style={s.alreadyPlayedSub}>
               A new ranking drops every day. Switch leagues to play more.
             </Text>
             <MidnightCountdown />
@@ -357,25 +361,25 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
           <>
             {/* Current player card */}
             {currentPlayer && (
-              <View style={styles.playerCard}>
-                <Text style={styles.playerCardName}>{currentPlayer.name}</Text>
-                <Text style={styles.playerCardHint}>TAP A SLOT TO PLACE</Text>
+              <View style={s.playerCard}>
+                <Text style={s.playerCardName}>{currentPlayer.name}</Text>
+                <Text style={s.playerCardHint}>TAP A SLOT TO PLACE</Text>
               </View>
             )}
 
             {/* 5 slot buttons */}
-            <View style={styles.slotsContainer}>
+            <View style={s.slotsContainer}>
               {Array.from({ length: TOTAL_PLAYERS }, (_, i) => {
                 const filled = placements[i];
                 if (filled) {
                   return (
-                    <View key={i} style={[styles.slot, styles.slotFilled]}>
-                      <View style={styles.slotRankBadge}>
-                        <Text style={styles.slotRankNum}>{i + 1}</Text>
+                    <View key={i} style={[s.slot, s.slotFilled]}>
+                      <View style={s.slotRankBadge}>
+                        <Text style={s.slotRankNum}>{i + 1}</Text>
                       </View>
-                      <View style={styles.slotFilledContent}>
-                        <Text style={styles.slotFilledName} numberOfLines={1}>{filled}</Text>
-                        <Text style={styles.slotLockedLabel}>LOCKED</Text>
+                      <View style={s.slotFilledContent}>
+                        <Text style={s.slotFilledName} numberOfLines={1}>{filled}</Text>
+                        <Text style={s.slotLockedLabel}>LOCKED</Text>
                       </View>
                     </View>
                   );
@@ -385,15 +389,15 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
                     key={i}
                     onPress={() => { void handleSlotTap(i); }}
                     style={({ pressed }) => [
-                      styles.slot,
-                      styles.slotEmpty,
-                      pressed && styles.slotPressed,
+                      s.slot,
+                      s.slotEmpty,
+                      pressed && s.slotPressed,
                     ]}
                   >
-                    <View style={styles.slotRankBadgeEmpty}>
-                      <Text style={styles.slotRankNumEmpty}>{i + 1}</Text>
+                    <View style={s.slotRankBadgeEmpty}>
+                      <Text style={s.slotRankNumEmpty}>{i + 1}</Text>
                     </View>
-                    <Text style={styles.slotEmptyLabel}>TAP TO PLACE</Text>
+                    <Text style={s.slotEmptyLabel}>TAP TO PLACE</Text>
                   </Pressable>
                 );
               })}
@@ -401,7 +405,7 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -420,6 +424,8 @@ function ResultsView({
   onNavigate: (tab: Tab) => void;
   selectedLeague: string;
 }) {
+  const { isDark } = useTheme();
+  const s = createStyles(isDark);
   const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
 
   const matchCount = result.communitySlots
@@ -434,14 +440,14 @@ function ResultsView({
     <>
       {/* XP card (hidden in archive) */}
       {!isArchive && (
-        <View style={styles.xpCard}>
-          <Text style={styles.xpCardLabel}>XP EARNED</Text>
-          <Text style={styles.xpCardTotal}>+{FLAT_XP}</Text>
+        <View style={s.xpCard}>
+          <Text style={s.xpCardLabel}>XP EARNED</Text>
+          <Text style={s.xpCardTotal}>+{FLAT_XP}</Text>
         </View>
       )}
 
       {/* Community comparison */}
-      <Text style={styles.sectionLabel}>YOUR RANKING</Text>
+      <Text style={s.sectionLabel}>YOUR RANKING</Text>
 
       {result.placements.map((name, idx) => {
         if (!name) return null;
@@ -452,32 +458,32 @@ function ResultsView({
         const isTopPick = topEntry?.name === name && (slot?.entries.length ?? 0) > 0;
 
         return (
-          <View key={idx} style={styles.resultSlot}>
-            <View style={styles.resultSlotHeader}>
-              <View style={styles.resultRankBadge}>
-                <Text style={styles.resultRankNum}>{idx + 1}</Text>
+          <View key={idx} style={s.resultSlot}>
+            <View style={s.resultSlotHeader}>
+              <View style={s.resultRankBadge}>
+                <Text style={s.resultRankNum}>{idx + 1}</Text>
               </View>
-              <View style={styles.resultSlotInfo}>
-                <Text style={styles.resultSlotName} numberOfLines={1}>{name}</Text>
+              <View style={s.resultSlotInfo}>
+                <Text style={s.resultSlotName} numberOfLines={1}>{name}</Text>
               </View>
               {isTopPick && (
-                <View style={styles.mostCommonBadge}>
-                  <Text style={styles.mostCommonText}>MOST COMMON</Text>
+                <View style={s.mostCommonBadge}>
+                  <Text style={s.mostCommonText}>MOST COMMON</Text>
                 </View>
               )}
             </View>
-            <View style={styles.resultBarSection}>
+            <View style={s.resultBarSection}>
               {result.communitySlots === null ? (
-                <Text style={styles.communityLoading}>Loading community data…</Text>
+                <Text style={s.communityLoading}>Loading community data…</Text>
               ) : (slot?.entries.length ?? 0) > 0 ? (
                 <>
-                  <View style={styles.barBg}>
-                    <View style={[styles.barFill, { width: `${userPct}%` as any }]} />
+                  <View style={s.barBg}>
+                    <View style={[s.barFill, { width: `${userPct}%` as any }]} />
                   </View>
-                  <Text style={styles.barPct}>{userPct}% placed here</Text>
+                  <Text style={s.barPct}>{userPct}% placed here</Text>
                 </>
               ) : (
-                <Text style={styles.communityLoading}>No community data yet</Text>
+                <Text style={s.communityLoading}>No community data yet</Text>
               )}
             </View>
           </View>
@@ -485,21 +491,21 @@ function ResultsView({
       })}
 
       {isArchive && (
-        <Text style={styles.archiveNotice}>ARCHIVE MODE — Results not saved</Text>
+        <Text style={s.archiveNotice}>ARCHIVE MODE — Results not saved</Text>
       )}
 
       {!isArchive && <MidnightCountdown />}
 
-      <View style={styles.resultButtons}>
+      <View style={s.resultButtons}>
         <Pressable
           onPress={() => { void shareRank5(selectedLeague, matchCount, TOTAL_PLAYERS); }}
-          style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
+          style={({ pressed }) => [s.shareBtn, pressed && s.shareBtnPressed]}
         >
-          <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
+          <Text style={s.shareBtnText}>SHARE RESULTS</Text>
         </Pressable>
         {/* Notify Friends button */}
         <Pressable
-          style={({ pressed }) => [styles.notifyBtn, pressed && styles.notifyBtnPressed, notifyState === 'done' && styles.notifyBtnDone]}
+          style={({ pressed }) => [s.notifyBtn, pressed && s.notifyBtnPressed, notifyState === 'done' && s.notifyBtnDone]}
           onPress={() => { void (async () => {
             if (notifyState !== 'idle') return;
             setNotifyState('sending');
@@ -509,7 +515,7 @@ function ResultsView({
           })(); }}
           disabled={notifyState === 'sending'}
         >
-          <Text style={styles.notifyBtnText}>
+          <Text style={s.notifyBtnText}>
             {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
           </Text>
         </Pressable>
@@ -524,496 +530,99 @@ function ResultsView({
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
+function createStyles(isDark: boolean) {
+  const txt = isDark ? dark.textPrimary : light.textPrimary;
+  const txtSec = isDark ? dark.textSecondary : light.textSecondary;
+  const cardBg = isDark ? dark.card : light.card;
+  const surfaceBg = isDark ? dark.surface : light.surface;
+  const borderCol = isDark ? dark.cardBorder : light.cardBorder;
+  const dividerCol = isDark ? dark.divider : light.divider;
 
-  // ── Zone 1 ────────────────────────────────────────────────────────────────
-  zone1: {
-    backgroundColor: colors.brand,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing['3xl'],
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-  },
-  zone1TopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  backBtn: {
-    padding: spacing.sm,
-    marginLeft: -spacing.sm,
-  },
-  zone1Center: {
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  zone1Title: {
-    fontFamily: fontFamily.black,
-    fontSize: 24,
-    color: colors.white,
-    letterSpacing: 3,
-    textAlign: 'center',
-  },
-  zone1CategoryBanner: {
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginTop: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.20)',
-  },
-  zone1CategoryLabel: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.60)',
-    letterSpacing: 2,
-    marginBottom: 2,
-  },
-  zone1CategoryValue: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 18,
-    color: colors.white,
-    letterSpacing: 1,
-    textAlign: 'center',
-  },
-  dotsRow: {
-    marginTop: spacing.md,
-  },
-  zone1Counter: {
-    fontFamily: fontFamily.bold,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.80)',
-    letterSpacing: 2,
-    marginTop: spacing.xs,
-  },
-  switcherRow: {
-    marginTop: spacing.lg,
-  },
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: 'transparent' },
 
-  // ── Zone 2 ────────────────────────────────────────────────────────────────
-  zone2: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -32,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.10)',
-  },
-  zone2Content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing['2xl'],
-    paddingBottom: 120,
-    gap: spacing.md,
-  },
+    // Zone 1
+    zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing['3xl'], borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+    zone1TopRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
+    backBtn: { padding: spacing.sm, marginLeft: -spacing.sm },
+    zone1Center: { alignItems: 'center', marginTop: spacing.xs },
+    zone1Title: { fontFamily: fonts.display, fontSize: 24, color: '#FFFFFF', letterSpacing: 3, textAlign: 'center' },
+    zone1CategoryBanner: { backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: radius.primary, paddingVertical: 10, paddingHorizontal: 20, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)' },
+    zone1CategoryLabel: { fontFamily: fonts.bodySemiBold, fontSize: 10, color: 'rgba(255,255,255,0.60)', letterSpacing: 2, marginBottom: 2 },
+    zone1CategoryValue: { fontFamily: fonts.display, fontSize: 18, color: '#FFFFFF', letterSpacing: 1, textAlign: 'center' },
+    dotsRow: { marginTop: spacing.md },
+    zone1Counter: { fontFamily: fonts.bodySemiBold, fontSize: 12, color: 'rgba(255,255,255,0.80)', letterSpacing: 2, marginTop: spacing.xs },
+    switcherRow: { marginTop: spacing.lg },
 
-  // Loading / error
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-  },
-  errorText: {
-    fontFamily: fontFamily.medium,
-    fontSize: 15,
-    color: '#9A9A9A',
-    textAlign: 'center',
-  },
+    // Zone 2
+    zone2: { flex: 1, backgroundColor: 'transparent', borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -32 },
+    zone2Content: { paddingHorizontal: spacing.lg, paddingTop: spacing['2xl'], paddingBottom: 120, gap: spacing.md },
 
-  // ── Current player card ────────────────────────────────────────────────────
-  playerCard: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 16,
-    paddingVertical: spacing['3xl'],
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    // 3D raised effect
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.12)',
-    borderLeftWidth: 1,
-    borderLeftColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 4,
-    borderBottomColor: 'rgba(0,0,0,0.70)',
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(0,0,0,0.40)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.60,
-    shadowRadius: 10,
-    elevation: 14,
-    marginBottom: 4,
-  },
-  playerCardName: {
-    fontFamily: fontFamily.black,
-    fontSize: 28,
-    color: colors.white,
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-  playerCardHint: {
-    fontFamily: fontFamily.medium,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.40)',
-    letterSpacing: 2,
-    marginTop: spacing.sm,
-  },
+    centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+    errorText: { fontFamily: fonts.bodyMedium, fontSize: 15, color: txtSec, textAlign: 'center' },
 
-  // ── Slot buttons ───────────────────────────────────────────────────────────
-  slotsContainer: {
-    gap: spacing.sm,
-  },
-  slot: {
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 56,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    gap: spacing.md,
-  },
-  slotEmpty: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(252,52,92,0.35)',
-  },
-  slotFilled: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.brand,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.50)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  slotPressed: {
-    opacity: 0.75,
-    transform: [{ scale: 0.98 }],
-  },
-  slotRankBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  slotRankNum: {
-    fontFamily: fontFamily.black,
-    fontSize: 14,
-    color: colors.white,
-  },
-  slotRankBadgeEmpty: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(252,52,92,0.50)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  slotRankNumEmpty: {
-    fontFamily: fontFamily.black,
-    fontSize: 14,
-    color: colors.brand,
-  },
-  slotFilledContent: {
-    flex: 1,
-  },
-  slotFilledName: {
-    fontFamily: fontFamily.bold,
-    fontSize: 15,
-    color: colors.white,
-  },
-  slotLockedLabel: {
-    fontFamily: fontFamily.medium,
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.35)',
-    letterSpacing: 1.5,
-    marginTop: 2,
-  },
-  slotEmptyLabel: {
-    fontFamily: fontFamily.bold,
-    fontSize: 12,
-    color: 'rgba(252,52,92,0.60)',
-    letterSpacing: 1,
-    flex: 1,
-    textAlign: 'center',
-  },
+    // Current player card
+    playerCard: { backgroundColor: cardBg, borderRadius: radius.primary, paddingVertical: spacing['3xl'], paddingHorizontal: spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: borderCol, marginBottom: 4 },
+    playerCardName: { fontFamily: fonts.display, fontSize: 28, color: txt, textAlign: 'center', letterSpacing: 0.5 },
+    playerCardHint: { fontFamily: fonts.bodyMedium, fontSize: 11, color: txtSec, letterSpacing: 2, marginTop: spacing.sm },
 
-  // ── Results ────────────────────────────────────────────────────────────────
-  xpCard: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 16,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.50)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.40,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  xpCardLabel: {
-    fontFamily: fontFamily.bold,
-    fontSize: 10,
-    letterSpacing: 2,
-    color: '#9A9A9A',
-    marginBottom: spacing.xs,
-  },
-  xpCardTotal: {
-    fontFamily: fontFamily.black,
-    fontSize: 48,
-    color: colors.brand,
-    lineHeight: 54,
-  },
-  sectionLabel: {
-    fontFamily: fontFamily.bold,
-    fontSize: 10,
-    letterSpacing: 2,
-    color: '#9A9A9A',
-    marginTop: spacing.xs,
-    marginBottom: -spacing.xs,
-  },
-  resultSlot: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderLeftWidth: 3,
-    borderLeftColor: colors.brand,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.50)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  resultSlotHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    gap: spacing.md,
-  },
-  resultRankBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  resultRankNum: {
-    fontFamily: fontFamily.black,
-    fontSize: 14,
-    color: colors.white,
-  },
-  resultSlotInfo: {
-    flex: 1,
-  },
-  resultSlotName: {
-    fontFamily: fontFamily.bold,
-    fontSize: 15,
-    color: colors.white,
-  },
-  mostCommonBadge: {
-    backgroundColor: 'rgba(7,188,204,0.15)',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    flexShrink: 0,
-  },
-  mostCommonText: {
-    fontFamily: fontFamily.bold,
-    fontSize: 9,
-    color: colors.accentCyan,
-    letterSpacing: 0.8,
-  },
-  resultBarSection: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    gap: 6,
-  },
-  barBg: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: 4,
-    backgroundColor: colors.brand,
-    borderRadius: 2,
-  },
-  barPct: {
-    fontFamily: fontFamily.medium,
-    fontSize: 11,
-    color: '#9A9A9A',
-  },
-  communityLoading: {
-    fontFamily: fontFamily.medium,
-    fontSize: 11,
-    color: '#9A9A9A',
-  },
-  resultButtons: {
-    gap: spacing.md,
-    marginTop: spacing.sm,
-  },
+    // Slot buttons
+    slotsContainer: { gap: spacing.sm },
+    slot: { borderRadius: radius.primary, flexDirection: 'row', alignItems: 'center', minHeight: 56, paddingVertical: spacing.md, paddingHorizontal: spacing.md, gap: spacing.md },
+    slotEmpty: { backgroundColor: cardBg, borderWidth: 1.5, borderStyle: 'dashed', borderColor: isDark ? 'rgba(252,52,92,0.35)' : 'rgba(252,52,92,0.25)' },
+    slotFilled: { backgroundColor: cardBg, borderLeftWidth: 3, borderLeftColor: brand.primary, borderWidth: 1, borderColor: borderCol },
+    slotPressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
+    slotRankBadge: { width: 32, height: 32, borderRadius: 16, backgroundColor: brand.primary, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+    slotRankNum: { fontFamily: fonts.display, fontSize: 14, color: '#FFFFFF' },
+    slotRankBadgeEmpty: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: isDark ? 'rgba(252,52,92,0.50)' : 'rgba(252,52,92,0.35)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+    slotRankNumEmpty: { fontFamily: fonts.display, fontSize: 14, color: brand.primary },
+    slotFilledContent: { flex: 1 },
+    slotFilledName: { fontFamily: fonts.bodySemiBold, fontSize: 15, color: txt },
+    slotLockedLabel: { fontFamily: fonts.bodyMedium, fontSize: 10, color: txtSec, letterSpacing: 1.5, marginTop: 2 },
+    slotEmptyLabel: { fontFamily: fonts.bodySemiBold, fontSize: 12, color: isDark ? 'rgba(252,52,92,0.60)' : 'rgba(252,52,92,0.50)', letterSpacing: 1, flex: 1, textAlign: 'center' },
 
-  // ── Already played today ───────────────────────────────────────────────────
-  alreadyPlayedCard: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 24,
-    padding: spacing['3xl'],
-    alignItems: 'center',
-    gap: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.50)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.50,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  alreadyPlayedBadge: {
-    fontFamily: fontFamily.bold,
-    fontSize: 10,
-    letterSpacing: 2,
-    color: colors.brand,
-    textAlign: 'center',
-  },
-  alreadyPlayedXp: {
-    fontFamily: fontFamily.black,
-    fontSize: 48,
-    color: colors.brand,
-    lineHeight: 54,
-  },
-  alreadyPlayedDivider: {
-    width: '100%',
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    marginVertical: spacing.xs,
-  },
-  alreadyPlayedCta: {
-    fontFamily: fontFamily.black,
-    fontSize: 18,
-    color: colors.white,
-    letterSpacing: 2,
-    textAlign: 'center',
-  },
-  alreadyPlayedSub: {
-    fontFamily: fontFamily.medium,
-    fontSize: 13,
-    color: '#9A9A9A',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+    // Results
+    xpCard: { backgroundColor: cardBg, borderRadius: radius.primary, paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: borderCol },
+    xpCardLabel: { fontFamily: fonts.bodySemiBold, fontSize: 10, letterSpacing: 2, color: txtSec, marginBottom: spacing.xs },
+    xpCardTotal: { fontFamily: fonts.display, fontSize: 48, color: brand.primary, lineHeight: 54 },
+    sectionLabel: { fontFamily: fonts.bodySemiBold, fontSize: 10, letterSpacing: 2, color: txtSec, marginTop: spacing.xs, marginBottom: -spacing.xs },
+    resultSlot: { backgroundColor: cardBg, borderRadius: radius.primary, overflow: 'hidden', borderLeftWidth: 3, borderLeftColor: brand.primary, borderWidth: 1, borderColor: borderCol },
+    resultSlotHeader: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.md, gap: spacing.md },
+    resultRankBadge: { width: 32, height: 32, borderRadius: 16, backgroundColor: brand.primary, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+    resultRankNum: { fontFamily: fonts.display, fontSize: 14, color: '#FFFFFF' },
+    resultSlotInfo: { flex: 1 },
+    resultSlotName: { fontFamily: fonts.bodySemiBold, fontSize: 15, color: txt },
+    mostCommonBadge: { backgroundColor: 'rgba(7,188,204,0.15)', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 },
+    mostCommonText: { fontFamily: fonts.bodySemiBold, fontSize: 9, color: colors.accentCyan, letterSpacing: 0.8 },
+    resultBarSection: { paddingHorizontal: spacing.md, paddingBottom: spacing.md, gap: 6 },
+    barBg: { height: 4, backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)', borderRadius: 2, overflow: 'hidden' },
+    barFill: { height: 4, backgroundColor: brand.primary, borderRadius: 2 },
+    barPct: { fontFamily: fonts.bodyMedium, fontSize: 11, color: txtSec },
+    communityLoading: { fontFamily: fonts.bodyMedium, fontSize: 11, color: txtSec },
+    resultButtons: { gap: spacing.md, marginTop: spacing.sm },
 
-  // ── Archive ──────────────────────────────────────────────────────────────
-  archiveBanner: {
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    alignSelf: 'center',
-    marginTop: spacing.lg,
-  },
-  archiveBannerText: {
-    fontFamily: fontFamily.bold,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.85)',
-    letterSpacing: 1.5,
-    textAlign: 'center',
-  },
-  archiveNotice: {
-    fontFamily: fontFamily.medium,
-    fontSize: 12,
-    color: '#9A9A9A',
-    textAlign: 'center',
-    letterSpacing: 1,
-    marginTop: spacing.sm,
-  },
+    // Already played
+    alreadyPlayedCard: { backgroundColor: cardBg, borderRadius: 24, padding: spacing['3xl'], alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: borderCol },
+    alreadyPlayedBadge: { fontFamily: fonts.bodySemiBold, fontSize: 10, letterSpacing: 2, color: brand.primary, textAlign: 'center' },
+    alreadyPlayedXp: { fontFamily: fonts.display, fontSize: 48, color: brand.primary, lineHeight: 54 },
+    alreadyPlayedDivider: { width: '100%' as any, height: 1, backgroundColor: dividerCol, marginVertical: spacing.xs },
+    alreadyPlayedCta: { fontFamily: fonts.display, fontSize: 18, color: txt, letterSpacing: 2, textAlign: 'center' },
+    alreadyPlayedSub: { fontFamily: fonts.bodyMedium, fontSize: 13, color: txtSec, textAlign: 'center', lineHeight: 20 },
 
-  // ── Share button ──────────────────────────────────────────────────────────
-  shareBtn: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 12,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.10)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.50)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  shareBtnPressed: {
-    opacity: 0.75,
-    transform: [{ scale: 0.98 }],
-  },
-  shareBtnText: {
-    fontFamily: fontFamily.bold,
-    fontSize: 14,
-    color: colors.white,
-    letterSpacing: 2,
-  },
-  notifyBtn: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    marginBottom: 12,
-  },
-  notifyBtnPressed: {
-    opacity: 0.7,
-  },
-  notifyBtnDone: {
-    borderColor: 'rgba(0,200,151,0.40)',
-    backgroundColor: 'rgba(0,200,151,0.08)',
-  },
-  notifyBtnText: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900' as const,
-    fontSize: 15,
-    color: '#F5F5F5',
-    letterSpacing: 2,
-  },
-});
+    // Archive
+    archiveBanner: { backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 8, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, alignSelf: 'center', marginTop: spacing.lg },
+    archiveBannerText: { fontFamily: fonts.bodySemiBold, fontSize: 11, color: 'rgba(255,255,255,0.85)', letterSpacing: 1.5, textAlign: 'center' },
+    archiveNotice: { fontFamily: fonts.bodyMedium, fontSize: 12, color: txtSec, textAlign: 'center', letterSpacing: 1, marginTop: spacing.sm },
+
+    // Share / notify
+    shareBtn: { backgroundColor: cardBg, borderRadius: radius.primary, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, alignItems: 'center', justifyContent: 'center', minHeight: 52, borderWidth: 1, borderColor: borderCol },
+    shareBtnPressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
+    shareBtnText: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: txt, letterSpacing: 2 },
+    notifyBtn: { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderRadius: radius.primary, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: borderCol, marginBottom: 12 },
+    notifyBtnPressed: { opacity: 0.7 },
+    notifyBtnDone: { borderColor: 'rgba(0,200,151,0.40)', backgroundColor: 'rgba(0,200,151,0.08)' },
+    notifyBtnText: { fontFamily: fonts.display, fontSize: 15, color: txt, letterSpacing: 2 },
+  });
+}
+
+const styles = createStyles(true);
