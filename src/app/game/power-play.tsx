@@ -11,10 +11,11 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Zap } from 'lucide-react-native';
 import MidnightCountdown from '../../components/MidnightCountdown';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, fonts, colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { type Tab } from '../components/ui/BottomNav';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
@@ -22,7 +23,9 @@ import { saveGameResult as saveXPResult, updateUserXPAndStreak } from '../../lib
 import {
   saveGameResult as saveCompletionResult,
   getGameResultToday,
+  getTodayEST,
 } from '../../lib/gameResults';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { updatePlayHour } from '../../lib/notifications';
 import { sharePowerPlay } from '../../lib/shareResults';
@@ -132,6 +135,9 @@ function matchAnswer(
 
 export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
   const isArchive = !!archiveDate;
+  const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
+  const s = createStyles(isDark);
   const { trackGameStart, trackPowerPlayScore, trackGameAbandoned } = useGameAnalytics();
   const [selectedLeague, setSelectedLeague] = useState('NBA');
   const [phase, setPhase] = useState<Phase>('loading');
@@ -196,9 +202,16 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
       ? Promise.resolve(null)
       : getGameResultToday(selectedLeague, 'power-play');
 
-    void Promise.all([fetchGame, checkCompletion]).then(([data, priorResult]) => {
-      if (priorResult) {
-        setAlreadyPlayed(priorResult);
+    // Also check local AsyncStorage (works for guests + offline)
+    const localKey = `power-play-done-${getTodayEST()}-${selectedLeague}`;
+    const checkLocal = isArchive
+      ? Promise.resolve(null)
+      : AsyncStorage.getItem(localKey).then(v => v ? JSON.parse(v) : null).catch(() => null);
+
+    void Promise.all([fetchGame, checkCompletion, checkLocal]).then(([data, priorResult, localResult]) => {
+      const completed = priorResult ?? localResult;
+      if (completed) {
+        setAlreadyPlayed(completed);
         setPhase('intro');
         return;
       }
@@ -356,6 +369,10 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
     // Persist result
     if (!isArchive) {
+      // Save locally first — guarantees no replay even for guests/offline
+      const localKey = `power-play-done-${getTodayEST()}-${selectedLeague}`;
+      void AsyncStorage.setItem(localKey, JSON.stringify({ score, xp }));
+
       void (async () => {
         const {
           data: { user },
@@ -386,7 +403,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
   function renderLoading() {
     return (
-      <View style={styles.centerState}>
+      <View style={s.centerState}>
         <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
@@ -395,17 +412,17 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
   function renderIntro() {
     if (alreadyPlayed) {
       return (
-        <View style={styles.alreadyPlayedCard}>
-          <Text style={styles.alreadyBadge}>ALREADY PLAYED TODAY</Text>
-          <Text style={styles.alreadyScore}>{alreadyPlayed.score}</Text>
-          <Text style={styles.alreadyScoreLabel}>pts scored today</Text>
-          <View style={styles.alreadyDivider} />
-          <View style={styles.alreadyXpRow}>
-            <Text style={styles.alreadyXpLabel}>XP EARNED</Text>
-            <Text style={styles.alreadyXp}>+{alreadyPlayed.xp}</Text>
+        <View style={s.alreadyPlayedCard}>
+          <Text style={s.alreadyBadge}>ALREADY PLAYED TODAY</Text>
+          <Text style={s.alreadyScore}>{alreadyPlayed.score}</Text>
+          <Text style={s.alreadyScoreLabel}>pts scored today</Text>
+          <View style={s.alreadyDivider} />
+          <View style={s.alreadyXpRow}>
+            <Text style={s.alreadyXpLabel}>XP EARNED</Text>
+            <Text style={s.alreadyXp}>+{alreadyPlayed.xp}</Text>
           </View>
-          <Text style={styles.alreadyCta}>COME BACK TOMORROW</Text>
-          <Text style={styles.alreadySub}>
+          <Text style={s.alreadyCta}>COME BACK TOMORROW</Text>
+          <Text style={s.alreadySub}>
             A new Power Play drops every day. Switch leagues to keep playing.
           </Text>
           <MidnightCountdown />
@@ -415,30 +432,30 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
     if (loadError || !gameData) {
       return (
-        <View style={styles.centerState}>
-          <Text style={styles.errorText}>No Power Play available today</Text>
-          <Text style={styles.errorSub}>Check back tomorrow or switch leagues</Text>
+        <View style={s.centerState}>
+          <Text style={s.errorText}>No Power Play available today</Text>
+          <Text style={s.errorSub}>Check back tomorrow or switch leagues</Text>
         </View>
       );
     }
 
     return (
-      <View style={styles.introCard}>
-        <View style={styles.introIconWrap}>
+      <View style={s.introCard}>
+        <View style={s.introIconWrap}>
           <Zap size={36} color={colors.brand} strokeWidth={2} />
         </View>
-        <Text style={styles.introTitle}>HOW IT WORKS</Text>
-        <View style={styles.introRules}>
-          <Text style={styles.introRule}>• 5 survey-style questions</Text>
-          <Text style={styles.introRule}>• 60 seconds on the clock</Text>
-          <Text style={styles.introRule}>• Match the top answers to score points</Text>
-          <Text style={styles.introRule}>• Each question is worth up to 100 pts</Text>
+        <Text style={s.introTitle}>HOW IT WORKS</Text>
+        <View style={s.introRules}>
+          <Text style={s.introRule}>• 5 survey-style questions</Text>
+          <Text style={s.introRule}>• 60 seconds on the clock</Text>
+          <Text style={s.introRule}>• Match the top answers to score points</Text>
+          <Text style={s.introRule}>• Each question is worth up to 100 pts</Text>
         </View>
         <Pressable
-          style={({ pressed }) => [styles.startBtn, pressed && styles.startBtnPressed]}
+          style={({ pressed }) => [s.startBtn, pressed && s.startBtnPressed]}
           onPress={handleStartGame}
         >
-          <Text style={styles.startBtnText}>LET'S PLAY</Text>
+          <Text style={s.startBtnText}>LET'S PLAY</Text>
         </Pressable>
       </View>
     );
@@ -451,31 +468,31 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
     return (
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.playingWrap}
+        style={s.playingWrap}
         keyboardVerticalOffset={0}
       >
         {/* Timer bar */}
-        <View style={styles.timerBarTrack}>
+        <View style={s.timerBarTrack}>
           <Animated.View
             style={[
-              styles.timerBarFill,
+              s.timerBarFill,
               { flex: timerBarWidth },
             ]}
           />
         </View>
 
         {/* Timer number + question counter */}
-        <View style={styles.timerRow}>
-          <Text style={styles.questionCounter}>
-            Q{currentQ + 1} <Text style={styles.questionCounterOf}>of {NUM_QUESTIONS}</Text>
+        <View style={s.timerRow}>
+          <Text style={s.questionCounter}>
+            Q{currentQ + 1} <Text style={s.questionCounterOf}>of {NUM_QUESTIONS}</Text>
           </Text>
           <View
             style={[
-              styles.timerBadge,
-              timeRemaining <= 15 && styles.timerBadgeUrgent,
+              s.timerBadge,
+              timeRemaining <= 15 && s.timerBadgeUrgent,
             ]}
           >
-            <Text style={[styles.timerNum, timeRemaining <= 15 && styles.timerNumUrgent]}>
+            <Text style={[s.timerNum, timeRemaining <= 15 && s.timerNumUrgent]}>
               {timeRemaining}
             </Text>
           </View>
@@ -484,25 +501,25 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
         {/* Question */}
         <Animated.View
           style={[
-            styles.questionWrap,
+            s.questionWrap,
             { transform: [{ translateY: questionSlide }] },
           ]}
         >
           {passed[currentQ] && (
-            <Text style={styles.passedBadge}>PASSED — ANSWER NOW</Text>
+            <Text style={s.passedBadge}>PASSED — ANSWER NOW</Text>
           )}
-          <Text style={styles.questionText}>{question?.text ?? ''}</Text>
+          <Text style={s.questionText}>{question?.text ?? ''}</Text>
         </Animated.View>
 
         {/* Input */}
-        <View style={styles.inputWrap}>
+        <View style={s.inputWrap}>
           <TextInput
             ref={inputRef}
-            style={styles.answerInput}
+            style={s.answerInput}
             value={currentInput}
             onChangeText={setCurrentInput}
             placeholder="Type your answer..."
-            placeholderTextColor="#555"
+            placeholderTextColor={dark.textSecondary}
             returnKeyType="done"
             onSubmitEditing={currentInput.trim() ? handleLockIn : handlePass}
             autoCapitalize="words"
@@ -511,36 +528,36 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
         </View>
 
         {/* Buttons */}
-        <View style={styles.actionRow}>
+        <View style={s.actionRow}>
           <Pressable
-            style={({ pressed }) => [styles.passBtn, pressed && styles.passBtnPressed]}
+            style={({ pressed }) => [s.passBtn, pressed && s.passBtnPressed]}
             onPress={handlePass}
           >
-            <Text style={styles.passBtnText}>PASS</Text>
+            <Text style={s.passBtnText}>PASS</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [
-              styles.lockInBtn,
-              !currentInput.trim() && styles.lockInBtnDisabled,
-              pressed && currentInput.trim() && styles.lockInBtnPressed,
+              s.lockInBtn,
+              !currentInput.trim() && s.lockInBtnDisabled,
+              pressed && currentInput.trim() && s.lockInBtnPressed,
             ]}
             onPress={handleLockIn}
             disabled={!currentInput.trim()}
           >
-            <Text style={styles.lockInBtnText}>LOCK IN</Text>
+            <Text style={s.lockInBtnText}>LOCK IN</Text>
           </Pressable>
         </View>
 
         {/* Question dots */}
-        <View style={styles.dotsRow}>
+        <View style={s.dotsRow}>
           {Array.from({ length: NUM_QUESTIONS }).map((_, i) => (
             <View
               key={i}
               style={[
-                styles.dot,
-                i === currentQ && styles.dotActive,
-                lockedIn[i] && styles.dotLocked,
-                !lockedIn[i] && passed[i] && styles.dotPassed,
+                s.dot,
+                i === currentQ && s.dotActive,
+                lockedIn[i] && s.dotLocked,
+                !lockedIn[i] && passed[i] && s.dotPassed,
               ]}
             />
           ))}
@@ -555,27 +572,27 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
     return (
       <ScrollView
-        style={styles.resultsScroll}
-        contentContainerStyle={styles.resultsContent}
+        style={s.resultsScroll}
+        contentContainerStyle={s.resultsContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Score header */}
-        <View style={styles.scoreHeader}>
+        <View style={s.scoreHeader}>
           {hitWin && (
-            <View style={styles.winBanner}>
+            <View style={s.winBanner}>
               <Zap size={16} color={colors.white} strokeWidth={2} fill={colors.white} />
-              <Text style={styles.winBannerText}>YOU WIN!</Text>
+              <Text style={s.winBannerText}>YOU WIN!</Text>
               <Zap size={16} color={colors.white} strokeWidth={2} fill={colors.white} />
             </View>
           )}
-          <Text style={styles.scoreLabel}>FINAL SCORE</Text>
-          <Text style={[styles.scoreBig, hitWin && styles.scoreBigHit]}>
+          <Text style={s.scoreLabel}>FINAL SCORE</Text>
+          <Text style={[s.scoreBig, hitWin && s.scoreBigHit]}>
             {totalScore}
           </Text>
         </View>
 
         {/* Question results */}
-        <View style={styles.resultsList}>
+        <View style={s.resultsList}>
           {gameData.questions.map((q, i) => {
             const revealed = i < revealedCount;
             const result = matchResults[i];
@@ -586,33 +603,33 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
               <Animated.View
                 key={i}
                 style={[
-                  styles.resultRow,
-                  revealed && pts > 0 && styles.resultRowHit,
-                  revealed && pts === 0 && styles.resultRowMiss,
+                  s.resultRow,
+                  revealed && pts > 0 && s.resultRowHit,
+                  revealed && pts === 0 && s.resultRowMiss,
                   { opacity: rowFlash[i].interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] }) },
                 ]}
               >
-                <View style={styles.resultLeft}>
-                  <Text style={styles.resultQNum}>Q{i + 1}</Text>
-                  <View style={styles.resultTextCol}>
-                    <Text style={styles.resultQuestion} numberOfLines={1}>{q.text}</Text>
+                <View style={s.resultLeft}>
+                  <Text style={s.resultQNum}>Q{i + 1}</Text>
+                  <View style={s.resultTextCol}>
+                    <Text style={s.resultQuestion} numberOfLines={1}>{q.text}</Text>
                     {revealed ? (
                       <>
-                        <Text style={[styles.resultUserAnswer, pts > 0 && styles.resultUserAnswerHit]}>
+                        <Text style={[s.resultUserAnswer, pts > 0 && s.resultUserAnswerHit]}>
                           {userAnswers[i] || '— no answer —'}
                         </Text>
                         {pts > 0 && matched && (
-                          <Text style={styles.resultMatchedLabel}>✓ {matched}</Text>
+                          <Text style={s.resultMatchedLabel}>✓ {matched}</Text>
                         )}
                       </>
                     ) : (
-                      <View style={styles.resultPlaceholder} />
+                      <View style={s.resultPlaceholder} />
                     )}
                   </View>
                 </View>
                 {revealed && (
-                  <View style={[styles.resultPtsBadge, pts > 0 && styles.resultPtsBadgeHit]}>
-                    <Text style={[styles.resultPts, pts > 0 && styles.resultPtsHit]}>
+                  <View style={[s.resultPtsBadge, pts > 0 && s.resultPtsBadgeHit]}>
+                    <Text style={[s.resultPts, pts > 0 && s.resultPtsHit]}>
                       {pts > 0 ? `+${pts}` : '0'}
                     </Text>
                   </View>
@@ -624,16 +641,16 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
         {/* Top answers reveal (after all revealed) */}
         {revealedCount === NUM_QUESTIONS && (
-          <View style={styles.topAnswersSection}>
-            <Text style={styles.topAnswersTitle}>TOP ANSWERS</Text>
+          <View style={s.topAnswersSection}>
+            <Text style={s.topAnswersTitle}>TOP ANSWERS</Text>
             {gameData.questions.map((q, i) => (
-              <View key={i} style={styles.topAnswersCard}>
-                <Text style={styles.topAnswersQText} numberOfLines={2}>{q.text}</Text>
+              <View key={i} style={s.topAnswersCard}>
+                <Text style={s.topAnswersQText} numberOfLines={2}>{q.text}</Text>
                 {q.answers.slice(0, 3).map((ans, j) => (
-                  <View key={j} style={styles.topAnswerRow}>
-                    <Text style={styles.topAnswerRank}>{j + 1}</Text>
-                    <Text style={styles.topAnswerText}>{ans.text}</Text>
-                    <Text style={styles.topAnswerPts}>{ans.points}</Text>
+                  <View key={j} style={s.topAnswerRow}>
+                    <Text style={s.topAnswerRank}>{j + 1}</Text>
+                    <Text style={s.topAnswerText}>{ans.text}</Text>
+                    <Text style={s.topAnswerPts}>{ans.points}</Text>
                   </View>
                 ))}
               </View>
@@ -643,17 +660,17 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
         {/* XP card */}
         {revealedCount === NUM_QUESTIONS && !isArchive && (
-          <View style={styles.xpCard}>
-            <Text style={styles.xpCardLabel}>⭐ XP EARNED</Text>
-            <Text style={styles.xpCardTotal}>+{xpEarned}</Text>
-            <Text style={styles.xpCardBreakdown}>
+          <View style={s.xpCard}>
+            <Text style={s.xpCardLabel}>XP EARNED</Text>
+            <Text style={s.xpCardTotal}>+{xpEarned}</Text>
+            <Text style={s.xpCardBreakdown}>
               500 base + {totalScore} pts × 5
             </Text>
           </View>
         )}
 
         {isArchive && revealedCount === NUM_QUESTIONS && (
-          <Text style={styles.archiveNotice}>ARCHIVE MODE — Results not saved</Text>
+          <Text style={s.archiveNotice}>ARCHIVE MODE — Results not saved</Text>
         )}
 
         {!isArchive && revealedCount === NUM_QUESTIONS && (
@@ -662,7 +679,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
         {revealedCount === NUM_QUESTIONS && (
           <Pressable
-            style={({ pressed }) => [styles.shareBtn, pressed && styles.shareBtnPressed]}
+            style={({ pressed }) => [s.shareBtn, pressed && s.shareBtnPressed]}
             onPress={() =>
               sharePowerPlay(
                 selectedLeague,
@@ -673,14 +690,14 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
               )
             }
           >
-            <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
+            <Text style={s.shareBtnText}>SHARE RESULTS</Text>
           </Pressable>
         )}
 
         {/* Notify Friends button */}
         {revealedCount === NUM_QUESTIONS && (
           <Pressable
-            style={({ pressed }) => [styles.notifyBtn, pressed && styles.notifyBtnPressed, notifyState === 'done' && styles.notifyBtnDone]}
+            style={({ pressed }) => [s.notifyBtn, pressed && s.notifyBtnPressed, notifyState === 'done' && s.notifyBtnDone]}
             onPress={() => { void (async () => {
               if (notifyState !== 'idle') return;
               setNotifyState('sending');
@@ -690,7 +707,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
             })(); }}
             disabled={notifyState === 'sending'}
           >
-            <Text style={styles.notifyBtnText}>
+            <Text style={s.notifyBtnText}>
               {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
             </Text>
           </Pressable>
@@ -698,10 +715,10 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
         {revealedCount === NUM_QUESTIONS && (
           <Pressable
-            style={({ pressed }) => [styles.doneBtn, pressed && styles.doneBtnPressed]}
+            style={({ pressed }) => [s.doneBtn, pressed && s.doneBtnPressed]}
             onPress={onBack}
           >
-            <Text style={styles.doneBtnText}>DONE</Text>
+            <Text style={s.doneBtnText}>DONE</Text>
           </Pressable>
         )}
       </ScrollView>
@@ -711,46 +728,49 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
   // ── Main render ────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={s.root}>
       {/* Zone 1 */}
-      <View style={styles.zone1}>
-        <View style={styles.zone1TopRow}>
-          <Pressable onPress={() => { if (phase === 'playing') trackGameAbandoned('power-play', selectedLeague); onBack(); }} hitSlop={8} style={styles.backBtn}>
+      <View style={[s.zone1, { paddingTop: insets.top + 16 }]}>
+        <View style={s.zone1TopRow}>
+          <Pressable onPress={() => { if (phase === 'playing') trackGameAbandoned('power-play', selectedLeague); onBack(); }} hitSlop={8} style={s.backBtn}>
             <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
           </Pressable>
         </View>
-        <View style={styles.zone1Center}>
-          <View style={styles.zone1TitleRow}>
+        <View style={s.zone1Center}>
+          <View style={s.zone1TitleRow}>
             <Zap size={20} color={colors.white} strokeWidth={2} fill={colors.white} />
-            <Text style={styles.zone1Title}>POWER PLAY</Text>
+            <Text style={s.zone1Title}>POWER PLAY</Text>
           </View>
-          <Text style={styles.zone1Sub}>Fast Money · Score 125+ to win</Text>
+          <Text style={s.zone1Sub}>Fast Money · Score 125+ to win</Text>
         </View>
         {isArchive ? (
-          <View style={styles.archiveBanner}>
-            <Text style={styles.archiveBannerText}>ARCHIVE — {archiveDate}</Text>
+          <View style={s.archiveBanner}>
+            <Text style={s.archiveBannerText}>ARCHIVE — {archiveDate}</Text>
           </View>
         ) : (
-          <View style={styles.switcherRow}>
+          <View style={s.switcherRow}>
             <LeagueSwitcher selected={selectedLeague} onChange={setSelectedLeague} />
           </View>
         )}
       </View>
 
       {/* Zone 2 */}
-      <View style={styles.zone2}>
+      <View style={s.zone2}>
         {phase === 'loading' && renderLoading()}
         {phase === 'intro' && renderIntro()}
         {phase === 'playing' && renderPlaying()}
         {phase === 'results' && renderResults()}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
+// Power Play keeps a dramatic dark card style regardless of light/dark mode (game show feel).
+// All game-board colors use dark.* tokens directly.
 
-const styles = StyleSheet.create({
+function createStyles(_isDark: boolean) {
+  return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: 'transparent',
@@ -758,7 +778,7 @@ const styles = StyleSheet.create({
 
   // Zone 1
   zone1: {
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['4xl'] + 8,
     borderBottomLeftRadius: 32,
@@ -784,14 +804,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   zone1Title: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 24,
-    color: colors.white,
+    color: '#FFFFFF',
     letterSpacing: 3,
   },
   zone1Sub: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontWeight: '500',
     fontSize: 13,
     color: 'rgba(255,255,255,0.65)',
@@ -809,7 +829,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   archiveBannerText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 11,
     color: 'rgba(255,255,255,0.80)',
@@ -834,7 +854,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   errorText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 16,
     color: darkColors.text,
@@ -842,7 +862,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   errorSub: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontWeight: '500',
     fontSize: 14,
     color: darkColors.textSecondary,
@@ -873,10 +893,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   introTitle: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 13,
-    color: colors.brand,
+    color: brand.primary,
     letterSpacing: 2,
     marginBottom: spacing.lg,
   },
@@ -886,14 +906,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing['3xl'],
   },
   introRule: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontWeight: '500',
     fontSize: 15,
     color: darkColors.text,
     lineHeight: 22,
   },
   startBtn: {
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
     borderRadius: 16,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing['4xl'],
@@ -904,10 +924,10 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   startBtnText: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 17,
-    color: colors.white,
+    color: '#FFFFFF',
     letterSpacing: 2,
   },
 
@@ -927,22 +947,22 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0,0,0,0.5)',
   },
   alreadyBadge: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 10,
     letterSpacing: 2,
-    color: colors.brand,
+    color: brand.primary,
     textAlign: 'center',
   },
   alreadyScore: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 56,
-    color: colors.white,
+    color: '#FFFFFF',
     lineHeight: 60,
   },
   alreadyScoreLabel: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontWeight: '500',
     fontSize: 14,
     color: darkColors.textSecondary,
@@ -957,29 +977,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   alreadyXpLabel: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 10,
     letterSpacing: 2,
     color: darkColors.textSecondary,
   },
   alreadyXp: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 32,
-    color: colors.brand,
+    color: brand.primary,
     lineHeight: 38,
   },
   alreadyCta: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 18,
-    color: colors.white,
+    color: '#FFFFFF',
     letterSpacing: 2,
     textAlign: 'center',
   },
   alreadySub: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontWeight: '500',
     fontSize: 13,
     color: darkColors.textSecondary,
@@ -1003,7 +1023,7 @@ const styles = StyleSheet.create({
   },
   timerBarFill: {
     height: 4,
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
     borderRadius: 2,
   },
   timerRow: {
@@ -1013,14 +1033,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing['2xl'],
   },
   questionCounter: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 22,
     color: darkColors.text,
     letterSpacing: 1,
   },
   questionCounterOf: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontWeight: '500',
     fontSize: 16,
     color: darkColors.textSecondary,
@@ -1038,23 +1058,23 @@ const styles = StyleSheet.create({
   },
   timerBadgeUrgent: {
     backgroundColor: 'rgba(252,52,92,0.15)',
-    borderColor: colors.brand,
+    borderColor: brand.primary,
   },
   timerNum: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 22,
     color: darkColors.text,
   },
   timerNumUrgent: {
-    color: colors.brand,
+    color: brand.primary,
   },
   questionWrap: {
     marginBottom: spacing['2xl'],
     minHeight: 80,
   },
   questionText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 20,
     color: darkColors.text,
@@ -1068,7 +1088,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 18,
     color: darkColors.text,
@@ -1093,7 +1113,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   passBtnText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 15,
     color: darkColors.textSecondary,
@@ -1101,7 +1121,7 @@ const styles = StyleSheet.create({
   },
   lockInBtn: {
     flex: 2,
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
     borderRadius: 14,
     paddingVertical: spacing.lg,
     alignItems: 'center',
@@ -1114,10 +1134,10 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   lockInBtnText: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 15,
-    color: colors.white,
+    color: '#FFFFFF',
     letterSpacing: 2,
   },
   dotsRow: {
@@ -1134,8 +1154,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
   },
   dotActive: {
-    backgroundColor: colors.brand,
-    borderColor: colors.brand,
+    backgroundColor: brand.primary,
+    borderColor: brand.primary,
   },
   dotLocked: {
     backgroundColor: 'rgba(255,255,255,0.25)',
@@ -1143,14 +1163,14 @@ const styles = StyleSheet.create({
   },
   dotPassed: {
     backgroundColor: 'transparent',
-    borderColor: colors.brand,
+    borderColor: brand.primary,
     borderWidth: 2,
   },
   passedBadge: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 11,
-    color: colors.brand,
+    color: brand.primary,
     letterSpacing: 1.5,
     marginBottom: spacing.sm,
   },
@@ -1162,14 +1182,14 @@ const styles = StyleSheet.create({
   resultsContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing['3xl'],
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   scoreHeader: {
     alignItems: 'center',
     marginBottom: spacing['3xl'],
   },
   scoreLabel: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 11,
     color: darkColors.textSecondary,
@@ -1177,30 +1197,30 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   scoreBig: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 72,
     color: darkColors.text,
     lineHeight: 76,
   },
   scoreBigHit: {
-    color: colors.brand,
+    color: brand.primary,
   },
   winBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
     borderRadius: 12,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
   winBannerText: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 16,
-    color: colors.white,
+    color: '#FFFFFF',
     letterSpacing: 3,
   },
   resultsList: {
@@ -1231,10 +1251,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   resultQNum: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 13,
-    color: colors.brand,
+    color: brand.primary,
     letterSpacing: 0.5,
     marginTop: 2,
     minWidth: 20,
@@ -1243,7 +1263,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   resultQuestion: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 12,
     color: darkColors.textSecondary,
@@ -1251,7 +1271,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   resultUserAnswer: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 15,
     color: darkColors.text,
@@ -1261,7 +1281,7 @@ const styles = StyleSheet.create({
     color: colors.accentGreen,
   },
   resultMatchedLabel: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontWeight: '500',
     fontSize: 12,
     color: colors.accentGreen,
@@ -1287,7 +1307,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,200,151,0.15)',
   },
   resultPts: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 17,
     color: darkColors.textSecondary,
@@ -1300,7 +1320,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   topAnswersTitle: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 11,
     color: darkColors.textSecondary,
@@ -1318,7 +1338,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0,0,0,0.3)',
   },
   topAnswersQText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 13,
     color: darkColors.textSecondary,
@@ -1332,22 +1352,22 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   topAnswerRank: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 13,
-    color: colors.brand,
+    color: brand.primary,
     width: 16,
     textAlign: 'center',
   },
   topAnswerText: {
     flex: 1,
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 14,
     color: darkColors.text,
   },
   topAnswerPts: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 14,
     color: darkColors.textSecondary,
@@ -1365,7 +1385,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing['2xl'],
   },
   xpCardLabel: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 13,
     color: darkColors.textSecondary,
@@ -1373,21 +1393,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   xpCardTotal: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 48,
-    color: colors.brand,
+    color: brand.primary,
     lineHeight: 54,
   },
   xpCardBreakdown: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontWeight: '500',
     fontSize: 13,
     color: darkColors.textSecondary,
     marginTop: spacing.xs,
   },
   archiveNotice: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontWeight: '500',
     fontSize: 13,
     color: darkColors.textSecondary,
@@ -1407,7 +1427,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   doneBtnText: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 15,
     color: darkColors.textSecondary,
@@ -1426,10 +1446,10 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   shareBtnText: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 15,
-    color: colors.white,
+    color: '#FFFFFF',
     letterSpacing: 2,
   },
   notifyBtn: {
@@ -1449,10 +1469,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,200,151,0.08)',
   },
   notifyBtnText: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900' as const,
     fontSize: 15,
-    color: '#F5F5F5',
+    color: dark.textPrimary,
     letterSpacing: 2,
   },
-});
+  });
+}
+
+const styles = createStyles(true);
