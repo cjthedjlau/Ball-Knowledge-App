@@ -1,0 +1,1310 @@
+[
+  {
+    "id": "funny-001",
+    "text": "The athlete most likely to survive a zombie apocalypse",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-002",
+    "text": "The athlete most likely to cry during a Disney movie",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-003",
+    "text": "The athlete most likely to become president someday",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-004",
+    "text": "The athlete most likely to have a secret TikTok account",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-005",
+    "text": "The athlete most likely to show up to practice in a bathrobe",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-006",
+    "text": "The athlete most likely to start a beef with a mascot",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-007",
+    "text": "The NBA player most likely to dominate a hot dog eating contest",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-008",
+    "text": "The NFL player most likely to win a season of Survivor",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-009",
+    "text": "The MLB player most likely to fall asleep in the dugout",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-010",
+    "text": "The NHL player most likely to get into a fight at a PTA meeting",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-011",
+    "text": "Finish this sentence: LeBron's secret pregame ritual is ___",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-012",
+    "text": "Finish this sentence: The reason the Cowboys haven't won a Super Bowl since the '90s is ___",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-013",
+    "text": "Finish this sentence: The worst thing about watching baseball is ___",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-014",
+    "text": "Finish this sentence: Hockey fights would be better if ___",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-015",
+    "text": "Finish this sentence: The real reason NBA players flop is ___",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-016",
+    "text": "If Shaq was an NHL enforcer, his nickname would be ___",
+    "type": "funny",
+    "leagues": ["NBA", "NHL"]
+  },
+  {
+    "id": "funny-017",
+    "text": "If Tom Brady was a baseball player, he'd be ___",
+    "type": "funny",
+    "leagues": ["NFL", "MLB"]
+  },
+  {
+    "id": "funny-018",
+    "text": "If the NBA had a halftime talent show, who would win?",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-019",
+    "text": "If NFL teams were restaurants, the Lions would be ___",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-020",
+    "text": "If every sport settled ties with a dance battle, which league would be the most entertaining?",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-021",
+    "text": "The worst sports tattoo idea involving your favorite team",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-022",
+    "text": "The athlete you'd least want as your Uber driver",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-023",
+    "text": "The athlete who would make the best substitute teacher",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-024",
+    "text": "What an NBA player whispers to the ball before a free throw",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-025",
+    "text": "The real reason NFL kickers miss field goals",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-026",
+    "text": "The athlete most likely to accidentally go viral for the wrong reasons",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-027",
+    "text": "Name a sport that's secretly harder than it looks",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-028",
+    "text": "The worst celebrity to throw out a first pitch",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-029",
+    "text": "The NHL player most likely to have a side hustle as a lumberjack",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-030",
+    "text": "If Patrick Mahomes and Steph Curry switched sports for a day, what happens?",
+    "type": "funny",
+    "leagues": ["NFL", "NBA"]
+  },
+  {
+    "id": "funny-031",
+    "text": "The athlete most likely to filibuster on the Senate floor about their GOAT status",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-032",
+    "text": "The worst possible walk-up song for an MLB batter",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-033",
+    "text": "The NHL player you'd trust least to watch your dog for a weekend",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-034",
+    "text": "If NBA refs had entrance music, what would it be?",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-035",
+    "text": "The athlete most likely to start a podcast nobody asked for",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-036",
+    "text": "Name something more reliable than the Knicks disappointing their fans",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-037",
+    "text": "The NFL player who would dominate in medieval jousting",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-038",
+    "text": "If MLB managers could challenge calls with a sword fight, who wins?",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-039",
+    "text": "The athlete most likely to ghost their own team's group chat",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-040",
+    "text": "If Giannis opened a restaurant, the signature dish would be ___",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-041",
+    "text": "The most embarrassing thing you've done while watching your team lose",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-042",
+    "text": "What's actually in the Gatorade cooler they dump on NFL coaches",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-043",
+    "text": "The NHL player who would be the best contestant on The Bachelor",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-044",
+    "text": "The sport that would be the funniest if played on ice",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB"]
+  },
+  {
+    "id": "funny-045",
+    "text": "An honest name for your favorite MLB team's stadium",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-046",
+    "text": "The NFL player most likely to win a Grammy before a Super Bowl",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-047",
+    "text": "If the Zamboni driver was also the backup goalie, how would the season go?",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-048",
+    "text": "The worst possible sponsorship deal for an athlete",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-049",
+    "text": "The NBA player most likely to get lost in an IKEA",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-050",
+    "text": "If NFL coaches had to play one quarter per game, which team gets better?",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-051",
+    "text": "The thing an MLB umpire is actually thinking about during a game",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-052",
+    "text": "The NHL team most likely to win a bar trivia night",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-053",
+    "text": "If athletes had to work a 9-to-5 office job, who complains first?",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-054",
+    "text": "The worst possible mascot for a new NFL expansion team",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-055",
+    "text": "Finish this sentence: The seventh-inning stretch would be better if ___",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-056",
+    "text": "The most unhinged thing you've yelled at a TV during an NBA game",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-057",
+    "text": "If every NBA team had to add one non-athlete to their roster, who do you pick?",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-058",
+    "text": "The athlete who definitely has a burner account defending themselves online",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-059",
+    "text": "The NFL play call that sounds the most like a food order",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-060",
+    "text": "If you had to describe your love life as a sports highlight, what is it?",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-061",
+    "text": "The athlete most likely to still be playing at age 50",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-062",
+    "text": "If the penalty box had WiFi, what would NHL players be browsing?",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-063",
+    "text": "The worst possible halftime show at the Super Bowl",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-064",
+    "text": "The NBA player who would absolutely dominate a rap battle",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-065",
+    "text": "If your team's GM let fans make one trade, what disaster happens?",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-066",
+    "text": "Name a rule change that would make any sport 10x more chaotic",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-067",
+    "text": "The NHL player most likely to host a cooking show after retiring",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-068",
+    "text": "If LeBron James was a hockey enforcer, his fighting style would be ___",
+    "type": "funny",
+    "leagues": ["NBA", "NHL"]
+  },
+  {
+    "id": "funny-069",
+    "text": "The thing fans do that MLB players secretly find the most annoying",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-070",
+    "text": "The worst thing you could put on a jumbotron kiss cam at an NHL game",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-071",
+    "text": "If MLB pitchers could throw anything besides a baseball, what would be the funniest?",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-072",
+    "text": "The athlete most likely to become a reality TV villain",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-073",
+    "text": "If professional sports had a bring-your-kid-to-work day, which sport would be the funniest?",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-074",
+    "text": "The NBA player whose trash talk would work best in a corporate meeting",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-075",
+    "text": "The MLB player most likely to write a self-help book called 'Just Be Great'",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-076",
+    "text": "If the NFL draft was for picking roommates instead of players, the #1 pick is ___",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-077",
+    "text": "The funniest possible name for a new NHL expansion team",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-078",
+    "text": "An athlete whose pregame speech would make you run through a wall",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-079",
+    "text": "If every NFL stadium served only one food, which stadium has the worst deal?",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-080",
+    "text": "The athlete most likely to challenge a fan to a 1-on-1 in the parking lot",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-081",
+    "text": "If an MLB game lasted only 3 innings, how would the vibes change?",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-082",
+    "text": "The athlete whose retirement speech would make everyone cry the hardest",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-083",
+    "text": "If you could add one ridiculous rule to the NFL Pro Bowl, what is it?",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-084",
+    "text": "The worst sports take your uncle has ever had at Thanksgiving",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-085",
+    "text": "The NHL player who would be the best contestant on Jeopardy",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-086",
+    "text": "If NHL goalies could use any object instead of a glove to block shots, they'd pick ___",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-087",
+    "text": "The athlete most likely to accidentally reveal a trade on Instagram Live",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-088",
+    "text": "If you had to pick an NFL player to be your lawyer, who are you calling?",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-089",
+    "text": "The most delusional thing a fanbase actually believes about their team",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-090",
+    "text": "Finish this sentence: The NBA All-Star Game would be fixed if ___",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-091",
+    "text": "The NHL player who would absolutely dominate on Dancing with the Stars",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-092",
+    "text": "If every MLB team had to have a live animal mascot on the field, which team has the biggest problem?",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-093",
+    "text": "The athlete most likely to be hiding an insane hidden talent",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-094",
+    "text": "If an NFL linebacker played goalie in the NHL, how many saves per game?",
+    "type": "funny",
+    "leagues": ["NFL", "NHL"]
+  },
+  {
+    "id": "funny-095",
+    "text": "The worst pickup line using a sports reference",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-096",
+    "text": "What would Shaq's batting average be if he played MLB?",
+    "type": "funny",
+    "leagues": ["NBA", "MLB"]
+  },
+  {
+    "id": "funny-097",
+    "text": "The NBA player most likely to get a technical foul at their own wedding",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-098",
+    "text": "If every team's GM was replaced by a golden retriever, which team improves the most?",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-099",
+    "text": "The most chaotic thing that could happen during a hockey intermission",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-100",
+    "text": "The athlete most likely to have a secret handshake with every person they've ever met",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-101",
+    "text": "If sports commentators had to narrate everyday life, which one would be the funniest?",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-102",
+    "text": "The athlete you'd pick first for your trivia team at a bar",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-103",
+    "text": "If an NFL lineman played catcher in MLB, describe the first game",
+    "type": "funny",
+    "leagues": ["NFL", "MLB"]
+  },
+  {
+    "id": "funny-104",
+    "text": "The thing that lives rent-free in every sports fan's head",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-105",
+    "text": "If you could add commentary from one athlete to nature documentaries, who?",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-106",
+    "text": "The worst possible city for an NHL expansion team",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-107",
+    "text": "The MLB player most likely to accidentally knock themselves out celebrating a home run",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-108",
+    "text": "If baseball allowed steroids but only for one position, which position gets them?",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-109",
+    "text": "The athlete who would give the most unhinged commencement speech",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-110",
+    "text": "If you could put any NHL player in the Fast & Furious franchise, who fits best?",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-111",
+    "text": "The NFL team that would be the most fun at a company retreat",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-112",
+    "text": "If NBA players had to wear capes, who pulls it off the best?",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-113",
+    "text": "The thing an equipment manager knows that would shock NHL fans",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-114",
+    "text": "Describe your team's last season using only a movie title",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-115",
+    "text": "If NHL players couldn't use sticks and had to kick the puck, who's the best?",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-116",
+    "text": "The most unbelievable excuse an athlete has given for a bad game",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-117",
+    "text": "If every sport played in complete silence, which would be the most awkward?",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-118",
+    "text": "The athlete who would win a staring contest against literally anyone",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-119",
+    "text": "Finish this sentence: The NFL would be better if quarterbacks had to ___",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-120",
+    "text": "The NBA player most likely to have an existential crisis mid-game",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-121",
+    "text": "If you had to send one athlete to represent Earth to aliens, who do you send?",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-122",
+    "text": "The athlete whose Wikipedia page definitely has some creative editing",
+    "type": "funny",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "funny-123",
+    "text": "The NFL running back most likely to open a chain of smoothie shops",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-124",
+    "text": "If NBA players had to do their postgame interview in a foreign accent, who nails it?",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-125",
+    "text": "The MLB reliever most likely to be moonlighting as a DJ",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-126",
+    "text": "If NHL teams were high school cliques, the Bruins would be ___",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "funny-127",
+    "text": "The NFL player who would absolutely crush it on a dating show",
+    "type": "funny",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "funny-128",
+    "text": "The NBA player most likely to accidentally break the backboard in 2025",
+    "type": "funny",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "funny-129",
+    "text": "If you could hear what catchers say to batters, the wildest chirp would come from ___",
+    "type": "funny",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "funny-130",
+    "text": "The NHL enforcer who would make the best kindergarten teacher",
+    "type": "funny",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "debate-001",
+    "text": "The most overrated player in sports right now",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-002",
+    "text": "The most overrated NBA dynasty of all time",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-003",
+    "text": "The worst NFL draft pick of the last decade",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-004",
+    "text": "The best MLB pitcher who never won a Cy Young",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-005",
+    "text": "The best NHL player who never won the Stanley Cup",
+    "type": "debate",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "debate-006",
+    "text": "The best player who never won a championship in their sport",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-007",
+    "text": "The worst coaching decision you've ever witnessed",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-008",
+    "text": "The NBA player who benefited the most from playing on a stacked team",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-009",
+    "text": "The most wasted prime in NFL history",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-010",
+    "text": "The trade that aged the worst in the last 10 years",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-011",
+    "text": "The franchise with the most tortured fanbase",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-012",
+    "text": "MJ vs LeBron: who do you take and why?",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-013",
+    "text": "The greatest Super Bowl of all time",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-014",
+    "text": "The most overrated sports rivalry",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-015",
+    "text": "The best NBA free agency signing in the last decade",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-016",
+    "text": "The worst NFL free agency signing in the last decade",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-017",
+    "text": "The most underrated player in the NBA right now",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-018",
+    "text": "The NFL quarterback most likely to decline hard in the next 2 years",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-019",
+    "text": "The MLB team most likely to become a dynasty in the next 5 years",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-020",
+    "text": "The NHL team with the brightest future",
+    "type": "debate",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "debate-021",
+    "text": "The most important position in all of sports",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-022",
+    "text": "The worst rule in professional sports",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-023",
+    "text": "The greatest single-game performance in NBA history",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-024",
+    "text": "The most clutch athlete of all time",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-025",
+    "text": "The quarterback you'd start a franchise with today",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-026",
+    "text": "The most iconic sports moment of the 2020s so far",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-027",
+    "text": "The greatest playoff run by a single player in any sport",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-028",
+    "text": "The NBA team that needs to blow it up and rebuild",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-029",
+    "text": "The most overpaid player in the NFL right now",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-030",
+    "text": "The MLB position that is the hardest to play",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-031",
+    "text": "The NHL goalie who changed the position the most",
+    "type": "debate",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "debate-032",
+    "text": "The coach who gets too much credit for their team's success",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-033",
+    "text": "The athlete who fell off the hardest",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-034",
+    "text": "Rings or stats: what matters more for legacy?",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-035",
+    "text": "The best second-round pick in NBA draft history",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-036",
+    "text": "The most underpaid player in the NFL",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-037",
+    "text": "The best baseball player of the steroid era, no asterisks",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-038",
+    "text": "The hardest trophy to win in professional sports",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-039",
+    "text": "The franchise that has made the worst decisions over the last 20 years",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-040",
+    "text": "The current NBA player with the best chance to pass LeBron on the all-time scoring list",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-041",
+    "text": "The NFL team that would dominate if there was no salary cap",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-042",
+    "text": "The most exciting style of play in any sport right now",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-043",
+    "text": "The biggest 'what if' in sports history",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-044",
+    "text": "The MLB player most likely to be a future Hall of Famer that nobody is talking about",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-045",
+    "text": "The worst expansion draft in NHL history",
+    "type": "debate",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "debate-046",
+    "text": "The most disrespected franchise in their league",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-047",
+    "text": "The athlete whose prime was the most dominant ever",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-048",
+    "text": "The biggest choke in NBA playoff history",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-049",
+    "text": "Analytics vs eye test: which do you trust more?",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-050",
+    "text": "The greatest rookie season in NBA history",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-051",
+    "text": "The best defensive player in NFL history",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-052",
+    "text": "The MLB record that will never be broken",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-053",
+    "text": "Should fighting be removed from hockey?",
+    "type": "debate",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "debate-054",
+    "text": "The sport that requires the most raw athleticism",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-055",
+    "text": "The best NBA player to ever be traded for nothing",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-056",
+    "text": "The worst defending champion performance the following NFL season",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-057",
+    "text": "The most valuable non-QB position in the NFL",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-058",
+    "text": "The NBA superstar most likely to demand a trade this offseason",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-059",
+    "text": "The greatest World Series of all time",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-060",
+    "text": "The best NHL player under 25 right now",
+    "type": "debate",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "debate-061",
+    "text": "The team that should relocate and where they should go",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-062",
+    "text": "The greatest coach in the history of their sport",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-063",
+    "text": "The NBA player who is better than their stats suggest",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-064",
+    "text": "Should the NBA bring back the old All-Star format?",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-065",
+    "text": "The worst contract in the NFL right now",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-066",
+    "text": "The designated hitter rule: good or bad for baseball?",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-067",
+    "text": "The best NHL rivalry of all time",
+    "type": "debate",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "debate-068",
+    "text": "The league that handles player discipline the worst",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-069",
+    "text": "The greatest draft class in any sport",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-070",
+    "text": "The MLB player who was ahead of their time",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-071",
+    "text": "The worst take by a major sports analyst that turned out to be right",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-072",
+    "text": "The NHL team with the best uniforms",
+    "type": "debate",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "debate-073",
+    "text": "The most boring sport to watch on TV but exciting in person",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-074",
+    "text": "The greatest game 7 in NBA Finals history",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-075",
+    "text": "The NFL position that has evolved the most in the last 20 years",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-076",
+    "text": "The biggest bust in MLB draft history",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-077",
+    "text": "The most underrated NHL team of the past decade",
+    "type": "debate",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "debate-078",
+    "text": "The league with the best playoff format",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-079",
+    "text": "The player whose legacy changed the most after retirement",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-080",
+    "text": "The most impactful rule change in MLB in the last 10 years",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-081",
+    "text": "The greatest rivalry in all of sports right now",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-082",
+    "text": "The team built to win now that will regret it in 3 years",
+    "type": "debate",
+    "leagues": ["NFL", "NBA", "MLB", "NHL"]
+  },
+  {
+    "id": "debate-083",
+    "text": "The greatest closer in MLB history",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-084",
+    "text": "The best NHL captain of all time",
+    "type": "debate",
+    "leagues": ["NHL"]
+  },
+  {
+    "id": "debate-085",
+    "text": "The most overrated NBA player of the last 5 years",
+    "type": "debate",
+    "leagues": ["NBA"]
+  },
+  {
+    "id": "debate-086",
+    "text": "The NFL receiver who is the hardest to cover one-on-one right now",
+    "type": "debate",
+    "leagues": ["NFL"]
+  },
+  {
+    "id": "debate-087",
+    "text": "The MLB pitcher with the most unhittable single pitch",
+    "type": "debate",
+    "leagues": ["MLB"]
+  },
+  {
+    "id": "debate-088",
+    "text": "The NHL team that got robbed by the refs the worst in a playoff series",
+    "type": "debate",
+    "leagues": ["NHL"]
+  }
+]
