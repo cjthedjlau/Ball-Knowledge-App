@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   },
   zone1: {
     paddingTop: spacing.lg,
-    paddingBottom: spacing['3xl'] + spacing.md,
+    paddingBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
     shadowColor: '#000',
