@@ -20,7 +20,6 @@ import GhostButton from '../../screens/components/ui/GhostButton';
 import { type Tab } from '../components/ui/BottomNav';
 import { calculateDailyGameXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { shareTrivia } from '../../lib/shareResults';
-import { notifyFriendsOfResult } from '../../lib/friends';
 import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { saveGameResult as saveCompletionResult, getGameResultToday, getTodayEST } from '../../lib/gameResults';
@@ -167,7 +166,6 @@ export default function TriviaScreen({ onBack, onNavigate, archiveDate }: Props)
   const [correctResults, setCorrectResults] = useState<boolean[]>([]);
   const [gameComplete, setGameComplete] = useState(false);
   const [xpEarned, setXpEarned] = useState<number | null>(null);
-  const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
   const [playedTodayCache, setPlayedTodayCache] = useState<Record<string, { score: number; xp: number } | null>>({});
   const [hintRevealed, setHintRevealed] = useState(false);
   const { showRewardedAd, isRewardedReady } = useRewardedAd();
@@ -574,18 +572,12 @@ export default function TriviaScreen({ onBack, onNavigate, archiveDate }: Props)
               </Pressable>
               {/* Notify Friends button */}
               <Pressable
-                style={({ pressed }) => [s.notifyBtn, pressed && s.notifyBtnPressed, notifyState === 'done' && s.notifyBtnDone]}
                 onPress={() => { void (async () => {
-                  if (notifyState !== 'idle') return;
                   setNotifyState('sending');
-                  await notifyFriendsOfResult('Ladder', selectedLeague, `${correctResults.filter(Boolean).length}/${questions.length} correct`);
                   setNotifyState('done');
                   setTimeout(() => setNotifyState('idle'), 3000);
                 })(); }}
-                disabled={notifyState === 'sending'}
               >
-                <Text style={s.notifyBtnText}>
-                  {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED \u2713' : 'NOTIFY FRIENDS'}
                 </Text>
               </Pressable>
               {!isArchive && (
@@ -892,10 +884,6 @@ function createStyles(isDark: boolean) {
     archiveBanner: { backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 8, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, alignSelf: 'center', marginTop: spacing.md },
     archiveBannerText: { fontFamily: fonts.bodySemiBold, fontSize: 11, color: 'rgba(255,255,255,0.85)', letterSpacing: 1.5, textAlign: 'center' },
     archiveNotice: { fontFamily: fonts.bodyMedium, fontSize: 12, color: txtSec, textAlign: 'center', letterSpacing: 1, marginTop: spacing.sm, marginBottom: spacing.lg },
-    notifyBtn: { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderRadius: radius.primary, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: borderCol, marginBottom: 12 },
-    notifyBtnPressed: { opacity: 0.7 },
-    notifyBtnDone: { borderColor: 'rgba(0,200,151,0.40)', backgroundColor: 'rgba(0,200,151,0.08)' },
-    notifyBtnText: { fontFamily: fonts.display, fontSize: 15, color: txt, letterSpacing: 2 },
 
     // Breakdown section (replaces rarity)
     breakdownSection: { width: '100%' as any, marginBottom: spacing['2xl'], gap: spacing.sm },

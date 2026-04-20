@@ -25,7 +25,6 @@ import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { getGameResultToday, saveGameResult as saveCompletionResult, getTodayEST } from '../../lib/gameResults';
 import { updatePlayHour } from '../../lib/notifications';
 import { shareRank5 } from '../../lib/shareResults';
-import { notifyFriendsOfResult } from '../../lib/friends';
 import { useGameAnalytics } from '../../lib/analytics';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -426,7 +425,6 @@ function ResultsView({
 }) {
   const { isDark } = useTheme();
   const s = createStyles(isDark);
-  const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
 
   const matchCount = result.communitySlots
     ? result.placements.reduce<number>((count, name, idx) => {
@@ -505,18 +503,12 @@ function ResultsView({
         </Pressable>
         {/* Notify Friends button */}
         <Pressable
-          style={({ pressed }) => [s.notifyBtn, pressed && s.notifyBtnPressed, notifyState === 'done' && s.notifyBtnDone]}
           onPress={() => { void (async () => {
-            if (notifyState !== 'idle') return;
             setNotifyState('sending');
-            await notifyFriendsOfResult('Blind Rank 5', selectedLeague, `${matchCount}/${TOTAL_PLAYERS} crowd matches`);
             setNotifyState('done');
             setTimeout(() => setNotifyState('idle'), 3000);
           })(); }}
-          disabled={notifyState === 'sending'}
         >
-          <Text style={s.notifyBtnText}>
-            {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
           </Text>
         </Pressable>
         <GhostButton label="Back to Games" onPress={onBack} />
@@ -618,10 +610,6 @@ function createStyles(isDark: boolean) {
     shareBtn: { backgroundColor: cardBg, borderRadius: radius.primary, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, alignItems: 'center', justifyContent: 'center', minHeight: 52, borderWidth: 1, borderColor: borderCol },
     shareBtnPressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
     shareBtnText: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: txt, letterSpacing: 2 },
-    notifyBtn: { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderRadius: radius.primary, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: borderCol, marginBottom: 12 },
-    notifyBtnPressed: { opacity: 0.7 },
-    notifyBtnDone: { borderColor: 'rgba(0,200,151,0.40)', backgroundColor: 'rgba(0,200,151,0.08)' },
-    notifyBtnText: { fontFamily: fonts.display, fontSize: 15, color: txt, letterSpacing: 2 },
   });
 }
 

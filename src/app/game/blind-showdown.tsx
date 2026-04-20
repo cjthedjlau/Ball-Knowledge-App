@@ -17,7 +17,6 @@ import GhostButton from '../../screens/components/ui/GhostButton';
 import { type Tab } from '../components/ui/BottomNav';
 import { calculateDailyGameXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { shareShowdown } from '../../lib/shareResults';
-import { notifyFriendsOfResult } from '../../lib/friends';
 import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
 import { saveGameResult as saveCompletionResult, getGameResultToday, getTodayEST } from '../../lib/gameResults';
@@ -79,7 +78,6 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
   const [loadError, setLoadError] = useState(false);
   const [playedTodayCache, setPlayedTodayCache] = useState<Record<string, { score: number; xp: number } | null>>({});
   const [communityVotes, setCommunityVotes] = useState<Record<string, { percentA: number; percentB: number } | null>>({});
-  const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
 
   useEffect(() => {
     trackGameStart('blind-showdown', selectedLeague);
@@ -338,18 +336,12 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
 
             {/* Notify Friends button */}
             <Pressable
-              style={({ pressed }) => [s.notifyBtn, pressed && s.notifyBtnPressed, notifyState === 'done' && s.notifyBtnDone]}
               onPress={() => { void (async () => {
-                if (notifyState !== 'idle') return;
                 setNotifyState('sending');
-                await notifyFriendsOfResult('Showdown', selectedLeague, selectedSide ? `Picked Player ${selectedSide}` : 'Played');
                 setNotifyState('done');
                 setTimeout(() => setNotifyState('idle'), 3000);
               })(); }}
-              disabled={notifyState === 'sending'}
             >
-              <Text style={s.notifyBtnText}>
-                {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
               </Text>
             </Pressable>
 
@@ -776,7 +768,6 @@ function createStyles(isDark: boolean) {
       color: txt,
       letterSpacing: 1.5,
     },
-    notifyBtn: {
       backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
       borderRadius: radius.primary,
       paddingVertical: 16,
@@ -786,14 +777,11 @@ function createStyles(isDark: boolean) {
       marginBottom: 12,
       width: '100%' as any,
     },
-    notifyBtnPressed: {
       opacity: 0.7,
     },
-    notifyBtnDone: {
       borderColor: 'rgba(0,200,151,0.40)',
       backgroundColor: 'rgba(0,200,151,0.08)',
     },
-    notifyBtnText: {
       fontFamily: fonts.display,
       fontSize: 15,
       color: txt,

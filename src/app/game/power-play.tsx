@@ -29,7 +29,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { updatePlayHour } from '../../lib/notifications';
 import { sharePowerPlay } from '../../lib/shareResults';
-import { notifyFriendsOfResult } from '../../lib/friends';
 import { useGameAnalytics } from '../../lib/analytics';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -160,7 +159,6 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
   const [totalScore, setTotalScore] = useState(0);
   const [revealedCount, setRevealedCount] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
-  const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'done'>('idle');
 
   // Animations
   const timerBarWidth = useRef(new Animated.Value(1)).current;
@@ -697,18 +695,12 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
         {/* Notify Friends button */}
         {revealedCount === NUM_QUESTIONS && (
           <Pressable
-            style={({ pressed }) => [s.notifyBtn, pressed && s.notifyBtnPressed, notifyState === 'done' && s.notifyBtnDone]}
             onPress={() => { void (async () => {
-              if (notifyState !== 'idle') return;
               setNotifyState('sending');
-              await notifyFriendsOfResult('Power Play', selectedLeague, `${totalScore} pts · ${matchResults.filter(r => r.points > 0).length}/${NUM_QUESTIONS} hit`);
               setNotifyState('done');
               setTimeout(() => setNotifyState('idle'), 3000);
             })(); }}
-            disabled={notifyState === 'sending'}
           >
-            <Text style={s.notifyBtnText}>
-              {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
             </Text>
           </Pressable>
         )}
@@ -1447,7 +1439,6 @@ function createStyles(_isDark: boolean) {
     color: '#FFFFFF',
     letterSpacing: 2,
   },
-  notifyBtn: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 16,
     paddingVertical: 16,
@@ -1456,14 +1447,11 @@ function createStyles(_isDark: boolean) {
     borderColor: 'rgba(255,255,255,0.12)',
     marginBottom: 12,
   },
-  notifyBtnPressed: {
     opacity: 0.7,
   },
-  notifyBtnDone: {
     borderColor: 'rgba(0,200,151,0.40)',
     backgroundColor: 'rgba(0,200,151,0.08)',
   },
-  notifyBtnText: {
     fontFamily: fonts.display,
     fontWeight: '900' as const,
     fontSize: 15,
