@@ -522,7 +522,7 @@ const activeStyles = StyleSheet.create({
     backgroundColor: 'transparent',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingBottom: 120,
   },
   flash: {
     ...StyleSheet.absoluteFillObject,
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
   zone1: {
     backgroundColor: colors.brand,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingBottom: 120,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
     shadowColor: '#000',

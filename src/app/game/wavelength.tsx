@@ -61,7 +61,9 @@ import wavelengthAxesData from '../../data/wavelength-axes.json';
 
 const SPECTRUM_PROMPTS: Record<string, { left: string; right: string }[]> = wavelengthAxesData as any;
 
-/** Shuffle prompts for the given league, pick 5, assign random targets */
+/** Shuffle prompts for the given league, pick 5, assign random targets.
+ *  Target positions are generated once and frozen — they must never change
+ *  between the clue phase and the reveal phase. */
 function getRoundPrompts(league: string): RoundData[] {
   const prompts = [...(SPECTRUM_PROMPTS[league] || SPECTRUM_PROMPTS.NBA)];
   // Fisher-Yates shuffle
@@ -355,6 +357,9 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
   const [roundIndex, setRoundIndex] = useState(0);
   const [dialPosition, setDialPosition] = useState(50);
   const [clueText, setClueText] = useState('');
+  // Lock the target for the current round — once the clue-giver sees it, it's frozen
+  // and used for reveal. This prevents any re-render or state drift from changing it.
+  const lockedTargetRef = useRef<number | null>(null);
   const [roundScores, setRoundScores] = useState<number[]>([]);
   const [gameOver, setGameOver] = useState(false);
   const [xpEarned, setXpEarned] = useState<number | null>(null);
@@ -505,10 +510,13 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
   }, [mode, lobbyCode, onEvent]);
 
   const round = rounds[roundIndex];
+  // Use the locked target (frozen when clue-giver taps reveal) to guarantee
+  // the same value is shown in clue, guess, and reveal phases.
+  const safeTarget = lockedTargetRef.current ?? round?.targetPosition ?? 50;
   const clueGiverIndex = roundIndex % players.length;
   const clueGiverName = players[clueGiverIndex] || `Player ${clueGiverIndex + 1}`;
   const totalScore = roundScores.reduce((a, b) => a + b, 0);
-  const currentScore = calcScore(dialPosition, round.targetPosition);
+  const currentScore = calcScore(dialPosition, safeTarget);
 
   // ── Lobby handlers ────────────────────────────────────────────────────────
 
@@ -657,7 +665,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
   }, [broadcast, allGuesses]);
 
   const handleOnlineNextRound = useCallback(() => {
-    const score = calcScore(dialPosition, round.targetPosition);
+    const score = calcScore(dialPosition, safeTarget);
     const newScores = [...roundScores, score];
     setRoundScores(newScores);
 
@@ -759,6 +767,8 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
   // ── Round handlers ────────────────────────────────────────────────────────
 
   function handleRevealTarget() {
+    // Lock the target position so it can never change between clue and reveal phases
+    lockedTargetRef.current = rounds[roundIndex]?.targetPosition ?? 50;
     setPhase('clue');
   }
 
@@ -773,7 +783,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
   }
 
   function handleNext() {
-    const score = calcScore(dialPosition, round.targetPosition);
+    const score = calcScore(dialPosition, safeTarget);
     const newScores = [...roundScores, score];
     setRoundScores(newScores);
 
@@ -793,6 +803,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
         }
       })();
     } else {
+      lockedTargetRef.current = null; // reset for next round
       setRoundIndex(roundIndex + 1);
       setClueText('');
       setDialPosition(50);
@@ -1088,7 +1099,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
                 <View style={styles.dialCard}>
                   <Dial
                     position={50}
-                    targetPosition={round.targetPosition}
+                    targetPosition={safeTarget}
                     showTarget
                     interactive={false}
                     leftLabel={round.leftLabel}
@@ -1240,7 +1251,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
             <View style={styles.dialCard}>
               <Dial
                 position={50}
-                targetPosition={round.targetPosition}
+                targetPosition={safeTarget}
                 showTarget
                 interactive={false}
                 leftLabel={round.leftLabel}
@@ -1428,7 +1439,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
   // ── REVEAL ────────────────────────────────────────────────────────────────
 
   if (phase === 'reveal') {
-    const score = calcScore(dialPosition, round.targetPosition);
+    const score = calcScore(dialPosition, safeTarget);
 
     // ── Online mode: show all players' guesses ──
     if (mode === 'online') {
@@ -1462,7 +1473,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
             <View style={styles.dialCard}>
               <Dial
                 position={dialPosition}
-                targetPosition={round.targetPosition}
+                targetPosition={safeTarget}
                 showTarget
                 interactive={false}
                 leftLabel={round.leftLabel}
@@ -1478,7 +1489,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: colors.accentGreen }]} />
-                <Text style={styles.legendText}>Target ({round.targetPosition})</Text>
+                <Text style={styles.legendText}>Target ({safeTarget})</Text>
               </View>
             </View>
 
@@ -1487,7 +1498,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
               <Text style={styles.cardHeaderText}>ALL GUESSES</Text>
               {lobbyPlayers.map((p) => {
                 const guess = allGuesses[p.player_index];
-                const pScore = guess != null ? calcScore(guess, round.targetPosition) : 0;
+                const pScore = guess != null ? calcScore(guess, safeTarget) : 0;
                 return (
                   <View key={p.id} style={styles.resultRow}>
                     <View style={styles.resultRowLeft}>
@@ -1558,7 +1569,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
           <View style={styles.dialCard}>
             <Dial
               position={dialPosition}
-              targetPosition={round.targetPosition}
+              targetPosition={safeTarget}
               showTarget
               interactive={false}
               leftLabel={round.leftLabel}
@@ -1574,7 +1585,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: colors.accentGreen }]} />
-              <Text style={styles.legendText}>Target ({round.targetPosition})</Text>
+              <Text style={styles.legendText}>Target ({safeTarget})</Text>
             </View>
           </View>
 
