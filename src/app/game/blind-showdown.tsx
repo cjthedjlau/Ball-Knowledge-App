@@ -415,7 +415,7 @@ function createStyles(isDark: boolean) {
     zone1: {
       backgroundColor: brand.primary,
       paddingHorizontal: spacing.lg,
-      paddingBottom: spacing['4xl'] + 8,
+      paddingBottom: spacing.lg,
     },
     zone1TopRow: {
       flexDirection: 'row',

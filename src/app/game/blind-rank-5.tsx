@@ -542,7 +542,7 @@ function createStyles(isDark: boolean) {
     root: { flex: 1, backgroundColor: 'transparent' },
 
     // Zone 1
-    zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing['3xl'] },
+    zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
     zone1TopRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
     backBtn: { padding: spacing.sm, marginLeft: -spacing.sm },
     zone1Center: { alignItems: 'center', marginTop: spacing.xs },
@@ -555,7 +555,7 @@ function createStyles(isDark: boolean) {
     switcherRow: { marginTop: spacing.lg },
 
     // Zone 2
-    zone2: { flex: 1, backgroundColor: 'transparent' },
+    zone2: { flex: 1, backgroundColor: 'transparent', overflow: 'scroll' as any },
     zone2Content: { paddingHorizontal: spacing.lg, paddingTop: spacing['2xl'], paddingBottom: 120, gap: spacing.md },
 
     centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },

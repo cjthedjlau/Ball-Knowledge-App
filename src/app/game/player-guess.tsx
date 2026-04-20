@@ -950,7 +950,7 @@ function createStyles(isDark: boolean) {
     flex: { flex: 1 },
 
     // Zone 1
-    zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing['2xl'] },
+    zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
     zone1TopRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
     backBtn: { padding: spacing.sm, marginLeft: -spacing.sm },
     zone1Center: { alignItems: 'center', marginTop: spacing.xs },
@@ -966,7 +966,7 @@ function createStyles(isDark: boolean) {
     zone1Gradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 40 },
 
     // Zone 2
-    zone2: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: spacing.sm, paddingTop: spacing.lg, paddingBottom: spacing.lg },
+    zone2: { flex: 1, backgroundColor: 'transparent', overflow: 'scroll' as any, paddingHorizontal: spacing.sm, paddingTop: spacing.lg, paddingBottom: spacing.lg },
 
     // Column headers
     headerRow: { flexDirection: 'row', marginBottom: spacing.sm, gap: 3 },

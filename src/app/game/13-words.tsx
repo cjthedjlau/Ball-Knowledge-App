@@ -266,8 +266,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing['3xl'],
     paddingBottom: 28,
     paddingHorizontal: spacing.lg,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
     shadowColor: colors.brand,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.45,
@@ -316,9 +314,6 @@ const styles = StyleSheet.create({
   zone2: {
     flex: 1,
     backgroundColor: 'transparent',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: 0,
   },
   zone2Content: {
     paddingTop: 24,
