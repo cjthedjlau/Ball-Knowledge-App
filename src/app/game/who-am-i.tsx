@@ -185,27 +185,26 @@ export default function WhoAmIScreen({ onBack }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  // ── Tilt detection (expo-sensors — graceful fallback if not installed) ────
+  // ── Tilt detection (Heads Up style: tilt DOWN = correct, tilt UP = pass) ──
   useEffect(() => {
     if (phase !== 'active') return;
     let subscription: { remove: () => void } | null = null;
     try {
-      // Tilt controls require: npx expo install expo-sensors --legacy-peer-deps
-      // Currently using button fallbacks — tilt can be enabled after EAS build
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { DeviceMotion } = require('expo-sensors');
-      DeviceMotion.setUpdateInterval(150);
+      DeviceMotion.setUpdateInterval(120);
       subscription = DeviceMotion.addListener(
-        ({ rotation }: { rotation: { beta: number } }) => {
+        ({ rotation }: { rotation: { beta: number; gamma: number } }) => {
+          if (!rotation || tiltLocked.current) return;
           const beta = (rotation.beta * 180) / Math.PI; // radians → degrees
-          if (!tiltLocked.current) {
-            if (beta > 45) handleCorrect();
-            else if (beta < -45) handlePass();
-          }
+          // Phone is held to forehead (landscape-ish, screen facing out)
+          // Tilt DOWN (nod forward, face toward ground) → beta goes negative
+          // Tilt UP (lean back, face toward ceiling) → beta goes positive
+          if (beta < -35) handleCorrect();   // tilt down = got it
+          else if (beta > 35) handlePass();  // tilt up = pass/skip
         },
       );
     } catch {
-      // expo-sensors not installed — fallback buttons are shown instead
+      // expo-sensors not available — fallback buttons shown instead
     }
     return () => {
       subscription?.remove();
