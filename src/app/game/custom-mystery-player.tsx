@@ -686,7 +686,7 @@ export default function CustomMysteryPlayer({ onBack }: Props) {
         >
           <ScrollView
             style={s.zone2}
-            contentContainerStyle={s.zone2Content}
+            contentContainerStyle={[s.zone2Content, { paddingBottom: 180 }]}
             keyboardShouldPersistTaps="handled"
           >
             <LeagueSwitcher activeLeague={activeLeague} onChange={handleLeagueChange} />
@@ -858,7 +858,7 @@ export default function CustomMysteryPlayer({ onBack }: Props) {
         >
           <ScrollView
             style={s.zone2}
-            contentContainerStyle={s.zone2Content}
+            contentContainerStyle={[s.zone2Content, { paddingBottom: 180 }]}
             keyboardShouldPersistTaps="handled"
           >
             {/* Column headers */}
@@ -985,8 +985,8 @@ const s = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    
+    
   },
   headerRow: {
     flexDirection: 'row',
