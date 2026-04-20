@@ -780,7 +780,7 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
           ) : (
           <ScrollView
             style={s.gameScrollView}
-            contentContainerStyle={s.gameScrollContent}
+            contentContainerStyle={[s.gameScrollContent, { paddingBottom: insets.bottom + 120 }]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -958,7 +958,7 @@ function createStyles(isDark: boolean) {
     zone1Gradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 40 },
 
     // Zone 2
-    zone2: { flex: 1, backgroundColor: 'transparent', overflow: 'scroll' as any, paddingHorizontal: spacing.sm, paddingTop: spacing.lg, paddingBottom: spacing.lg },
+    zone2: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: spacing.sm, paddingTop: spacing.lg },
 
     // Column headers
     headerRow: { flexDirection: 'row', marginBottom: spacing.sm, gap: 3 },
@@ -972,7 +972,7 @@ function createStyles(isDark: boolean) {
 
     // Outer game scroll
     gameScrollView: { flex: 1 },
-    gameScrollContent: { paddingBottom: 120 },
+    gameScrollContent: { paddingBottom: 0 },
 
     // Grid
     gridContent: { gap: spacing.xs, paddingBottom: spacing.sm },

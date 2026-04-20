@@ -327,7 +327,7 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
       {/* ── Zone 2 ── */}
       <ScrollView
         style={s.zone2}
-        contentContainerStyle={s.zone2Content}
+        contentContainerStyle={[s.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
@@ -547,8 +547,8 @@ function createStyles(isDark: boolean) {
     switcherRow: { marginTop: spacing.lg },
 
     // Zone 2
-    zone2: { flex: 1, backgroundColor: 'transparent', overflow: 'scroll' as any },
-    zone2Content: { paddingHorizontal: spacing.lg, paddingTop: spacing['2xl'], paddingBottom: 120, gap: spacing.md },
+    zone2: { flex: 1, backgroundColor: 'transparent' },
+    zone2Content: { paddingHorizontal: spacing.lg, paddingTop: spacing['2xl'], paddingBottom: 0, gap: spacing.md },
 
     centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
     errorText: { fontFamily: fonts.bodyMedium, fontSize: 15, color: txtSec, textAlign: 'center' },

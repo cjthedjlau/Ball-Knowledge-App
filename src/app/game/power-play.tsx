@@ -571,7 +571,7 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
     return (
       <ScrollView
         style={s.resultsScroll}
-        contentContainerStyle={s.resultsContent}
+        contentContainerStyle={[s.resultsContent, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Score header */}
@@ -829,7 +829,7 @@ function createStyles(_isDark: boolean) {
   // Zone 2
   zone2: {
     flex: 1,
-    overflow: 'hidden',
+    
   },
 
   // Loading / error
@@ -1004,7 +1004,7 @@ function createStyles(_isDark: boolean) {
     height: 4,
     backgroundColor: darkColors.surfaceElevated,
     borderRadius: 2,
-    overflow: 'hidden',
+    
     flexDirection: 'row',
     marginBottom: spacing.lg,
   },
@@ -1169,7 +1169,7 @@ function createStyles(_isDark: boolean) {
   resultsContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing['3xl'],
-    paddingBottom: 120,
+    paddingBottom: 0,
   },
   scoreHeader: {
     alignItems: 'center',

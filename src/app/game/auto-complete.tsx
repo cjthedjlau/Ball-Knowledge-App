@@ -442,7 +442,7 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
       >
         <ScrollView
           style={s.playingScroll}
-          contentContainerStyle={s.playingScrollContent}
+          contentContainerStyle={[s.playingScrollContent, { paddingBottom: insets.bottom + 120 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -621,7 +621,7 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
     return (
       <ScrollView
         style={s.resultsScroll}
-        contentContainerStyle={s.resultsContent}
+        contentContainerStyle={[s.resultsContent, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Score header */}
@@ -899,7 +899,7 @@ function createStyles(_isDark: boolean) {
   // Zone 2
   zone2: {
     flex: 1,
-    overflow: 'hidden',
+    
   },
 
   // Loading / error
@@ -1074,7 +1074,7 @@ function createStyles(_isDark: boolean) {
   playingScrollContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing['2xl'],
-    paddingBottom: 120,
+    paddingBottom: 0,
   },
   topRow: {
     flexDirection: 'row',
@@ -1388,7 +1388,7 @@ function createStyles(_isDark: boolean) {
   resultsContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing['3xl'],
-    paddingBottom: 120,
+    paddingBottom: 0,
   },
   scoreHeader: {
     alignItems: 'center',

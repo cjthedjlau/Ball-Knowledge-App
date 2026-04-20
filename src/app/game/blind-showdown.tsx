@@ -262,7 +262,7 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
       {/* ── Zone 2 ── */}
       <ScrollView
         style={s.zone2}
-        contentContainerStyle={s.zone2Content}
+        contentContainerStyle={[s.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
@@ -459,13 +459,13 @@ function createStyles(isDark: boolean) {
     zone2: {
       flex: 1,
       backgroundColor: 'transparent',
-      borderTopWidth: 1,
-      borderTopColor: dividerCol,
+      
+      
     },
     zone2Content: {
       paddingHorizontal: spacing.lg,
       paddingTop: spacing['2xl'],
-      paddingBottom: 120,
+      paddingBottom: 0,
     },
 
     // Loading / error

@@ -428,7 +428,7 @@ export default function TriviaScreen({ onBack, onNavigate, archiveDate }: Props)
       {/* ── Zone 2 ── */}
       <ScrollView
         style={s.zone2}
-        contentContainerStyle={s.zone2Content}
+        contentContainerStyle={[s.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
@@ -767,8 +767,8 @@ function createStyles(isDark: boolean) {
     ladderTierLabel: { fontFamily: fonts.bodySemiBold, fontSize: 9, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5 },
 
     // Zone 2
-    zone2: { flex: 1, backgroundColor: 'transparent', overflow: 'scroll' as any },
-    zone2Content: { paddingHorizontal: spacing.lg, paddingTop: spacing['2xl'], paddingBottom: 120, gap: spacing.md },
+    zone2: { flex: 1, backgroundColor: 'transparent' },
+    zone2Content: { paddingHorizontal: spacing.lg, paddingTop: spacing['2xl'], paddingBottom: 0, gap: spacing.md },
 
     // Question card
     questionCard: { backgroundColor: cardBg, borderRadius: radius.primary, padding: spacing['2xl'], alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: borderCol },

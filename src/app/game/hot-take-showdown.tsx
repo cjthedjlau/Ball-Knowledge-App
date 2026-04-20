@@ -944,7 +944,7 @@ export default function HotTakeShowdownScreen({ onBack, onNavigate, joinedLobby 
 
           {onlineError && <Text style={styles.errorText}>{onlineError}</Text>}
 
-          <View style={{ marginTop: 32, gap: 12, paddingBottom: 40 }}>
+          <View style={{ marginTop: 32, gap: 12, paddingBottom: 140 }}>
             <PrimaryButton label="CREATE GAME" onPress={handleCreateLobby} loading={onlineLoading} />
           </View>
         </ScrollView>
