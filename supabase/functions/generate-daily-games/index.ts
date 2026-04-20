@@ -225,7 +225,7 @@ async function generateGameForDate(date: string, league: string): Promise<{ stat
   // Fetch player pool — only active players, never retired
   const { data: players, error } = await supabaseAdmin
     .from('players_pool')
-    .select('id, name, team, position, tier, status')
+    .select('id, name, team, position, tier, status, attributes')
     .eq('league', league)
     .eq('status', 'active')
     .in('tier', ['normal', 'ball_knowledge'])
@@ -257,12 +257,24 @@ async function generateGameForDate(date: string, league: string): Promise<{ stat
   const availableForMystery = shuffled.filter(p => !recentNames.has(p.name))
   const mysteryPool = availableForMystery.length > 0 ? availableForMystery : shuffled
 
-  // Mystery player — first available non-repeat
+  // Mystery player — first available non-repeat, include full attributes for Guesser game
   const mysteryRaw = mysteryPool[0]
+  const attrs = mysteryRaw.attributes ?? {}
   const mysteryPlayer = {
     name: mysteryRaw.name,
     team: mysteryRaw.team,
     position: mysteryRaw.position,
+    // Full attributes for the Guesser comparison grid
+    height: attrs.height,
+    jersey: attrs.jersey,
+    conference: attrs.conference,
+    college: attrs.college,
+    age: attrs.age,
+    // MLB-specific
+    bat: attrs.bat,
+    throwing: attrs.throwing,
+    country: attrs.country,
+    division: attrs.division,
   }
 
   // Remaining players for other games (exclude mystery player)
