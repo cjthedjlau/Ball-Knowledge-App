@@ -996,6 +996,7 @@ function createStyles(_isDark: boolean) {
 
   // Playing
   playingWrap: {
+    paddingBottom: 120,
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing['2xl'],

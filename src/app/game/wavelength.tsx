@@ -836,7 +836,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
           <Text style={styles.zone1Sub}>GAME OVER</Text>
         </View>
 
-        <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.zone2} contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]} showsVerticalScrollIndicator={false}>
           <View style={styles.card}>
             <Text style={styles.resultScore}>
               {finalTotal}
@@ -978,7 +978,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
             <Text style={styles.zone1Sub}>ONLINE</Text>
           </View>
 
-          <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.zone2} contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]} showsVerticalScrollIndicator={false}>
             <ModeToggle mode={mode} onModeChange={(m) => { setMode(m); setOnlinePhase('choose'); }} />
             <View style={{ height: 32 }} />
             <PrimaryButton label="CREATE GAME" onPress={handleCreateGame} disabled={!userId || onlineLoading} />
@@ -1009,7 +1009,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
             <Text style={styles.zone1Sub}>WHO'S PLAYING?</Text>
           </View>
 
-          <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.zone2} contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {/* Mode Toggle */}
             <ModeToggle mode={mode} onModeChange={(m) => { setMode(m); setOnlinePhase('choose'); }} />
 
@@ -1087,7 +1087,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
                 </View>
               </View>
 
-              <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <ScrollView style={styles.zone2} contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 <View style={styles.phaseTag}>
                   <Text style={styles.phaseTagText}>YOU ARE THE CLUE-GIVER</Text>
                 </View>
@@ -1238,7 +1238,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
             </View>
           </View>
 
-          <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.zone2} contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.phaseTag}>
               <Text style={styles.phaseTagText}>CLUE-GIVER: {clueGiverName.toUpperCase()}</Text>
             </View>
@@ -1338,7 +1338,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
             </View>
           </View>
 
-          <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.zone2} contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]} showsVerticalScrollIndicator={false}>
             <View style={styles.phaseTag}>
               <Text style={styles.phaseTagText}>DRAG YOUR GUESS</Text>
             </View>
@@ -1403,7 +1403,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
           </View>
         </View>
 
-        <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.zone2} contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]} showsVerticalScrollIndicator={false}>
           <View style={styles.phaseTag}>
             <Text style={styles.phaseTagText}>GUESSERS — DISCUSS AND DRAG</Text>
           </View>
@@ -1456,7 +1456,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
             </View>
           </View>
 
-          <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.zone2} contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]} showsVerticalScrollIndicator={false}>
             {/* Score badge for my guess */}
             <View style={[
               styles.scoreBadge,
@@ -1552,7 +1552,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
           </View>
         </View>
 
-        <ScrollView style={styles.zone2} contentContainerStyle={styles.zone2Content} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.zone2} contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]} showsVerticalScrollIndicator={false}>
           {/* Score badge */}
           <View style={[
             styles.scoreBadge,
@@ -1682,7 +1682,7 @@ const styles = StyleSheet.create({
   zone2Content: {
     paddingTop: spacing['4xl'],
     paddingHorizontal: spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: 0,
     gap: spacing.lg,
   },
 
