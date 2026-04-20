@@ -4,15 +4,22 @@ import { colors, fontFamily } from '../styles/theme';
 
 function getMsUntilMidnightEST(): number {
   const now = new Date();
-  // Build "now" as a wall-clock time in America/New_York
-  const estString = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
-  const estNow = new Date(estString);
-  // Next midnight in that local context
-  const nextMidnight = new Date(estNow);
-  nextMidnight.setHours(24, 0, 0, 0);
-  // Map back to real UTC ms
-  const diffMs = nextMidnight.getTime() - estNow.getTime();
-  return Math.max(0, diffMs);
+  // Get current ET hour/min/sec using Intl (works reliably on Hermes/iOS)
+  const parts: Record<string, string> = {};
+  new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric', minute: 'numeric', second: 'numeric',
+    hour12: false,
+  }).formatToParts(now).forEach(p => { parts[p.type] = p.value; });
+
+  const h = parseInt(parts.hour || '0', 10);
+  const m = parseInt(parts.minute || '0', 10);
+  const s = parseInt(parts.second || '0', 10);
+
+  // Seconds remaining until midnight ET
+  const secSinceMidnight = h * 3600 + m * 60 + s;
+  const secUntilMidnight = 86400 - secSinceMidnight;
+  return Math.max(0, secUntilMidnight * 1000);
 }
 
 function format(ms: number): string {

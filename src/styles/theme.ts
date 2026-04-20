@@ -6,116 +6,81 @@
  */
 
 // ---------------------------------------------------------------------------
-// Colors
+// Brand (shared across light and dark)
 // ---------------------------------------------------------------------------
 
-export const colors = {
-  // Brand
-  brand: '#FC345C',
-  brandDark: '#C4163E',
-  brandLight: '#FEE2EA',
-  brandMid: '#FD8FAA',
-
-  // Neutrals
-  white: '#FFFFFF',
-  offWhite: '#FAFAFA',
-  charcoal: '#1A1A2E',
-  darkText: '#2D2D2D',
-  midGray: '#6B7280',
-  ruleGray: '#E5E7EB',
-  lightGray: '#F4F4F6',
-
-  // Semantic
-  success: '#0A6640',
-  successBg: '#D1FAE5',
-  warning: '#92400E',
-  warningBg: '#FEF3C7',
-
-  // Accents
-  accentBlue: '#3B82F6',
-  accentCyan: '#07bccc',
-  accentGreen: '#00C897',
-  accentRed: '#FF4757',
-  brandAlpha15: 'rgba(252,52,92,0.15)',
+export const brand = {
+  primary:  '#FC345C',
+  light:    '#FF7191',
+  dark:     '#B8003D',
+  teal:     '#07BCCC',
+  gradient: ['#B8003D', '#FC345C', '#FF7191'] as const,
 } as const;
 
-export const darkColors = {
-  background: '#0F0F0F',
-  surface: '#1A1A1A',
-  surfaceElevated: '#242424',
-  text: '#F5F5F5',
-  textSecondary: '#9CA3AF',
-  border: '#333333',
-  brand: '#FC345C',
-  brandLight: '#3D1520',
-  success: '#34D399',
-  successBg: '#0A2E1A',
+// ---------------------------------------------------------------------------
+// Dark Theme
+// ---------------------------------------------------------------------------
+
+export const dark = {
+  background:   '#0F0F0F',
+  card:         '#1A1A1A',
+  cardBorder:   'rgba(255,255,255,0.07)',
+  surface:      '#222222',
+  divider:      'rgba(255,255,255,0.08)',
+
+  textPrimary:  '#FFFFFF',
+  textSecondary:'rgba(255,255,255,0.55)',
+  textMuted:    'rgba(255,255,255,0.3)',
+  textDisabled: 'rgba(255,255,255,0.18)',
+
+  tagBg:        'rgba(255,255,255,0.08)',
+  inputBg:      '#1A1A1A',
+  inputBorder:  'rgba(255,255,255,0.1)',
+  overlay:      'rgba(0,0,0,0.6)',
+} as const;
+
+// ---------------------------------------------------------------------------
+// Light Theme
+// ---------------------------------------------------------------------------
+
+export const light = {
+  background:   '#F5F2EF',
+  card:         '#FFFFFF',
+  cardBorder:   '#E5E0DB',
+  surface:      '#EDEAE6',
+  divider:      '#E5E0DB',
+
+  textPrimary:  '#0F0F0F',
+  textSecondary:'#6B6560',
+  textMuted:    '#9E9990',
+  textDisabled: '#C5BFB8',
+
+  tagBg:        'rgba(252,52,92,0.07)',
+  inputBg:      '#FFFFFF',
+  inputBorder:  '#E5E0DB',
+  overlay:      'rgba(0,0,0,0.35)',
 } as const;
 
 // ---------------------------------------------------------------------------
 // Typography
 // ---------------------------------------------------------------------------
 
-export const fontFamily = {
-  regular: 'Chillax-Bold',
-  medium: 'Chillax-Bold',
-  bold: 'Chillax-Bold',
-  black: 'Chillax-Bold',
+export const fonts = {
+  display:      'BebasNeue_400Regular',
+  body:         'SpaceGrotesk_400Regular',
+  bodyMedium:   'SpaceGrotesk_500Medium',
+  bodySemiBold: 'SpaceGrotesk_600SemiBold',
+  bodyBold:     'SpaceGrotesk_700Bold',
 } as const;
 
-/**
- * Type scale — every text element in the app must use one of these presets.
- *
- * Line-height rules:
- *   Body  → 1.5×
- *   Headings → 1.2×
- *   Scores / Numbers → 1.0×
- */
-export const typography = {
-  hero: {
-    fontFamily: fontFamily.black,
-    fontSize: 48,
-    lineHeight: 48, // 1.0×
-  },
-  h1: {
-    fontFamily: fontFamily.black,
-    fontSize: 32,
-    lineHeight: 38, // 1.2×
-  },
-  h2: {
-    fontFamily: fontFamily.bold,
-    fontSize: 26,
-    lineHeight: 31,
-  },
-  h3: {
-    fontFamily: fontFamily.bold,
-    fontSize: 20,
-    lineHeight: 24,
-  },
-  body: {
-    fontFamily: fontFamily.medium,
-    fontSize: 16,
-    lineHeight: 24, // 1.5×
-  },
-  bodyMedium: {
-    fontFamily: fontFamily.bold,
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  label: {
-    fontFamily: fontFamily.bold,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  caption: {
-    fontFamily: fontFamily.medium,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  brandNum: {
-    fontFamily: fontFamily.black,
-    // fontSize intentionally omitted — set per usage (streaks, XP, levels)
-  },
+export const fontSizes = {
+  display:  { fontSize: 48, letterSpacing: 1 },
+  heading:  { fontSize: 32, letterSpacing: 0.5 },
+  subhead:  { fontSize: 22, letterSpacing: 0.3 },
+  body:     { fontSize: 14, lineHeight: 21 },
+  small:    { fontSize: 12, lineHeight: 18 },
+  label:    { fontSize: 10, letterSpacing: 2 },
+  stat:     { fontSize: 42, letterSpacing: 0.5 },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -133,13 +98,9 @@ export const spacing = {
   '4xl': 40,
   '5xl': 48,
 
-  /** Horizontal padding for all screens */
   screenHorizontal: 16,
-  /** Internal padding inside cards */
   cardPadding: 16,
-  /** Vertical gap between major sections on a screen */
   sectionGap: 24,
-  /** Vertical gap between cards in a list */
   cardGap: 12,
 } as const;
 
@@ -148,13 +109,10 @@ export const spacing = {
 // ---------------------------------------------------------------------------
 
 export const radius = {
-  /** Primary cards, sheets */
-  primary: 16,
-  /** Secondary cards */
+  primary: 12,
   secondary: 12,
-  /** Chips, tags, small elements */
-  chip: 8,
-  /** Bottom sheet top corners */
+  chip: 20,
+  pill: 28,
   sheet: 24,
 } as const;
 
@@ -163,12 +121,104 @@ export const radius = {
 // ---------------------------------------------------------------------------
 
 export const layout = {
-  /** Minimum tap target — no exceptions */
   minTapTarget: 44,
-  /** Bottom nav bar height (excludes safe-area inset) */
   bottomNavHeight: 56,
-  /** BKButton height */
   buttonHeight: 56,
-  /** BKInput height */
   inputHeight: 48,
+} as const;
+
+// ---------------------------------------------------------------------------
+// Backward-compatible aliases (existing imports keep working)
+// ---------------------------------------------------------------------------
+
+export const colors = {
+  brand: brand.primary,
+  brandDark: brand.dark,
+  brandLight: brand.light,
+  brandMid: '#FD8FAA',
+
+  white: '#FFFFFF',
+  offWhite: light.background,
+  charcoal: '#1A1A2E',
+  darkText: light.textPrimary,
+  midGray: light.textSecondary,
+  ruleGray: light.divider,
+  lightGray: light.surface,
+
+  success: '#0A6640',
+  successBg: '#D1FAE5',
+  warning: '#92400E',
+  warningBg: '#FEF3C7',
+
+  accentBlue: '#3B82F6',
+  accentCyan: brand.teal,
+  accentGreen: '#00C897',
+  accentRed: '#FF4757',
+  brandAlpha15: 'rgba(252,52,92,0.15)',
+} as const;
+
+export const darkColors = {
+  background: dark.background,
+  surface: dark.card,
+  surfaceElevated: dark.surface,
+  text: dark.textPrimary,
+  textSecondary: dark.textSecondary,
+  border: dark.cardBorder,
+  brand: brand.primary,
+  brandLight: brand.dark,
+  success: '#34D399',
+  successBg: '#0A2E1A',
+} as const;
+
+export const fontFamily = {
+  regular: fonts.body,
+  medium: fonts.bodyMedium,
+  bold: fonts.bodySemiBold,
+  black: fonts.display,
+} as const;
+
+export const typography = {
+  hero: {
+    fontFamily: fonts.display,
+    fontSize: 48,
+    lineHeight: 48,
+  },
+  h1: {
+    fontFamily: fonts.display,
+    fontSize: 32,
+    lineHeight: 38,
+  },
+  h2: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    lineHeight: 31,
+  },
+  h3: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 20,
+    lineHeight: 24,
+  },
+  body: {
+    fontFamily: fonts.body,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  bodyMedium: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  label: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  caption: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  brandNum: {
+    fontFamily: fonts.display,
+  },
 } as const;

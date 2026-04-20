@@ -11,7 +11,7 @@ import {
   Linking,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   User,
@@ -24,14 +24,17 @@ import {
   Moon,
   Bug,
   Send,
+  Bell,
+  BellOff,
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing } from '../../styles/theme';
 import { supabase } from '../../lib/supabase';
 import ListRow from '../../screens/components/ui/ListRow';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import PrimaryButton from '../../screens/components/ui/PrimaryButton';
 import { type Tab } from './ui/BottomNav';
+import SlideTag from '../../screens/components/ui/SlideTag';
 import { useTheme } from '../../hooks/useTheme';
 import { useUserAnalytics } from '../../lib/analytics';
 
@@ -41,6 +44,7 @@ interface Props {
 }
 
 export default function SettingsScreen({ onBack, onNavigate }: Props) {
+  const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
   const [editingUsername, setEditingUsername] = useState(false);
   const [savingUsername, setSavingUsername] = useState(false);
@@ -53,6 +57,11 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
   const [sendingReport, setSendingReport] = useState(false);
   const { theme, toggleTheme, isDark } = useTheme();
   const { trackLogout } = useUserAnalytics();
+  const [notifNFL, setNotifNFL] = useState(true);
+  const [notifNBA, setNotifNBA] = useState(true);
+  const [notifMLB, setNotifMLB] = useState(true);
+  const [notifNHL, setNotifNHL] = useState(true);
+  const [dailyReminder, setDailyReminder] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +77,18 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
         setUsername(data.username ?? '');
         setFavoriteLeague(data.favorite_league ?? 'NBA');
       }
+      // Load notification preferences
+      try {
+        const prefs = await AsyncStorage.getItem('bk_notif_prefs');
+        if (prefs && !cancelled) {
+          const parsed = JSON.parse(prefs);
+          setNotifNFL(parsed.NFL ?? true);
+          setNotifNBA(parsed.NBA ?? true);
+          setNotifMLB(parsed.MLB ?? true);
+          setNotifNHL(parsed.NHL ?? true);
+          setDailyReminder(parsed.daily ?? true);
+        }
+      } catch {}
       if (!cancelled) setLoading(false);
     }
     load();
@@ -190,22 +211,58 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
     onNavigate('logout');
   }
 
-  // TODO: implement delete account via Edge Function before re-exposing this UI
+  async function handleDeleteAccount() {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all your data (XP, streaks, game history, leaderboard rankings). This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Forever',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (!user) return;
+
+              // Delete user data from all tables
+              await supabase.from('game_sessions').delete().eq('user_id', user.id);
+              await supabase.from('user_game_results').delete().eq('user_id', user.id);
+              await supabase.from('weekly_leagues').delete().eq('user_id', user.id);
+              await supabase.from('lobby_players').delete().eq('user_id', user.id);
+              await supabase.from('qotd_responses').delete().eq('user_id', user.id);
+              await supabase.from('friendships').delete().or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+              await supabase.from('profiles').delete().eq('id', user.id);
+
+              // Clear local storage
+              await AsyncStorage.clear();
+
+              // Sign out
+              await supabase.auth.signOut();
+              onNavigate('logout');
+            } catch (e: any) {
+              Alert.alert('Error', e.message || 'Failed to delete account. Please try again.');
+            }
+          },
+        },
+      ],
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={styles.root}>
       {/* Zone 1 */}
-      <View style={styles.zone1}>
+      <View style={[styles.zone1, { backgroundColor: brand.primary, paddingTop: insets.top + spacing.lg }]}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+          <ArrowLeft size={22} color={dark.textPrimary} strokeWidth={2.5} />
         </Pressable>
         <Text style={styles.zone1Title}>SETTINGS</Text>
       </View>
 
       {/* Zone 2 */}
       <ScrollView
-        style={styles.zone2}
-        contentContainerStyle={styles.zone2Content}
+        style={[styles.zone2, { borderTopColor: isDark ? dark.cardBorder : light.cardBorder }]}
+        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
@@ -213,17 +270,24 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
         ) : (
           <>
             {/* Account Section */}
-            <Text style={styles.sectionHeader}>ACCOUNT</Text>
+            <SlideTag label="Account" variant="red" />
 
-            <View style={styles.card}>
+            <View style={[styles.card, {
+              backgroundColor: isDark ? dark.card : light.card,
+              borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+            }]}>
               {editingUsername ? (
                 <View style={styles.usernameEditRow}>
                   <TextInput
-                    style={styles.usernameInput}
+                    style={[styles.usernameInput, {
+                      backgroundColor: isDark ? dark.background : light.inputBg,
+                      borderColor: isDark ? dark.cardBorder : light.cardBorder,
+                      color: isDark ? dark.textPrimary : light.textPrimary,
+                    }]}
                     value={username}
                     onChangeText={(t) => { setUsername(t); setUsernameSaved(false); }}
                     placeholder="Username"
-                    placeholderTextColor={darkColors.textSecondary}
+                    placeholderTextColor={isDark ? dark.textSecondary : light.textSecondary}
                     maxLength={20}
                     autoCapitalize="none"
                     returnKeyType="done"
@@ -262,10 +326,15 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
             </View>
 
             {/* App Section */}
-            <Text style={[styles.sectionHeader, { marginTop: spacing['2xl'] }]}>APP</Text>
+            <View style={{ marginTop: spacing['2xl'] }}>
+              <SlideTag label="App" variant="red" />
+            </View>
 
-            <View style={styles.card}>
-              <Text style={styles.settingLabel}>DEFAULT LEAGUE</Text>
+            <View style={[styles.card, {
+              backgroundColor: isDark ? dark.card : light.card,
+              borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+            }]}>
+              <Text style={[styles.settingLabel, { color: isDark ? dark.textSecondary : light.textSecondary }]}>DEFAULT LEAGUE</Text>
               <LeagueSwitcher selected={favoriteLeague} onChange={handleLeagueChange} />
             </View>
 
@@ -292,20 +361,27 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
             </View>
 
             {reportingBug && (
-              <View style={styles.bugCard}>
-                <Text style={styles.bugLabel}>DESCRIBE THE ISSUE</Text>
+              <View style={[styles.bugCard, {
+                backgroundColor: isDark ? dark.card : light.card,
+                borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+              }]}>
+                <Text style={[styles.bugLabel, { color: isDark ? dark.textSecondary : light.textSecondary }]}>DESCRIBE THE ISSUE</Text>
                 <TextInput
-                  style={styles.bugInput}
+                  style={[styles.bugInput, {
+                    backgroundColor: isDark ? dark.background : light.inputBg,
+                    borderColor: isDark ? dark.cardBorder : light.cardBorder,
+                    color: isDark ? dark.textPrimary : light.textPrimary,
+                  }]}
                   value={bugDescription}
                   onChangeText={setBugDescription}
                   placeholder="What happened? Steps to reproduce…"
-                  placeholderTextColor={darkColors.textSecondary}
+                  placeholderTextColor={isDark ? dark.textSecondary : light.textSecondary}
                   multiline
                   maxLength={1000}
                   autoFocus
                   textAlignVertical="top"
                 />
-                <Text style={styles.bugCharCount}>{bugDescription.length}/1000</Text>
+                <Text style={[styles.bugCharCount, { color: isDark ? dark.textSecondary : light.textSecondary }]}>{bugDescription.length}/1000</Text>
                 <Pressable
                   style={[styles.bugSendBtn, sendingReport && styles.bugSendBtnDisabled]}
                   onPress={handleSendBugReport}
@@ -323,8 +399,67 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
               </View>
             )}
 
+            {/* Notification Preferences */}
+            <View style={{ marginTop: spacing['2xl'] }}>
+              <SlideTag label="Notifications" variant="red" />
+            </View>
+
+            <View style={styles.menuGroup}>
+              <ListRow
+                icon={dailyReminder
+                  ? <Bell color={colors.brand} size={20} strokeWidth={2} />
+                  : <BellOff color={isDark ? dark.textSecondary : light.textSecondary} size={20} strokeWidth={2} />
+                }
+                label="Daily Reminder"
+                value={dailyReminder ? 'On' : 'Off'}
+                onPress={() => {
+                  const next = !dailyReminder;
+                  setDailyReminder(next);
+                  AsyncStorage.setItem('bk_notif_prefs', JSON.stringify({ NFL: notifNFL, NBA: notifNBA, MLB: notifMLB, NHL: notifNHL, daily: next }));
+                }}
+              />
+              {(['NFL', 'NBA', 'MLB', 'NHL'] as const).map(league => {
+                const isOn = league === 'NFL' ? notifNFL : league === 'NBA' ? notifNBA : league === 'MLB' ? notifMLB : notifNHL;
+                const setFn = league === 'NFL' ? setNotifNFL : league === 'NBA' ? setNotifNBA : league === 'MLB' ? setNotifMLB : setNotifNHL;
+                return (
+                  <ListRow
+                    key={league}
+                    icon={isOn
+                      ? <Bell color={colors.brand} size={20} strokeWidth={2} />
+                      : <BellOff color={isDark ? dark.textSecondary : light.textSecondary} size={20} strokeWidth={2} />
+                    }
+                    label={`${league} Updates`}
+                    value={isOn ? 'On' : 'Off'}
+                    onPress={() => {
+                      const next = !isOn;
+                      setFn(next);
+                      const prefs = { NFL: notifNFL, NBA: notifNBA, MLB: notifMLB, NHL: notifNHL, daily: dailyReminder };
+                      prefs[league] = next;
+                      AsyncStorage.setItem('bk_notif_prefs', JSON.stringify(prefs));
+                    }}
+                  />
+                );
+              })}
+            </View>
+
+            {/* Privacy */}
+            <View style={styles.menuGroup}>
+              <ListRow
+                icon={<Globe color={colors.brand} size={20} strokeWidth={2} />}
+                label="Privacy Policy"
+                onPress={() => Linking.openURL('https://ballknowledgeapp.com/privacy')}
+              />
+              <ListRow
+                icon={<Globe color={colors.brand} size={20} strokeWidth={2} />}
+                label="Terms of Service"
+                onPress={() => Linking.openURL('https://ballknowledgeapp.com/terms')}
+              />
+            </View>
+
             {/* Danger Zone */}
-            <Text style={[styles.sectionHeader, { marginTop: spacing['2xl'] }]}>DANGER ZONE</Text>
+            <View style={{ marginTop: spacing['2xl'] }}>
+              <SlideTag label="Danger Zone" variant="red" />
+            </View>
 
             <View style={styles.menuGroup}>
               <ListRow
@@ -336,11 +471,17 @@ export default function SettingsScreen({ onBack, onNavigate }: Props) {
                 onPress={handleLogOut}
                 danger
               />
+              <ListRow
+                icon={<Trash2 color={colors.brand} size={20} strokeWidth={2} />}
+                label="Delete Account"
+                onPress={handleDeleteAccount}
+                danger
+              />
             </View>
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -350,7 +491,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   zone1: {
-    backgroundColor: colors.brand,
     paddingTop: spacing.lg,
     paddingBottom: spacing['3xl'] + spacing.md,
     paddingHorizontal: spacing.lg,
@@ -373,19 +513,19 @@ const styles = StyleSheet.create({
   zone1Title: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
-    fontSize: 28,
+    fontSize: 36,
+    lineHeight: 38,
     letterSpacing: 3,
-    color: colors.white,
+    color: dark.textPrimary,
   },
   zone2: {
     flex: 1,
     backgroundColor: 'transparent',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    marginTop: -32,
+    marginTop: 0,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    shadowColor: '#000',
+    shadowColor: dark.background,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -403,19 +543,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 11,
     letterSpacing: 2,
-    color: darkColors.textSecondary,
     marginBottom: spacing.xs,
   },
   card: {
-    backgroundColor: darkColors.surfaceElevated,
     borderRadius: 16,
     padding: spacing.lg,
     gap: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
     borderBottomWidth: 2,
     borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000',
+    shadowColor: dark.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -431,22 +568,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 11,
     letterSpacing: 2,
-    color: darkColors.textSecondary,
   },
   usernameEditRow: {
     gap: spacing.md,
   },
   usernameInput: {
-    backgroundColor: darkColors.background,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: darkColors.border,
     height: 48,
     paddingHorizontal: spacing.lg,
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 16,
-    color: darkColors.text,
   },
   savedText: {
     fontFamily: fontFamily.bold,
@@ -456,12 +589,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   bugCard: {
-    backgroundColor: darkColors.surfaceElevated,
     borderRadius: 16,
     padding: spacing.lg,
     gap: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
     borderBottomWidth: 2,
     borderBottomColor: 'rgba(0,0,0,0.5)',
   },
@@ -470,25 +601,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 11,
     letterSpacing: 2,
-    color: darkColors.textSecondary,
   },
   bugInput: {
-    backgroundColor: darkColors.background,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: darkColors.border,
     minHeight: 100,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontFamily: fontFamily.medium,
     fontSize: 15,
-    color: darkColors.text,
     lineHeight: 22,
   },
   bugCharCount: {
     fontFamily: fontFamily.medium,
     fontSize: 12,
-    color: darkColors.textSecondary,
     textAlign: 'right',
     marginTop: -spacing.sm,
   },
@@ -499,7 +625,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     height: 48,
     borderRadius: 12,
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
   },
   bugSendBtnDisabled: {
     opacity: 0.6,

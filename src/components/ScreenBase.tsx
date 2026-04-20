@@ -2,14 +2,12 @@ import React from 'react';
 import { Platform, View } from 'react-native';
 import StarryBackground from './StarryBackground';
 import { useTheme } from '../hooks/useTheme';
+import { dark, light } from '../styles/theme';
 
 interface Props {
   children: React.ReactNode;
   starCount?: number;
 }
-
-const DARK_BG = '#0F0F0F';
-const LIGHT_BG = '#F5F5F5';
 
 export default function ScreenBase({ children, starCount }: Props) {
   const { isDark } = useTheme();
@@ -18,7 +16,7 @@ export default function ScreenBase({ children, starCount }: Props) {
     <View
       style={{
         flex: 1,
-        backgroundColor: isDark ? DARK_BG : LIGHT_BG,
+        backgroundColor: isDark ? dark.background : light.background,
         position: 'relative' as const,
         ...(Platform.OS === 'web'
           ? { minHeight: '100vh' as any, width: '100%' as any }

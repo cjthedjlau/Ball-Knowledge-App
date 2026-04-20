@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Swords } from 'lucide-react-native';
-import { colors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, fonts, colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
 
 const { width: W } = Dimensions.get('window');
 
@@ -331,7 +331,7 @@ function Scene3({ opacity }: { opacity: Animated.Value }) {
       >
         <Text style={styles.revealPlayerLabel}>PLAYER B</Text>
         <Text style={[styles.revealPlayerName, styles.revealPlayerNameDim]}>{REVEAL_B.name}</Text>
-        <Text style={[styles.revealTeam, { color: 'rgba(255,255,255,0.3)' }]}>{REVEAL_B.team}</Text>
+        <Text style={[styles.revealTeam, { color: dark.textMuted }]}>{REVEAL_B.team}</Text>
       </Animated.View>
 
       {/* XP */}
@@ -412,12 +412,12 @@ export default function BlindShowdownIntro({ onFinish }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: dark.background,
   },
 
   // ── Scene 1 ──────────────────────────────────────────────────────────────
   scene1: {
-    backgroundColor: '#0F0F0F',
+    backgroundColor: dark.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.45)',
+    color: dark.textSecondary,
     letterSpacing: 3,
     textAlign: 'center',
     marginTop: 20,
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
 
   // ── Scene 2 ──────────────────────────────────────────────────────────────
   scene2: {
-    backgroundColor: '#0F0F0F',
+    backgroundColor: dark.background,
     paddingHorizontal: 16,
     paddingTop: 72,
     alignItems: 'center',
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 13,
-    color: 'rgba(255,255,255,0.4)',
+    color: dark.textMuted,
     letterSpacing: 2,
     flex: 1,
   },
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     letterSpacing: 1,
   },
   cardsRow: {
@@ -496,18 +496,18 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   statCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: dark.card,
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: dark.cardBorder,
   },
   silhouetteBlock: {
     alignItems: 'center',
     marginBottom: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: dark.cardBorder,
   },
   silhouetteLabel: {
     fontFamily: fontFamily.bold,
@@ -521,16 +521,16 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: dark.surface,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: dark.cardBorder,
   },
   silhouetteHidden: {
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 9,
-    color: 'rgba(255,255,255,0.2)',
+    color: dark.textDisabled,
     letterSpacing: 2,
   },
   statRow: {
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 9,
-    color: 'rgba(255,255,255,0.35)',
+    color: dark.textMuted,
     letterSpacing: 1,
     marginBottom: 2,
   },
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     letterSpacing: 2,
     textAlign: 'center',
     marginTop: 20,
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
 
   // ── Scene 3 ──────────────────────────────────────────────────────────────
   scene3: {
-    backgroundColor: '#0F0F0F',
+    backgroundColor: dark.background,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
@@ -587,22 +587,22 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 13,
-    color: 'rgba(255,255,255,0.35)',
+    color: dark.textMuted,
     letterSpacing: 4,
     marginBottom: 20,
   },
   revealCard: {
     width: '100%',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: dark.card,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: dark.cardBorder,
     marginBottom: 8,
   },
   revealCardWinner: {
     borderColor: colors.brand,
-    backgroundColor: 'rgba(252,52,92,0.08)',
+    backgroundColor: colors.brandAlpha15,
   },
   revealCardHeader: {
     flexDirection: 'row',
@@ -638,13 +638,13 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   revealPlayerNameDim: {
-    color: 'rgba(255,255,255,0.45)',
+    color: dark.textSecondary,
   },
   revealTeam: {
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
+    color: dark.textSecondary,
     marginTop: 4,
   },
   voteRow: {
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
   voteBarTrack: {
     flex: 1,
     height: 6,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: dark.surface,
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -676,14 +676,14 @@ const styles = StyleSheet.create({
   },
   voteBarFillDim: {
     height: '100%',
-    backgroundColor: '#3A3A3A',
+    backgroundColor: dark.surface,
     borderRadius: 3,
   },
   vsDivider: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.2)',
+    color: dark.textDisabled,
     letterSpacing: 3,
     marginVertical: 4,
   },
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: 'rgba(0,200,151,0.1)',
+    backgroundColor: darkColors.successBg,
     borderWidth: 1.5,
     borderColor: colors.accentGreen,
     borderRadius: 50,
@@ -709,7 +709,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.4)',
+    color: dark.textMuted,
   },
   ctaWrap: {
     alignItems: 'center',
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontWeight: '400',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     letterSpacing: 2,
   },
 
@@ -754,13 +754,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: dark.tagBg,
   },
   skipText: {
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
+    color: dark.textSecondary,
     letterSpacing: 2,
   },
 });

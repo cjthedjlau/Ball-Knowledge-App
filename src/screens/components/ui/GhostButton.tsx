@@ -6,7 +6,8 @@ import {
   StyleSheet,
   type PressableProps,
 } from 'react-native';
-import { colors, fontFamily } from '../../../styles/theme';
+import { brand, dark, light, fonts, radius } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 
 interface GhostButtonProps extends Omit<PressableProps, 'children'> {
   label: string;
@@ -20,6 +21,7 @@ export default function GhostButton({
   disabled = false,
   ...rest
 }: GhostButtonProps) {
+  const { isDark } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -48,12 +50,24 @@ export default function GhostButton({
         disabled={disabled}
         style={({ pressed }) => [
           styles.button,
-          pressed && styles.pressed,
+          {
+            borderColor: isDark ? 'rgba(255,255,255,0.15)' : light.cardBorder,
+          },
+          pressed && {
+            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+          },
           disabled && styles.disabled,
         ]}
         {...rest}
       >
-        <Text style={styles.label}>{label}</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: isDark ? dark.textPrimary : light.textPrimary },
+          ]}
+        >
+          {label}
+        </Text>
       </Pressable>
     </Animated.View>
   );
@@ -65,34 +79,17 @@ const styles = StyleSheet.create({
     height: 52,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 999,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderTopWidth: 1,
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.4)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  pressed: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    elevation: 2,
   },
   disabled: {
     opacity: 0.3,
   },
   label: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 17,
     letterSpacing: 1,
-    color: colors.white,
   },
 });

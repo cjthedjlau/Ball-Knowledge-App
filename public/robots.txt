@@ -1,0 +1,18 @@
+User-agent: *
+
+# Block functional/behavioral screens — no publisher content
+Disallow: /onboarding
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /login
+
+# Allow all public content pages
+Allow: /landing
+Allow: /about
+Allow: /privacy
+Allow: /terms
+Allow: /robots.txt
+Allow: /sitemap.xml
+Allow: /ads.txt
+
+Sitemap: https://ballknowledgeapp.com/sitemap.xml

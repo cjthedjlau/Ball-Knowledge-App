@@ -6,7 +6,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { MessageCircle, ChevronRight } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, fonts, fontSizes, spacing, radius } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { supabase } from '../../lib/supabase';
 import { getQuestionForDate } from '../../data/qotd-questions';
 
@@ -19,6 +20,8 @@ interface Props {
 }
 
 export default function QuestionOfTheDay({ onPress }: Props) {
+  const { isDark } = useTheme();
+  const t = isDark ? dark : light;
   const [question, setQuestion] = useState('');
   const [questionId, setQuestionId] = useState<string | null>(null);
   const [responseCount, setResponseCount] = useState(0);
@@ -30,35 +33,39 @@ export default function QuestionOfTheDay({ onPress }: Props) {
 
     // Try to load from Supabase (may have a curated question)
     void (async () => {
-      const { data: qRow } = await supabase
-        .from('qotd_questions')
-        .select('id, question')
-        .eq('date', today)
-        .single();
-
-      if (qRow) {
-        setQuestion(qRow.question);
-        setQuestionId(qRow.id);
-
-        // Get response count
-        const { count } = await supabase
-          .from('qotd_responses')
-          .select('id', { count: 'exact', head: true })
-          .eq('question_id', qRow.id);
-
-        setResponseCount(count ?? 0);
-      } else {
-        // Insert today's question from the bank
-        const { data: inserted, error: insertErr } = await supabase
+      try {
+        const { data: qRow } = await supabase
           .from('qotd_questions')
-          .upsert({ date: today, question: fallbackQ }, { onConflict: 'date' })
-          .select('id')
+          .select('id, question')
+          .eq('date', today)
           .single();
 
-        if (insertErr) {
-          console.warn('[QotD] Failed to insert question:', insertErr.message);
+        if (qRow) {
+          setQuestion(qRow.question);
+          setQuestionId(qRow.id);
+
+          // Get response count
+          const { count } = await supabase
+            .from('qotd_responses')
+            .select('id', { count: 'exact', head: true })
+            .eq('question_id', qRow.id);
+
+          setResponseCount(count ?? 0);
+        } else {
+          // Insert today's question from the bank
+          const { data: inserted, error: insertErr } = await supabase
+            .from('qotd_questions')
+            .upsert({ date: today, question: fallbackQ }, { onConflict: 'date' })
+            .select('id')
+            .single();
+
+          if (insertErr) {
+            console.warn('[QotD] Failed to insert question:', insertErr.message);
+          }
+          if (inserted) setQuestionId(inserted.id);
         }
-        if (inserted) setQuestionId(inserted.id);
+      } catch (err) {
+        console.warn('[QotD] Failed to load question from DB:', err);
       }
     })();
   }, []);
@@ -67,25 +74,25 @@ export default function QuestionOfTheDay({ onPress }: Props) {
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [styles.card, { backgroundColor: t.card, borderColor: t.cardBorder, borderLeftColor: brand.teal }, pressed && styles.cardPressed]}
       onPress={() => onPress(question, questionId)}
     >
       <View style={styles.labelRow}>
-        <MessageCircle size={16} color={colors.accentCyan} strokeWidth={2.5} />
-        <Text style={styles.label}>QUESTION OF THE DAY</Text>
+        <MessageCircle size={16} color={brand.teal} strokeWidth={2.5} />
+        <Text style={[styles.label, { color: brand.teal }]}>QUESTION OF THE DAY</Text>
       </View>
 
-      <Text style={styles.question} numberOfLines={3}>
+      <Text style={[styles.question, { color: t.textPrimary }]} numberOfLines={3}>
         {question}
       </Text>
 
       <View style={styles.footer}>
-        <Text style={styles.responseCount}>
+        <Text style={[styles.responseCount, { color: t.textSecondary }]}>
           {responseCount > 0 ? `${responseCount} ${responseCount === 1 ? 'response' : 'responses'}` : 'Be the first to answer'}
         </Text>
         <View style={styles.tapHint}>
-          <Text style={styles.tapHintText}>Tap to answer</Text>
-          <ChevronRight size={14} color={colors.accentCyan} strokeWidth={2.5} />
+          <Text style={[styles.tapHintText, { color: brand.teal }]}>Tap to answer</Text>
+          <ChevronRight size={14} color={brand.teal} strokeWidth={2.5} />
         </View>
       </View>
     </Pressable>
@@ -94,15 +101,16 @@ export default function QuestionOfTheDay({ onPress }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 20,
-    padding: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.accentCyan,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    padding: spacing.xl,
+    paddingTop: spacing.xl + 8,
+    paddingHorizontal: spacing.screenHorizontal + 8,
+    borderLeftWidth: 0,
+    borderBottomWidth: 1,
+    width: '100%',
   },
   cardPressed: {
     opacity: 0.85,
@@ -111,23 +119,19 @@ const styles = StyleSheet.create({
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   label: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 11,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.label.fontSize - 3,
     letterSpacing: 2,
-    color: colors.accentCyan,
   },
   question: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 20,
-    color: colors.white,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.subhead.fontSize - 2,
     lineHeight: 28,
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   footer: {
     flexDirection: 'row',
@@ -135,19 +139,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   responseCount: {
-    fontFamily: fontFamily.medium,
-    fontSize: 13,
-    color: darkColors.textSecondary,
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSizes.small.fontSize + 1,
   },
   tapHint: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   tapHintText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 13,
-    color: colors.accentCyan,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.small.fontSize + 1,
   },
 });

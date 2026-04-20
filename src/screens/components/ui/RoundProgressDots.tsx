@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { colors } from '../../../styles/theme';
+import { brand, dark, light } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 
 interface RoundProgressDotsProps {
   total: number;
@@ -8,6 +9,8 @@ interface RoundProgressDotsProps {
 }
 
 export default function RoundProgressDots({ total, current }: RoundProgressDotsProps) {
+  const { isDark } = useTheme();
+
   return (
     <View style={styles.container}>
       {Array.from({ length: total }, (_, i) => {
@@ -20,8 +23,13 @@ export default function RoundProgressDots({ total, current }: RoundProgressDotsP
             key={i}
             style={[
               styles.dot,
+              { backgroundColor: brand.primary },
               isCurrent && styles.dotCurrent,
-              isUpcoming && styles.dotUpcoming,
+              isUpcoming && {
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.15)'
+                  : 'rgba(0,0,0,0.12)',
+              },
             ]}
           />
         );
@@ -43,19 +51,15 @@ const styles = StyleSheet.create({
     width: DOT_SIZE,
     height: DOT_SIZE,
     borderRadius: DOT_SIZE / 2,
-    backgroundColor: colors.white,
   },
   dotCurrent: {
     width: DOT_SIZE * 1.3,
     height: DOT_SIZE * 1.3,
     borderRadius: (DOT_SIZE * 1.3) / 2,
-    shadowColor: colors.white,
+    shadowColor: brand.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 6,
     elevation: 6,
-  },
-  dotUpcoming: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
   },
 });

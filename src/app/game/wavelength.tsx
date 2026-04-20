@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Plus, Minus } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing, radius } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { calculateMultiplayerXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { supabase } from '../../lib/supabase';
 import { getNormalPlayers, type Player } from '../../lib/playersPool';
@@ -56,56 +57,9 @@ interface RoundData {
 
 // ── League-specific spectrum prompts ──────────────────────────────────────
 
-const SPECTRUM_PROMPTS: Record<string, { left: string; right: string }[]> = {
-  NBA: [
-    { left: 'Overrated', right: 'Underrated' },
-    { left: 'Role Player', right: 'Superstar' },
-    { left: 'Regular Season', right: 'Playoff Performer' },
-    { left: 'Old Era', right: 'Modern Era' },
-    { left: 'Pure Scorer', right: 'Pure Defender' },
-    { left: 'Ball Hog', right: 'Team Player' },
-    { left: 'Athletic', right: 'Skill-Based' },
-    { left: 'Forgotten', right: 'Legendary' },
-    { left: 'Bust', right: 'All-Time Great' },
-    { left: 'Soft', right: 'Tough' },
-  ],
-  NFL: [
-    { left: 'Overrated', right: 'Underrated' },
-    { left: 'System Player', right: 'Elite Talent' },
-    { left: 'Regular Season', right: 'Clutch' },
-    { left: 'One Hit Wonder', right: 'Consistent' },
-    { left: 'Bust', right: 'All-Time Great' },
-    { left: 'Offense', right: 'Defense' },
-    { left: 'Old School', right: 'Modern Game' },
-    { left: 'Forgotten', right: 'Legendary' },
-    { left: 'Average', right: 'Dominant' },
-    { left: 'Role Player', right: 'Franchise Player' },
-  ],
-  MLB: [
-    { left: 'Overrated', right: 'Underrated' },
-    { left: 'Regular Season', right: 'Postseason Hero' },
-    { left: 'Power Hitter', right: 'Contact Hitter' },
-    { left: 'Bust', right: 'Hall of Famer' },
-    { left: 'Forgotten', right: 'Legendary' },
-    { left: 'Old Era', right: 'Modern Era' },
-    { left: 'One Tool', right: 'Five Tool Player' },
-    { left: 'Role Player', right: 'Franchise Cornerstone' },
-    { left: 'Streaky', right: 'Consistent' },
-    { left: 'Average', right: 'Dominant' },
-  ],
-  NHL: [
-    { left: 'Overrated', right: 'Underrated' },
-    { left: 'Enforcer', right: 'Sniper' },
-    { left: 'Regular Season', right: 'Playoff Performer' },
-    { left: 'Role Player', right: 'Franchise Player' },
-    { left: 'Bust', right: 'All-Time Great' },
-    { left: 'Forgotten', right: 'Legendary' },
-    { left: 'Old School', right: 'Modern Game' },
-    { left: 'Average', right: 'Dominant' },
-    { left: 'Soft', right: 'Physical' },
-    { left: 'One Dimensional', right: 'Complete Player' },
-  ],
-};
+import wavelengthAxesData from '../../data/wavelength-axes.json';
+
+const SPECTRUM_PROMPTS: Record<string, { left: string; right: string }[]> = wavelengthAxesData as any;
 
 /** Shuffle prompts for the given league, pick 5, assign random targets */
 function getRoundPrompts(league: string): RoundData[] {
@@ -137,10 +91,10 @@ function calcScore(guess: number, target: number): number {
 }
 
 function scoreLabel(score: number): string {
-  if (score === 4) return 'BULLSEYE! 🎯';
-  if (score === 3) return 'SO CLOSE! 🔥';
-  if (score === 2) return 'NOT BAD! 👍';
-  return 'KEEP PRACTICING 😅';
+  if (score === 4) return 'BULLSEYE!';
+  if (score === 3) return 'SO CLOSE!';
+  if (score === 2) return 'NOT BAD!';
+  return 'KEEP PRACTICING';
 }
 
 function totalPerf(score: number): string {
@@ -189,6 +143,7 @@ function Dial({
       onMoveShouldSetPanResponder: () => interactiveRef.current,
       onPanResponderGrant: (e) => {
         if (!interactiveRef.current) return;
+        if (layoutRef.current.width <= 1) return; // Not measured yet
         const raw =
           ((e.nativeEvent.pageX - layoutRef.current.left) /
             layoutRef.current.width) *
@@ -197,6 +152,7 @@ function Dial({
       },
       onPanResponderMove: (_, gs) => {
         if (!interactiveRef.current) return;
+        if (layoutRef.current.width <= 1) return; // Not measured yet
         const raw =
           ((gs.moveX - layoutRef.current.left) / layoutRef.current.width) *
           100;
@@ -295,7 +251,7 @@ const dialStyles = StyleSheet.create({
   },
   track: {
     height: 8,
-    backgroundColor: '#383838',
+    backgroundColor: dark.surface,
     borderRadius: 4,
     overflow: 'visible',
     position: 'relative',
@@ -386,11 +342,13 @@ const dialStyles = StyleSheet.create({
 interface Props {
   onBack: () => void;
   onNavigate: (tab: Tab) => void;
+  joinedLobby?: { lobbyId: string; playerIndex: number; code: string; gameType: string };
 }
 
 const FETCH_COUNT = 10;
 
-export default function WavelengthScreen({ onBack }: Props) {
+export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
+  const { isDark } = useTheme();
   const [phase, setPhase] = useState<Phase>('lobby');
   const [players, setPlayers] = useState<string[]>([...DEFAULT_PLAYERS]);
   const [rounds, setRounds] = useState<RoundData[]>(() => getRoundPrompts('NBA'));
@@ -454,6 +412,13 @@ export default function WavelengthScreen({ onBack }: Props) {
     });
   }, []);
 
+  // ── Auto-join lobby when navigated from Games hub Join Game ──
+  useEffect(() => {
+    if (!joinedLobby) return;
+    setMode('online');
+    handleJoinSuccess(joinedLobby.lobbyId, joinedLobby.playerIndex, joinedLobby.code);
+  }, [joinedLobby]);
+
   // ── useLobby hook for realtime ──
   const { presencePlayers, isConnected, broadcast, onEvent } = useLobby({
     code: lobbyCode,
@@ -462,9 +427,23 @@ export default function WavelengthScreen({ onBack }: Props) {
     playerIndex: myPlayerIndex,
   });
 
+  // ── Refresh lobby players when presence changes ──
+  useEffect(() => {
+    if (!lobbyId || onlinePhase !== 'lobby') return;
+    getLobbyPlayers(lobbyId).then(players => {
+      setLobbyPlayers(players);
+    }).catch(() => {});
+  }, [presencePlayers.length, lobbyId, onlinePhase]);
+
   // ── Online event listeners ──
   useEffect(() => {
     if (mode !== 'online' || !lobbyCode) return;
+
+    const unsubReady = onEvent('player:ready', () => {
+      if (lobbyId) {
+        getLobbyPlayers(lobbyId).then(players => setLobbyPlayers(players)).catch(() => {});
+      }
+    });
 
     // Host broadcasts game config (round data)
     const unsubConfig = onEvent('game:config', (payload: any) => {
@@ -520,7 +499,7 @@ export default function WavelengthScreen({ onBack }: Props) {
     });
 
     return () => {
-      unsubConfig(); unsubClue(); unsubGuess(); unsubReveal();
+      unsubReady(); unsubConfig(); unsubClue(); unsubGuess(); unsubReveal();
       unsubNext(); unsubGameOver(); unsubSettings();
     };
   }, [mode, lobbyCode, onEvent]);
@@ -595,53 +574,65 @@ export default function WavelengthScreen({ onBack }: Props) {
     }
   }, [userId, displayName]);
 
-  const handleJoinSuccess = useCallback(async (joinedLobbyId: string, joinedPlayerIndex: number) => {
+  const handleJoinSuccess = useCallback(async (joinedLobbyId: string, joinedPlayerIndex: number, joinedCode: string) => {
     setLobbyId(joinedLobbyId);
     setMyPlayerIndex(joinedPlayerIndex);
+    setLobbyCode(joinedCode);
     setOnlinePhase('lobby');
-    const lPlayers = await getLobbyPlayers(joinedLobbyId);
-    setLobbyPlayers(lPlayers);
-    const me = lPlayers.find(p => p.player_index === joinedPlayerIndex);
-    setMyPlayerId(me?.id || null);
-    if (lPlayers.length > 0) {
+    try {
+      const lPlayers = await getLobbyPlayers(joinedLobbyId);
+      setLobbyPlayers(lPlayers);
+      const me = lPlayers.find(p => p.player_index === joinedPlayerIndex);
+      setMyPlayerId(me?.id || null);
       setLobby({
         id: joinedLobbyId,
-        code: lobbyCode || '',
+        code: joinedCode,
         game_type: 'wavelength',
         host_user_id: '',
         status: 'waiting',
         settings: {},
         game_state: {},
       });
+    } catch (e: any) {
+      setOnlineError(e.message || 'Failed to load lobby players');
     }
-  }, [lobbyCode]);
+  }, []);
 
   const handleToggleReady = useCallback(async () => {
     if (!myPlayerId) return;
     const newReady = !isReady;
     setIsReady(newReady);
-    await togglePlayerReady(myPlayerId, newReady);
-    broadcast('player:ready', { playerIndex: myPlayerIndex, isReady: newReady });
-    if (lobbyId) {
-      const lPlayers = await getLobbyPlayers(lobbyId);
-      setLobbyPlayers(lPlayers);
+    try {
+      await togglePlayerReady(myPlayerId, newReady);
+      broadcast('player:ready', { playerIndex: myPlayerIndex, isReady: newReady });
+      if (lobbyId) {
+        const lPlayers = await getLobbyPlayers(lobbyId);
+        setLobbyPlayers(lPlayers);
+      }
+    } catch (e: any) {
+      setIsReady(!newReady);
+      setOnlineError(e.message || 'Failed to toggle ready');
     }
   }, [myPlayerId, isReady, myPlayerIndex, broadcast, lobbyId]);
 
   const handleOnlineStart = useCallback(async () => {
     if (!isHost || !lobbyId) return;
-    const roundData = getRoundPrompts(selectedLeague);
-    setRounds(roundData);
-    setRoundIndex(0);
-    setRoundScores([]);
-    setGameOver(false);
-    setAllGuesses({});
-    setMyGuessLocked(false);
-    setOnlineClue('');
-    setClueText('');
-    await updateLobbyStatus(lobbyId, 'playing');
-    broadcast('game:config', { rounds: roundData });
-    setPhase('setup');
+    try {
+      const roundData = getRoundPrompts(selectedLeague);
+      setRounds(roundData);
+      setRoundIndex(0);
+      setRoundScores([]);
+      setGameOver(false);
+      setAllGuesses({});
+      setMyGuessLocked(false);
+      setOnlineClue('');
+      setClueText('');
+      broadcast('game:config', { rounds: roundData });
+      await updateLobbyStatus(lobbyId, 'playing');
+      setPhase('setup');
+    } catch (e: any) {
+      setOnlineError(e.message || 'Failed to start game');
+    }
   }, [isHost, lobbyId, selectedLeague, broadcast]);
 
   const handleOnlineClue = useCallback(() => {
@@ -673,15 +664,23 @@ export default function WavelengthScreen({ onBack }: Props) {
     if (roundIndex >= rounds.length - 1) {
       setGameOver(true);
       broadcast('game:over', {});
-      const xp = calculateMultiplayerXP(newScores.length);
-      setXpEarned(xp);
-      void (async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await saveGameResult(user.id, 'wavelength', xp, newScores.reduce((a, b) => a + b, 0));
-          await updateUserXPAndStreak(user.id, xp, false);
-        }
-      })();
+      // Guard against duplicate XP awards
+      setXpEarned(prev => {
+        if (prev !== null) return prev;
+        const xp = calculateMultiplayerXP(newScores.length);
+        void (async () => {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await saveGameResult(user.id, 'wavelength', xp, newScores.reduce((a, b) => a + b, 0));
+              await updateUserXPAndStreak(user.id, xp, false);
+            }
+          } catch {
+            // silently fail - XP is non-critical
+          }
+        })();
+        return xp;
+      });
     } else {
       const nextRound = roundIndex + 1;
       setRoundIndex(nextRound);
@@ -698,7 +697,11 @@ export default function WavelengthScreen({ onBack }: Props) {
 
   const handleLeaveOnline = useCallback(async () => {
     if (lobbyId && myPlayerId) {
-      await leaveLobby(lobbyId, myPlayerId);
+      try {
+        await leaveLobby(lobbyId, myPlayerId);
+      } catch {
+        // silently fail - still reset state
+      }
     }
     setLobbyCode(null);
     setLobbyId(null);
@@ -721,7 +724,7 @@ export default function WavelengthScreen({ onBack }: Props) {
 
   // ── Host disconnect detection ──
   useEffect(() => {
-    if (mode !== 'online' || isHost || onlinePhase === 'lobby' || onlinePhase === 'choose' || onlinePhase === 'join') return;
+    if (mode !== 'online' || isHost || onlinePhase === 'choose' || onlinePhase === 'join') return;
 
     const hostPlayer = lobbyPlayers.find(p => p.is_host);
     if (!hostPlayer) return;
@@ -779,10 +782,14 @@ export default function WavelengthScreen({ onBack }: Props) {
       const xp = calculateMultiplayerXP(newScores.length);
       setXpEarned(xp);
       void (async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await saveGameResult(user.id, 'wavelength', xp, newScores.reduce((a, b) => a + b, 0));
-          await updateUserXPAndStreak(user.id, xp, false);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await saveGameResult(user.id, 'wavelength', xp, newScores.reduce((a, b) => a + b, 0));
+            await updateUserXPAndStreak(user.id, xp, false);
+          }
+        } catch {
+          // silently fail - XP is non-critical
         }
       })();
     } else {
@@ -828,7 +835,7 @@ export default function WavelengthScreen({ onBack }: Props) {
 
             {xpEarned !== null && (
               <View style={styles.xpCard}>
-                <Text style={styles.xpCardLabel}>⭐ XP EARNED</Text>
+                <Text style={styles.xpCardLabel}>XP EARNED</Text>
                 <Text style={styles.xpCardTotal}>+{xpEarned}</Text>
                 <Text style={styles.xpCardBreakdown}>Multiplayer Bonus: {xpEarned} XP</Text>
               </View>
@@ -898,8 +905,8 @@ export default function WavelengthScreen({ onBack }: Props) {
         return (
           <SafeAreaView edges={['top']} style={styles.root}>
             <JoinLobby
-              onJoin={(joinedLobbyId, joinedPlayerIndex) => {
-                handleJoinSuccess(joinedLobbyId, joinedPlayerIndex);
+              onJoin={(joinedLobbyId, joinedPlayerIndex, joinedCode) => {
+                handleJoinSuccess(joinedLobbyId, joinedPlayerIndex, joinedCode);
               }}
               onBack={() => setOnlinePhase('choose')}
             />
@@ -1302,7 +1309,9 @@ export default function WavelengthScreen({ onBack }: Props) {
     // ── Online mode: each player drags their own needle ──
     if (mode === 'online') {
       const lockedCount = Object.keys(allGuesses).length;
-      const totalGuessers = lobbyPlayers.length;
+      // Use presencePlayers (connected players) instead of lobbyPlayers to avoid
+      // deadlock when a player disconnects mid-guess phase.
+      const totalGuessers = presencePlayers.length;
       const allLocked = lockedCount >= totalGuessers;
 
       return (
@@ -1611,8 +1620,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['3xl'] + spacing.md,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
@@ -1657,9 +1664,6 @@ const styles = StyleSheet.create({
   zone2: {
     flex: 1,
     backgroundColor: 'transparent',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -32,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
     zIndex: 1,
@@ -1667,7 +1671,7 @@ const styles = StyleSheet.create({
   zone2Content: {
     paddingTop: spacing['4xl'],
     paddingHorizontal: spacing.lg,
-    paddingBottom: 48,
+    paddingBottom: 120,
     gap: spacing.lg,
   },
 
@@ -2121,7 +2125,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 1,
-    color: '#9A9A9A',
+    color: darkColors.textSecondary,
   },
   xpCardTotal: {
     fontFamily: fontFamily.black,
@@ -2133,7 +2137,7 @@ const styles = StyleSheet.create({
   xpCardBreakdown: {
     fontFamily: fontFamily.regular,
     fontSize: 13,
-    color: '#9A9A9A',
+    color: darkColors.textSecondary,
   },
 });
 

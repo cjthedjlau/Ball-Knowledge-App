@@ -7,11 +7,13 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { supabase } from '../../lib/supabase';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
+import HighlightPill from '../../screens/components/ui/HighlightPill';
 
 interface Props {
   onBack: () => void;
@@ -80,6 +82,8 @@ function computeStats(rows: GameRow[]): LeagueStats {
 }
 
 export default function MyStats({ onBack }: Props) {
+  const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
   const [selectedLeague, setSelectedLeague] = useState('NBA');
   const [stats, setStats] = useState<LeagueStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,19 +111,19 @@ export default function MyStats({ onBack }: Props) {
   }, [selectedLeague]);
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={styles.root}>
       {/* Zone 1 */}
-      <View style={styles.zone1}>
+      <View style={[styles.zone1, { backgroundColor: brand.primary, paddingTop: insets.top + spacing.lg }]}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+          <ArrowLeft size={22} color={dark.textPrimary} strokeWidth={2.5} />
         </Pressable>
         <Text style={styles.zone1Title}>MY STATS</Text>
       </View>
 
       {/* Zone 2 */}
       <ScrollView
-        style={styles.zone2}
-        contentContainerStyle={styles.zone2Content}
+        style={[styles.zone2, { borderTopColor: isDark ? dark.cardBorder : light.cardBorder }]}
+        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         <LeagueSwitcher selected={selectedLeague} onChange={setSelectedLeague} />
@@ -127,13 +131,16 @@ export default function MyStats({ onBack }: Props) {
         {loading ? (
           <ActivityIndicator color={colors.brand} style={{ marginTop: spacing['3xl'] }} />
         ) : !stats || stats.gamesPlayed === 0 ? (
-          <Text style={styles.emptyText}>No games played yet for this league</Text>
+          <Text style={[styles.emptyText, { color: isDark ? dark.textSecondary : light.textSecondary }]}>No games played yet for this league</Text>
         ) : (
           <>
             {/* Games Played Card */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>GAMES PLAYED</Text>
-              <Text style={styles.cardHero}>{stats.gamesPlayed}</Text>
+            <View style={[styles.card, {
+              backgroundColor: isDark ? dark.card : light.card,
+              borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+            }]}>
+              <Text style={[styles.cardTitle, { color: isDark ? dark.textSecondary : light.textSecondary }]}>GAMES PLAYED</Text>
+              <Text style={[styles.cardHero, { color: brand.primary }]}>{stats.gamesPlayed}</Text>
               <View style={styles.breakdownRow}>
                 <StatPill label="Mystery Player" value={stats.mysteryCount} />
                 <StatPill label="Showdown" value={stats.showdownCount} />
@@ -144,67 +151,101 @@ export default function MyStats({ onBack }: Props) {
               </View>
             </View>
 
-            {/* Performance Card */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>PERFORMANCE</Text>
+            {/* Performance — Timeline Rows */}
+            <View style={[styles.card, {
+              backgroundColor: isDark ? dark.card : light.card,
+              borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+            }]}>
+              <Text style={[styles.cardTitle, { color: isDark ? dark.textSecondary : light.textSecondary }]}>PERFORMANCE</Text>
 
-              <View style={styles.perfSection}>
-                <Text style={styles.perfSectionLabel}>Mystery Player</Text>
-                <View style={styles.perfRow}>
-                  <PerfItem label="Avg Guesses" value={stats.mysteryAvgGuesses.toString()} />
-                  <PerfItem label="Best Solve" value={stats.mysteryBestSolve > 0 ? stats.mysteryBestSolve.toString() : '—'} />
-                  <PerfItem label="Wins" value={stats.mysteryWins.toString()} />
+              {/* Mystery Player row */}
+              <View style={styles.timelineRow}>
+                <Text style={styles.timelineAccent}>{stats.mysteryAvgGuesses.toString()}</Text>
+                <View style={styles.timelineRight}>
+                  <Text style={[styles.timelineTitle, { color: isDark ? dark.textPrimary : light.textPrimary }]}>Avg Guesses (Mystery Player)</Text>
+                  <Text style={[styles.timelineDetail, { color: isDark ? dark.textSecondary : light.textSecondary }]}>
+                    Best: {stats.mysteryBestSolve > 0 ? stats.mysteryBestSolve.toString() : '--'}  |  Wins: {stats.mysteryWins}
+                  </Text>
                 </View>
               </View>
 
-              <View style={styles.perfSection}>
-                <Text style={styles.perfSectionLabel}>Trivia</Text>
-                <View style={styles.perfRow}>
-                  <PerfItem label="Avg Score" value={`${stats.triviaAvgScore}/3`} />
-                  <PerfItem label="Perfect (3/3)" value={stats.triviaPerfects.toString()} />
+              <View style={[styles.timelineDivider, { backgroundColor: isDark ? dark.divider : light.divider }]} />
+
+              {/* Trivia row */}
+              <View style={styles.timelineRow}>
+                <Text style={styles.timelineAccent}>{stats.triviaAvgScore}/3</Text>
+                <View style={styles.timelineRight}>
+                  <Text style={[styles.timelineTitle, { color: isDark ? dark.textPrimary : light.textPrimary }]}>Avg Score (Trivia)</Text>
+                  <Text style={[styles.timelineDetail, { color: isDark ? dark.textSecondary : light.textSecondary }]}>
+                    Perfect Games: {stats.triviaPerfects}
+                  </Text>
                 </View>
               </View>
 
-              <View style={styles.perfSection}>
-                <Text style={styles.perfSectionLabel}>Showdown &amp; Blind Rank 5</Text>
-                <View style={styles.perfRow}>
-                  <PerfItem label="Showdown" value={stats.showdownCompletions.toString()} />
-                  <PerfItem label="Rank 5" value={stats.rank5Completions.toString()} />
+              <View style={[styles.timelineDivider, { backgroundColor: isDark ? dark.divider : light.divider }]} />
+
+              {/* Showdown & Rank 5 row */}
+              <View style={styles.timelineRow}>
+                <Text style={styles.timelineAccent}>{stats.showdownCompletions + stats.rank5Completions}</Text>
+                <View style={styles.timelineRight}>
+                  <Text style={[styles.timelineTitle, { color: isDark ? dark.textPrimary : light.textPrimary }]}>Showdown + Rank 5</Text>
+                  <Text style={[styles.timelineDetail, { color: isDark ? dark.textSecondary : light.textSecondary }]}>
+                    Showdown: {stats.showdownCompletions}  |  Rank 5: {stats.rank5Completions}
+                  </Text>
                 </View>
               </View>
             </View>
 
             {/* XP Card */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>XP</Text>
+            <View style={[styles.card, {
+              backgroundColor: isDark ? dark.card : light.card,
+              borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+            }]}>
+              <Text style={[styles.cardTitle, { color: isDark ? dark.textSecondary : light.textSecondary }]}>XP</Text>
               <View style={styles.perfRow}>
                 <PerfItem label="Total XP" value={stats.totalXp.toLocaleString()} accent />
                 <PerfItem label="Best Game" value={stats.bestSingleXp.toLocaleString()} />
               </View>
             </View>
+
+            {/* Highlight Pill — personal best */}
+            {stats.triviaPerfects > 0 && (
+              <HighlightPill text={`PERSONAL BEST: ${stats.triviaPerfects} PERFECT TRIVIA GAME${stats.triviaPerfects > 1 ? 'S' : ''}`} />
+            )}
+            {stats.triviaPerfects === 0 && stats.mysteryBestSolve > 0 && (
+              <HighlightPill text={`PERSONAL BEST: MYSTERY PLAYER SOLVED IN ${stats.mysteryBestSolve}`} />
+            )}
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 // ── Small components ──
 
 function StatPill({ label, value }: { label: string; value: number }) {
+  const { isDark } = useTheme();
   return (
-    <View style={styles.statPill}>
-      <Text style={styles.statPillValue}>{value}</Text>
-      <Text style={styles.statPillLabel}>{label}</Text>
+    <View style={[styles.statPill, {
+      backgroundColor: isDark ? dark.background : light.surface,
+      borderColor: isDark ? dark.cardBorder : light.cardBorder,
+    }]}>
+      <Text style={[styles.statPillValue, { color: isDark ? dark.textPrimary : light.textPrimary }]}>{value}</Text>
+      <Text style={[styles.statPillLabel, { color: isDark ? dark.textSecondary : light.textSecondary }]}>{label}</Text>
     </View>
   );
 }
 
 function PerfItem({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  const { isDark } = useTheme();
   return (
-    <View style={styles.perfItem}>
-      <Text style={[styles.perfValue, accent && { color: colors.brand }]}>{value}</Text>
-      <Text style={styles.perfLabel}>{label}</Text>
+    <View style={[styles.perfItem, {
+      backgroundColor: isDark ? dark.background : light.surface,
+      borderColor: isDark ? dark.cardBorder : light.cardBorder,
+    }]}>
+      <Text style={[styles.perfValue, { color: isDark ? dark.textPrimary : light.textPrimary }, accent && { color: brand.primary }]}>{value}</Text>
+      <Text style={[styles.perfLabel, { color: isDark ? dark.textSecondary : light.textSecondary }]}>{label}</Text>
     </View>
   );
 }
@@ -217,7 +258,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   zone1: {
-    backgroundColor: colors.brand,
     paddingTop: spacing.lg,
     paddingBottom: spacing['3xl'] + spacing.md,
     paddingHorizontal: spacing.lg,
@@ -240,19 +280,19 @@ const styles = StyleSheet.create({
   zone1Title: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
-    fontSize: 28,
+    fontSize: 36,
+    lineHeight: 38,
     letterSpacing: 3,
-    color: colors.white,
+    color: dark.textPrimary,
   },
   zone2: {
     flex: 1,
     backgroundColor: 'transparent',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    marginTop: -32,
+    marginTop: 0,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    shadowColor: '#000',
+    shadowColor: dark.background,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -275,15 +315,13 @@ const styles = StyleSheet.create({
 
   // Cards
   card: {
-    backgroundColor: darkColors.surfaceElevated,
     borderRadius: 16,
     padding: spacing.lg,
     gap: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
     borderBottomWidth: 2,
     borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000',
+    shadowColor: dark.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -294,13 +332,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 11,
     letterSpacing: 2,
-    color: darkColors.textSecondary,
   },
   cardHero: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
+    fontFamily: fonts.display,
     fontSize: 48,
-    color: colors.brand,
     lineHeight: 52,
   },
   breakdownRow: {
@@ -309,24 +344,21 @@ const styles = StyleSheet.create({
   },
   statPill: {
     flex: 1,
-    backgroundColor: darkColors.background,
     borderRadius: 12,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: darkColors.border,
   },
   statPillValue: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
+    fontFamily: fonts.display,
     fontSize: 20,
-    color: darkColors.text,
   },
   statPillLabel: {
-    fontFamily: fontFamily.regular,
-    fontSize: 11,
-    color: darkColors.textSecondary,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
     marginTop: 2,
   },
 
@@ -338,7 +370,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 13,
-    color: darkColors.text,
     letterSpacing: 0.5,
   },
   perfRow: {
@@ -347,25 +378,53 @@ const styles = StyleSheet.create({
   },
   perfItem: {
     flex: 1,
-    backgroundColor: darkColors.background,
     borderRadius: 12,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: darkColors.border,
   },
   perfValue: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
+    fontFamily: fonts.display,
     fontSize: 18,
-    color: darkColors.text,
   },
   perfLabel: {
-    fontFamily: fontFamily.regular,
-    fontSize: 10,
-    color: darkColors.textSecondary,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
     marginTop: 2,
     textAlign: 'center',
+  },
+
+  // Timeline rows
+  timelineRow: {
+    flexDirection: 'row' as const,
+    gap: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  timelineAccent: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    minWidth: 56,
+    color: brand.primary,
+  },
+  timelineRight: {
+    flex: 1,
+    justifyContent: 'center' as const,
+  },
+  timelineTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+  },
+  timelineDetail: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  timelineDivider: {
+    height: 1,
+    marginHorizontal: 4,
   },
 });

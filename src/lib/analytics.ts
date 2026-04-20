@@ -1,4 +1,5 @@
-import { usePostHog } from 'posthog-react-native';
+let usePostHog: any = () => null;
+try { usePostHog = require('posthog-react-native').usePostHog; } catch {}
 
 export function useGameAnalytics() {
   const posthog = usePostHog();

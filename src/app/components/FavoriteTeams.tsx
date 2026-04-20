@@ -7,11 +7,14 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing, radius } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { supabase } from '../../lib/supabase';
 import PrimaryButton from '../../screens/components/ui/PrimaryButton';
+import SlideTag from '../../screens/components/ui/SlideTag';
+import GhostWatermark from '../../screens/components/ui/GhostWatermark';
 
 interface Props {
   onBack: () => void;
@@ -55,12 +58,19 @@ const LEAGUE_TEAMS: Record<string, string[]> = {
 const LEAGUE_ORDER = ['NBA', 'NFL', 'MLB', 'NHL'];
 
 export default function FavoriteTeams({ onBack }: Props) {
+  const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
   const [selections, setSelections] = useState<Record<string, string>>({
     NBA: '', NFL: '', MLB: '', NHL: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const bgColor = isDark ? dark.background : light.background;
+  const textSecondary = isDark ? dark.textSecondary : light.textSecondary;
+  const textPrimary = isDark ? dark.textPrimary : light.textPrimary;
+  const watermarkColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(252,52,92,0.05)';
 
   useEffect(() => {
     let cancelled = false;
@@ -111,46 +121,64 @@ export default function FavoriteTeams({ onBack }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
-      {/* Zone 1 */}
-      <View style={styles.zone1}>
+    <SafeAreaView style={[styles.root, { backgroundColor: bgColor }]} edges={['top']}>
+      <GhostWatermark text="BK" color={watermarkColor} />
+
+      {/* Header */}
+      <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+          <ArrowLeft size={22} color={textPrimary} strokeWidth={2.5} />
         </Pressable>
-        <Text style={styles.zone1Title}>FAVORITE TEAMS</Text>
+        <Text style={[styles.headerTitle, { color: textPrimary }]}>Favorite Teams</Text>
       </View>
 
-      {/* Zone 2 */}
+      {/* Content */}
       <ScrollView
-        style={styles.zone2}
-        contentContainerStyle={styles.zone2Content}
+        style={styles.scrollArea}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
-          <ActivityIndicator color={colors.brand} style={{ marginTop: spacing['3xl'] }} />
+          <ActivityIndicator color={brand.primary} style={{ marginTop: spacing['3xl'] }} />
         ) : (
           <>
-            {LEAGUE_ORDER.map(league => (
-              <View key={league} style={styles.leagueSection}>
-                <Text style={styles.leagueHeader}>{league}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow}>
-                  {LEAGUE_TEAMS[league].map(team => {
-                    const isSelected = selections[league] === team;
-                    return (
-                      <Pressable
-                        key={team}
-                        onPress={() => selectTeam(league, team)}
-                        style={[styles.teamPill, isSelected && styles.teamPillSelected]}
-                      >
-                        <Text style={[styles.teamPillText, isSelected && styles.teamPillTextSelected]}>
-                          {team}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            ))}
+            {LEAGUE_ORDER.map(league => {
+              const teams = LEAGUE_TEAMS[league];
+              return (
+                <View key={league} style={styles.leagueSection}>
+                  {/* Section tag */}
+                  <SlideTag label={league} variant="red" />
+
+                  {/* Team list — timeline style */}
+                  <View style={styles.teamList}>
+                    {teams.map(team => {
+                      const isSelected = selections[league] === team;
+                      return (
+                        <Pressable
+                          key={team}
+                          onPress={() => selectTeam(league, team)}
+                          style={styles.teamRow}
+                        >
+                          <Text style={[
+                            styles.leagueAbbr,
+                            { color: isSelected ? brand.primary : textSecondary },
+                          ]}>
+                            {league}
+                          </Text>
+                          <Text style={[
+                            styles.teamName,
+                            { color: isSelected ? textPrimary : textSecondary },
+                            isSelected && styles.teamNameSelected,
+                          ]}>
+                            {team}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              );
+            })}
 
             <View style={{ marginTop: spacing.lg }}>
               <PrimaryButton label={saving ? 'SAVING...' : 'SAVE'} onPress={handleSave} loading={saving} />
@@ -169,100 +197,61 @@ export default function FavoriteTeams({ onBack }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
-  zone1: {
-    backgroundColor: colors.brand,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing['3xl'] + spacing.md,
-    paddingHorizontal: spacing.lg,
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    zIndex: 2,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
   backBtn: {
-    position: 'absolute',
-    top: spacing.lg,
-    left: spacing.lg,
     padding: spacing.sm,
-    zIndex: 10,
+    marginRight: spacing.md,
   },
-  zone1Title: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 28,
-    letterSpacing: 3,
-    color: colors.white,
+  headerTitle: {
+    fontFamily: fonts.display,
+    fontSize: 36,
+    lineHeight: 38,
+    letterSpacing: 1,
   },
-  zone2: {
+  scrollArea: {
     flex: 1,
-    backgroundColor: 'transparent',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -32,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-    zIndex: 1,
   },
-  zone2Content: {
-    paddingTop: spacing['4xl'],
+  scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: 48,
-    gap: spacing.lg,
+    gap: spacing['2xl'],
   },
   leagueSection: {
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  leagueHeader: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 14,
-    letterSpacing: 2,
-    color: darkColors.textSecondary,
+  teamList: {
+    gap: 0,
   },
-  pillRow: {
+  teamRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
-  teamPill: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 999,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: darkColors.border,
+  leagueAbbr: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    width: 72,
+    letterSpacing: 1,
   },
-  teamPillSelected: {
-    backgroundColor: colors.brand,
-    borderColor: colors.brand,
-    shadowColor: colors.brand,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 6,
+  teamName: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    flex: 1,
   },
-  teamPillText: {
-    fontFamily: fontFamily.bold,
+  teamNameSelected: {
+    fontFamily: fonts.bodyBold,
     fontWeight: '700',
-    fontSize: 13,
-    color: darkColors.textSecondary,
-  },
-  teamPillTextSelected: {
-    color: colors.white,
   },
   savedText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodyBold,
     fontWeight: '700',
     fontSize: 14,
     color: colors.accentGreen,

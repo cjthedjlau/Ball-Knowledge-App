@@ -7,7 +7,8 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native'
-import { colors, darkColors, fontFamily, spacing, radius, layout } from '../../styles/theme'
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing, radius, layout } from '../../styles/theme'
+import { useTheme } from '../../hooks/useTheme'
 import type { GameLobby, LobbyPlayer } from '../../lib/multiplayer'
 import type { PresencePlayer } from '../../hooks/useLobby'
 
@@ -77,6 +78,7 @@ export function LobbyScreen({
   onUpdateSettings,
   renderSettings,
 }: LobbyScreenProps) {
+  const { isDark } = useTheme()
   const [copiedVisible, setCopiedVisible] = useState(false)
 
   // Build a set of connected playerIndexes for quick lookup
@@ -95,10 +97,10 @@ export function LobbyScreen({
   }, [lobby.code])
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: isDark ? dark.background : light.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>LOBBY</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? dark.textPrimary : light.textPrimary }]}>LOBBY</Text>
         <TouchableOpacity onPress={onLeave} activeOpacity={0.7}>
           <Text style={styles.leaveText}>Leave</Text>
         </TouchableOpacity>
@@ -115,8 +117,8 @@ export function LobbyScreen({
           onPress={handleCopyCode}
           activeOpacity={0.7}
         >
-          <Text style={styles.codeText}>{lobby.code}</Text>
-          <Text style={styles.codeSubtitle}>
+          <Text style={[styles.codeText, { color: isDark ? dark.textPrimary : light.textPrimary }]}>{lobby.code}</Text>
+          <Text style={[styles.codeSubtitle, { color: isDark ? dark.textSecondary : light.textSecondary }]}>
             {copiedVisible ? 'Copied!' : 'Tap to copy'}
           </Text>
         </TouchableOpacity>
@@ -129,7 +131,7 @@ export function LobbyScreen({
         </View>
 
         {/* Player count */}
-        <Text style={styles.playerCount}>
+        <Text style={[styles.playerCount, { color: isDark ? dark.textSecondary : light.textSecondary }]}>
           {players.length} {players.length === 1 ? 'player' : 'players'}
         </Text>
 
@@ -141,13 +143,14 @@ export function LobbyScreen({
             return (
               <View
                 key={player.id}
-                style={[styles.playerRow, !isConnected && styles.playerRowDisconnected]}
+                style={[styles.playerRow, { backgroundColor: isDark ? dark.surface : light.surface }, !isConnected && styles.playerRowDisconnected]}
               >
                 <View style={styles.playerInfo}>
                   <Text
                     style={[
                       styles.playerName,
-                      !isConnected && styles.playerNameDisconnected,
+                      { color: isDark ? dark.textPrimary : light.textPrimary },
+                      !isConnected && { color: isDark ? dark.textSecondary : light.textSecondary },
                     ]}
                   >
                     {player.display_name}
@@ -211,7 +214,6 @@ export function LobbyScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: darkColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -222,21 +224,20 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   headerTitle: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 18,
-    color: colors.white,
   },
   leaveText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
-    color: colors.brandDark,
+    color: brand.dark,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: spacing.screenHorizontal,
-    paddingBottom: spacing['3xl'],
+    paddingBottom: spacing['5xl'],
   },
   codeContainer: {
     alignItems: 'center',
@@ -244,15 +245,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   codeText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 36,
-    color: colors.white,
     letterSpacing: 6,
   },
   codeSubtitle: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontSize: 13,
-    color: colors.midGray,
     marginTop: spacing.xs,
   },
   badgeRow: {
@@ -260,20 +259,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   gameTypeBadge: {
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
     borderRadius: radius.chip,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
   gameTypeBadgeText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 12,
-    color: colors.white,
+    color: '#FFFFFF',
   },
   playerCount: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontSize: 14,
-    color: colors.midGray,
     textAlign: 'center',
     marginBottom: spacing.lg,
   },
@@ -284,7 +282,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: darkColors.surface,
     borderRadius: radius.secondary,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
@@ -299,20 +296,17 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   playerName: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
-    color: colors.white,
   },
-  playerNameDisconnected: {
-    color: darkColors.textSecondary,
-  },
+  playerNameDisconnected: {},
   hostLabel: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontSize: 12,
     color: colors.brandMid,
   },
   disconnectedLabel: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontSize: 12,
     color: colors.midGray,
   },
@@ -322,17 +316,17 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   readyDotActive: {
-    backgroundColor: colors.success,
+    backgroundColor: colors.accentGreen,
   },
   readyDotInactive: {
-    backgroundColor: darkColors.border,
+    backgroundColor: colors.ruleGray,
   },
   settingsArea: {
     marginTop: spacing['2xl'],
   },
   bottomActions: {
     paddingHorizontal: spacing.screenHorizontal,
-    paddingBottom: spacing['3xl'],
+    paddingBottom: spacing['5xl'],
     paddingTop: spacing.lg,
   },
   actionButton: {
@@ -345,17 +339,17 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   startButton: {
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
   },
   notReadyButton: {
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
   },
   readyButton: {
-    backgroundColor: colors.success,
+    backgroundColor: colors.accentGreen,
   },
   actionButtonText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
-    color: colors.white,
+    color: '#FFFFFF',
   },
 })

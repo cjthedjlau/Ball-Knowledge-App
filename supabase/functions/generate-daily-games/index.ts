@@ -149,27 +149,27 @@ const TRIVIA_BANKS: Record<string, Array<{ question: string; options: string[]; 
     { question: 'Luka Doncic was traded to which team mid-season in 2025?', options: ['Los Angeles Clippers', 'Los Angeles Lakers', 'Golden State Warriors', 'Miami Heat'], correctIndex: 1, explanation: 'Luka Doncic was traded from the Dallas Mavericks to the Los Angeles Lakers in January 2025.' },
     { question: 'How many MVP awards has Nikola Jokic won as of 2025?', options: ['1', '2', '3', '4'], correctIndex: 2, explanation: 'Jokic won the MVP in 2021, 2022, and 2024 — three in four years.' },
     { question: 'Which player is known as "The Greek Freak"?', options: ['Luka Doncic', 'Nikola Jokic', 'Giannis Antetokounmpo', 'Kristaps Porzingis'], correctIndex: 2, explanation: 'Giannis earned the nickname for his unique combination of size, speed, and ball-handling.' },
-    { question: 'The 1996 NBA Draft class included which two future Hall of Famers?', options: ['LeBron & Wade', 'Kobe Bryant & Allen Iverson', 'Duncan & Garnett', 'Shaq & Penny'], correctIndex: 1, explanation: 'The 1996 class featured Kobe Bryant (13th pick) and Allen Iverson (1st overall), both future Hall of Famers.' },
+    { question: 'Who was selected 1st overall in the 1996 NBA Draft?', options: ['Kobe Bryant', 'Ray Allen', 'Allen Iverson', 'Marcus Camby'], correctIndex: 2, explanation: 'Allen Iverson was selected 1st overall by the Philadelphia 76ers in the 1996 NBA Draft.' },
     { question: 'Jayson Tatum played college basketball at which school?', options: ['Kentucky', 'Duke', 'Kansas', 'North Carolina'], correctIndex: 1, explanation: 'Tatum played one season at Duke under Coach K before being drafted 3rd overall by Boston in 2017.' },
     { question: 'What is the NBA record for most 3-pointers made in a single game?', options: ['11', '12', '14', '13'], correctIndex: 2, explanation: 'Klay Thompson set the record with 14 three-pointers in a single game against the Bulls in 2016.' },
-    { question: 'Who was the first player to win the NBA Finals MVP unanimously?', options: ['Michael Jordan', 'Magic Johnson', 'LeBron James', 'Shaquille O\'Neal'], correctIndex: 2, explanation: 'LeBron James in 2016 was the first unanimous Finals MVP after leading Cleveland\'s comeback from 3-1.' },
+    { question: 'Which NBA player has the most career triple-doubles?', options: ['Magic Johnson', 'Jason Kidd', 'Russell Westbrook', 'Oscar Robertson'], correctIndex: 2, explanation: 'Russell Westbrook holds the all-time triple-double record with 199, surpassing Oscar Robertson\'s long-standing mark.' },
   ],
   NFL: [
-    { question: 'How many Super Bowls has Patrick Mahomes won as of 2025?', options: ['1', '2', '3', '4'], correctIndex: 2, explanation: 'Mahomes won Super Bowls LIV (2020), LVII (2023), and LVIII (2024) with the Kansas City Chiefs.' },
-    { question: 'Tom Brady won how many Super Bowl rings in his career?', options: ['5', '6', '7', '8'], correctIndex: 2, explanation: 'Brady won 7 Super Bowls: 6 with New England (2002, 04, 05, 15, 17, 19) and 1 with Tampa Bay (2021).' },
+    { question: 'How many Super Bowls has Patrick Mahomes won as of 2025?', options: ['1', '2', '3', '4'], correctIndex: 2, explanation: 'Mahomes has won 3 Super Bowls with the Kansas City Chiefs: LIV, LVII, and LVIII.' },
+    { question: 'Tom Brady won how many Super Bowl rings in his career?', options: ['5', '6', '7', '8'], correctIndex: 2, explanation: 'Brady won 7 Super Bowls: 6 with the New England Patriots and 1 with the Tampa Bay Buccaneers.' },
     { question: 'Which team did Joe Burrow win a Heisman Trophy with?', options: ['Cincinnati Bengals', 'Ohio State', 'LSU', 'Georgia'], correctIndex: 2, explanation: 'Burrow won the 2019 Heisman Trophy at LSU, setting the single-season TD record in college football.' },
     { question: 'Lamar Jackson plays for which NFL team?', options: ['Cleveland Browns', 'Pittsburgh Steelers', 'Baltimore Ravens', 'Cincinnati Bengals'], correctIndex: 2, explanation: 'Lamar Jackson was drafted by the Baltimore Ravens in 2018 and has been their franchise QB since.' },
     { question: 'Who holds the NFL all-time rushing yards record?', options: ['Emmitt Smith', 'Walter Payton', 'Barry Sanders', 'Frank Gore'], correctIndex: 0, explanation: 'Emmitt Smith retired with 18,355 career rushing yards, a record that still stands.' },
     { question: 'Which wide receiver holds the single-season receiving yards record?', options: ['Jerry Rice', 'Randy Moss', 'Calvin Johnson', 'Julio Jones'], correctIndex: 2, explanation: 'Calvin Johnson ("Megatron") set the single-season receiving yards record with 1,964 yards in 2012.' },
     { question: 'Josh Allen plays for which NFL team?', options: ['Miami Dolphins', 'New England Patriots', 'New York Jets', 'Buffalo Bills'], correctIndex: 3, explanation: 'Josh Allen was drafted 7th overall by the Buffalo Bills in 2018 and has led them to multiple playoff appearances.' },
     { question: 'CeeDee Lamb plays for which NFL team?', options: ['Los Angeles Rams', 'San Francisco 49ers', 'Dallas Cowboys', 'Green Bay Packers'], correctIndex: 2, explanation: 'CeeDee Lamb was drafted 17th overall by the Dallas Cowboys in 2020 and became their top receiver.' },
-    { question: 'What record did Ja\'Marr Chase break in 2024?', options: ['Single-season TDs', 'Single-season receiving yards', 'Consecutive 100-yard games', 'Single-game receiving yards'], correctIndex: 1, explanation: 'Ja\'Marr Chase broke Calvin Johnson\'s single-season receiving yards record with 1,708 yards in 2024.' },
+    { question: 'How many receiving yards did Ja\'Marr Chase record in the 2024 season?', options: ['1,510', '1,612', '1,708', '1,823'], correctIndex: 2, explanation: 'Ja\'Marr Chase had 1,708 receiving yards in 2024, leading the NFL and setting a Cincinnati Bengals franchise record.' },
     { question: 'Which team won Super Bowl LVIII in Las Vegas?', options: ['San Francisco 49ers', 'Kansas City Chiefs', 'Baltimore Ravens', 'Detroit Lions'], correctIndex: 1, explanation: 'The Kansas City Chiefs defeated the San Francisco 49ers 25-22 in overtime in Super Bowl LVIII.' },
     { question: 'Jalen Hurts plays for which NFL team?', options: ['Dallas Cowboys', 'New York Giants', 'Washington Commanders', 'Philadelphia Eagles'], correctIndex: 3, explanation: 'Jalen Hurts was drafted 53rd overall by the Philadelphia Eagles in 2020 and became their starter in 2021.' },
-    { question: 'Which quarterback has the most career passing touchdowns?', options: ['Peyton Manning', 'Tom Brady', 'Drew Brees', 'Brett Favre'], correctIndex: 1, explanation: 'Tom Brady retired with 649 career passing TDs, surpassing Drew Brees\'s previous record of 571.' },
+    { question: 'Which quarterback has the most career passing touchdowns?', options: ['Peyton Manning', 'Tom Brady', 'Drew Brees', 'Brett Favre'], correctIndex: 1, explanation: 'Tom Brady holds the record with 649 career passing touchdowns, the most in NFL history.' },
     { question: 'Which college did Justin Jefferson attend?', options: ['Alabama', 'Ohio State', 'LSU', 'Clemson'], correctIndex: 2, explanation: 'Justin Jefferson played at LSU alongside Joe Burrow during their 2019 national championship season.' },
     { question: 'What position does Micah Parsons play?', options: ['Safety', 'Linebacker', 'Cornerback', 'Defensive End'], correctIndex: 1, explanation: 'Micah Parsons is a versatile linebacker for the Dallas Cowboys, known for his elite pass-rushing ability.' },
-    { question: 'Which team has won the most Super Bowls in NFL history?', options: ['San Francisco 49ers', 'Dallas Cowboys', 'New England Patriots', 'Pittsburgh Steelers'], correctIndex: 3, explanation: 'The Pittsburgh Steelers and New England Patriots are tied with 6 Super Bowls each, but Pittsburgh got there first.' },
+    { question: 'Which two teams are tied for the most Super Bowl wins in NFL history?', options: ['Cowboys & 49ers', 'Packers & Giants', 'Patriots & Steelers', 'Patriots & Cowboys'], correctIndex: 2, explanation: 'The New England Patriots and Pittsburgh Steelers are tied with 6 Super Bowl wins each, the most in NFL history.' },
   ],
   MLB: [
     { question: 'Shohei Ohtani plays for which MLB team?', options: ['Los Angeles Angels', 'New York Yankees', 'Los Angeles Dodgers', 'Toronto Blue Jays'], correctIndex: 2, explanation: 'Ohtani signed a record $700 million contract with the Dodgers ahead of the 2024 season.' },
@@ -185,12 +185,12 @@ const TRIVIA_BANKS: Record<string, Array<{ question: string; options: string[]; 
     { question: 'Which player won the 2024 World Series MVP?', options: ['Freddie Freeman', 'Mookie Betts', 'Shohei Ohtani', 'Walker Buehler'], correctIndex: 0, explanation: 'Freddie Freeman hit .400 with 4 HR and 12 RBI in the series, including the legendary walk-off grand slam in Game 1.' },
     { question: 'Who holds the record for most career hits in MLB history?', options: ['Ty Cobb', 'Pete Rose', 'Hank Aaron', 'Stan Musial'], correctIndex: 1, explanation: 'Pete Rose had 4,256 career hits, though he was banned from baseball for gambling.' },
     { question: 'Yordan Alvarez plays for which MLB team?', options: ['Miami Marlins', 'Houston Astros', 'Oakland Athletics', 'Texas Rangers'], correctIndex: 1, explanation: 'Yordan Alvarez has been the Astros\' designated hitter/outfielder since 2019 and won the 2022 World Series MVP.' },
-    { question: 'Which pitcher had a 0.64 ERA in 2023 before injury, which led to a famous podcast bet?', options: ['Spencer Strider', 'Gerrit Cole', 'Zack Wheeler', 'Sandy Alcantara'], correctIndex: 0, explanation: 'Spencer Strider of the Braves had a historically dominant stretch before injury in 2024.' },
+    { question: 'Which Braves pitcher struck out 281 batters in 2023 before suffering an elbow injury?', options: ['Spencer Strider', 'Max Fried', 'Charlie Morton', 'Kyle Wright'], correctIndex: 0, explanation: 'Spencer Strider struck out 281 batters in 2023 for the Braves before undergoing UCL surgery in 2024.' },
     { question: 'Which team has won the most World Series titles?', options: ['Boston Red Sox', 'Los Angeles Dodgers', 'New York Yankees', 'Oakland Athletics'], correctIndex: 2, explanation: 'The New York Yankees have won 27 World Series titles, far more than any other franchise.' },
   ],
   NHL: [
     { question: 'Connor McDavid plays for which NHL team?', options: ['Toronto Maple Leafs', 'Calgary Flames', 'Edmonton Oilers', 'Ottawa Senators'], correctIndex: 2, explanation: 'McDavid has played his entire career with the Edmonton Oilers since being drafted 1st overall in 2015.' },
-    { question: 'Who holds the NHL record for most career goals?', options: ['Mario Lemieux', 'Jaromir Jagr', 'Wayne Gretzky', 'Brett Hull'], correctIndex: 2, explanation: 'Wayne Gretzky scored 894 career goals — a record so dominant, he would still hold the scoring record even without his goals.' },
+    { question: 'Who holds the NHL record for most career goals?', options: ['Mario Lemieux', 'Jaromir Jagr', 'Wayne Gretzky', 'Brett Hull'], correctIndex: 2, explanation: 'Wayne Gretzky scored 894 career goals, the most in NHL history by a wide margin.' },
     { question: 'Which team won the 2024 Stanley Cup?', options: ['Florida Panthers', 'Edmonton Oilers', 'New York Rangers', 'Vancouver Canucks'], correctIndex: 0, explanation: 'The Florida Panthers defeated the Edmonton Oilers in 7 games to win their first Stanley Cup in franchise history.' },
     { question: 'Nathan MacKinnon plays for which NHL team?', options: ['Montreal Canadiens', 'Minnesota Wild', 'Colorado Avalanche', 'Pittsburgh Penguins'], correctIndex: 2, explanation: 'MacKinnon was drafted 1st overall by Colorado in 2013 and won the Stanley Cup with them in 2022.' },
     { question: 'Which goalie holds the NHL record for career wins?', options: ['Patrick Roy', 'Martin Brodeur', 'Dominik Hasek', 'Henrik Lundqvist'], correctIndex: 1, explanation: 'Martin Brodeur won 691 games in his career, a record that still stands. He won 3 Stanley Cups with New Jersey.' },
@@ -200,7 +200,7 @@ const TRIVIA_BANKS: Record<string, Array<{ question: string; options: string[]; 
     { question: 'David Pastrnak plays for which NHL team?', options: ['Pittsburgh Penguins', 'Boston Bruins', 'Colorado Avalanche', 'Tampa Bay Lightning'], correctIndex: 1, explanation: 'Pastrnak has been the Bruins\' top scorer since being drafted 25th overall in 2014.' },
     { question: 'Which NHL team has won the most Stanley Cups?', options: ['Montreal Canadiens', 'Toronto Maple Leafs', 'Detroit Red Wings', 'Boston Bruins'], correctIndex: 0, explanation: 'The Montreal Canadiens have won 24 Stanley Cups, more than any other franchise in NHL history.' },
     { question: 'Cale Makar plays for which NHL team?', options: ['Calgary Flames', 'Colorado Avalanche', 'Nashville Predators', 'Minnesota Wild'], correctIndex: 1, explanation: 'Makar was drafted 4th overall by Colorado in 2019 and won the Norris Trophy (best defenseman) and Conn Smythe in 2022.' },
-    { question: 'What is the record for most goals scored by a team in a single NHL season?', options: ['397', '401', '446', '446'], correctIndex: 2, explanation: 'The 1983-84 Edmonton Oilers scored 446 goals in a single season, led by Wayne Gretzky\'s 87 goals.' },
+    { question: 'What is the record for most goals scored by a team in a single NHL season?', options: ['397', '401', '426', '446'], correctIndex: 3, explanation: 'The 1983-84 Edmonton Oilers scored 446 goals in a single season, led by Wayne Gretzky\'s 87 goals.' },
     { question: 'Which position does Quinn Hughes play?', options: ['Center', 'Left Wing', 'Defenseman', 'Goalie'], correctIndex: 2, explanation: 'Quinn Hughes is an offensive defenseman for the Vancouver Canucks, winning the Norris Trophy in 2024.' },
     { question: 'Sidney Crosby has won how many Stanley Cups?', options: ['1', '2', '3', '4'], correctIndex: 2, explanation: 'Crosby won the Cup in 2009, 2016, and 2017 with the Pittsburgh Penguins, earning two Conn Smythe trophies.' },
     { question: 'Which team did the Florida Panthers defeat to win the 2024 Stanley Cup?', options: ['New York Rangers', 'Boston Bruins', 'Edmonton Oilers', 'Vancouver Canucks'], correctIndex: 2, explanation: 'The Panthers defeated the Oilers in 7 games, completing a comeback after being down 3-0 in the series.' },
@@ -222,12 +222,12 @@ async function generateGameForDate(date: string, league: string): Promise<{ stat
     return { status: 'already_exists' }
   }
 
-  // Fetch player pool — ordered by tier so normal players are preferred
-  // NOTE: Add .eq('status', 'active') after running the 20260326_players_pool_status migration
+  // Fetch player pool — only active players, never retired
   const { data: players, error } = await supabaseAdmin
     .from('players_pool')
-    .select('id, name, team, position, tier')
+    .select('id, name, team, position, tier, status')
     .eq('league', league)
+    .eq('status', 'active')
     .in('tier', ['normal', 'ball_knowledge'])
 
   if (error || !players?.length) {
@@ -235,20 +235,41 @@ async function generateGameForDate(date: string, league: string): Promise<{ stat
     return { status: 'no_players' }
   }
 
+  // Fetch recently used mystery players (last 60 days) to prevent repeats
+  const { data: recentGames } = await supabaseAdmin
+    .from('daily_games')
+    .select('mystery_player')
+    .eq('league', league)
+    .gte('date', new Date(new Date(date).getTime() - 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
+    .lt('date', date)
+
+  const recentNames = new Set<string>()
+  if (recentGames) {
+    for (const g of recentGames) {
+      if (g.mystery_player?.name) recentNames.add(g.mystery_player.name)
+    }
+  }
+
   const rand = makePRNG(dateLeagueSeed(date, league))
   const shuffled = seededShuffle(players, rand)
 
-  // Mystery player — first in shuffled list
-  const mysteryRaw = shuffled[0]
+  // Filter out recently used players for mystery player selection
+  const availableForMystery = shuffled.filter(p => !recentNames.has(p.name))
+  const mysteryPool = availableForMystery.length > 0 ? availableForMystery : shuffled
+
+  // Mystery player — first available non-repeat
+  const mysteryRaw = mysteryPool[0]
   const mysteryPlayer = {
     name: mysteryRaw.name,
     team: mysteryRaw.team,
     position: mysteryRaw.position,
-    // Client will supplement remaining attrs (height, age, etc.) from local playerAttrs cache
   }
 
+  // Remaining players for other games (exclude mystery player)
+  const remaining = shuffled.filter(p => p.name !== mysteryRaw.name)
+
   // Blind rank 5 — next 5
-  const blindRankPlayers = shuffled.slice(1, 6).map(p => ({
+  const blindRankPlayers = remaining.slice(0, 5).map(p => ({
     name: p.name,
     team: p.team,
   }))
@@ -259,15 +280,186 @@ async function generateGameForDate(date: string, league: string): Promise<{ stat
   const blindRankCategory = categories[categoryIdx]
 
   // Showdown — next 2 after rank 5
-  const showdownA = shuffled[6]
-  const showdownB = shuffled[7]
+  const showdownA = remaining[5]
+  const showdownB = remaining[6]
   const showCategories = SHOWDOWN_CATEGORIES[league] ?? ['WHO IS THE BETTER PLAYER?']
   const showCategoryIdx = Math.floor(rand() * showCategories.length)
 
-  // Trivia — pick 3 non-overlapping questions from the bank
-  const bank = TRIVIA_BANKS[league] ?? []
-  const bankShuffled = seededShuffle(bank, rand)
-  const triviaQuestions = bankShuffled.slice(0, 3)
+  // Ladder — pick 1 question per tier (5 total), prefer unused questions
+  const TIERS = ['100%', '75%', '50%', '25%', '1%']
+  const triviaQuestions: any[] = []
+
+  for (const tier of TIERS) {
+    // Fetch unused questions for this tier first, fall back to any
+    const { data: tierQs } = await supabaseAdmin
+      .from('trivia_questions_bank')
+      .select('id, question, options, correct_index, answer, explanation, tier')
+      .eq('league', league)
+      .eq('active', true)
+      .eq('tier', tier)
+      .is('last_used_date', null)
+      .limit(10)
+
+    let pool = tierQs ?? []
+    // If no unused questions, get any question for this tier
+    if (pool.length === 0) {
+      const { data: anyQs } = await supabaseAdmin
+        .from('trivia_questions_bank')
+        .select('id, question, options, correct_index, answer, explanation, tier')
+        .eq('league', league)
+        .eq('active', true)
+        .eq('tier', tier)
+        .order('last_used_date', { ascending: true, nullsFirst: true })
+        .limit(10)
+      pool = anyQs ?? []
+    }
+
+    // Fall back to old-style questions if no tier-specific ones exist
+    if (pool.length === 0) {
+      const { data: fallbackQs } = await supabaseAdmin
+        .from('trivia_questions_bank')
+        .select('id, question, options, correct_index, answer, explanation, tier')
+        .eq('league', league)
+        .eq('active', true)
+        .is('last_used_date', null)
+        .limit(5)
+      pool = fallbackQs ?? []
+    }
+
+    const shuffled = seededShuffle(pool, rand)
+    if (shuffled.length > 0) {
+      const picked = shuffled[0]
+      if (tier === '1%') {
+        triviaQuestions.push({
+          question: picked.question,
+          answer: picked.answer ?? '',
+          explanation: picked.explanation,
+          tier,
+        })
+      } else {
+        triviaQuestions.push({
+          question: picked.question,
+          options: typeof picked.options === 'string' ? JSON.parse(picked.options) : picked.options,
+          correctIndex: picked.correct_index,
+          explanation: picked.explanation,
+          tier,
+        })
+      }
+      // Mark as used
+      await supabaseAdmin
+        .from('trivia_questions_bank')
+        .update({ last_used_date: date })
+        .eq('id', picked.id)
+    }
+  }
+
+  // Showdown — pick curated matchup from bank
+  let showdownPlayerA: any = { name: showdownA.name, team: showdownA.team, stats: {} }
+  let showdownPlayerB: any = { name: showdownB.name, team: showdownB.team, stats: {} }
+  let showdownCategory = showCategories[showCategoryIdx]
+
+  const { data: sdUnused } = await supabaseAdmin
+    .from('showdown_bank')
+    .select('id, player_a, player_b, category')
+    .eq('league', league)
+    .eq('active', true)
+    .is('last_used_date', null)
+    .limit(20)
+
+  let sdPool = sdUnused ?? []
+  if (sdPool.length === 0) {
+    const { data: sdAny } = await supabaseAdmin
+      .from('showdown_bank')
+      .select('id, player_a, player_b, category')
+      .eq('league', league)
+      .eq('active', true)
+      .order('last_used_date', { ascending: true, nullsFirst: true })
+      .limit(20)
+    sdPool = sdAny ?? []
+  }
+
+  if (sdPool.length > 0) {
+    const sdShuffled = seededShuffle(sdPool, rand)
+    const sdPicked = sdShuffled[0]
+    showdownPlayerA = typeof sdPicked.player_a === 'string' ? JSON.parse(sdPicked.player_a) : sdPicked.player_a
+    showdownPlayerB = typeof sdPicked.player_b === 'string' ? JSON.parse(sdPicked.player_b) : sdPicked.player_b
+    showdownCategory = sdPicked.category
+    await supabaseAdmin.from('showdown_bank').update({ last_used_date: date }).eq('id', sdPicked.id)
+  }
+
+  // Auto Complete — pick 3 prompts from bank, prefer unused
+  let autoComplete: any = null
+  const { data: acUnused } = await supabaseAdmin
+    .from('auto_complete_bank')
+    .select('id, prompt, answers')
+    .eq('league', league)
+    .eq('active', true)
+    .is('last_used_date', null)
+    .limit(20)
+
+  let acPool = acUnused ?? []
+  if (acPool.length < 3) {
+    const { data: acAny } = await supabaseAdmin
+      .from('auto_complete_bank')
+      .select('id, prompt, answers')
+      .eq('league', league)
+      .eq('active', true)
+      .order('last_used_date', { ascending: true, nullsFirst: true })
+      .limit(20)
+    acPool = acAny ?? []
+  }
+
+  if (acPool.length >= 3) {
+    const acShuffled = seededShuffle(acPool, rand)
+    const picked3 = acShuffled.slice(0, 3)
+    autoComplete = {
+      league,
+      prompts: picked3.map(p => ({
+        text: p.prompt,
+        answers: typeof p.answers === 'string' ? JSON.parse(p.answers) : p.answers,
+      })),
+    }
+    for (const p of picked3) {
+      await supabaseAdmin.from('auto_complete_bank').update({ last_used_date: date }).eq('id', p.id)
+    }
+  }
+
+  // Power Play — pick 5 questions from bank, prefer unused
+  let powerPlay: any = null
+  const { data: ppUnused } = await supabaseAdmin
+    .from('power_play_bank')
+    .select('id, question_text, answers')
+    .eq('league', league)
+    .eq('active', true)
+    .is('last_used_date', null)
+    .limit(20)
+
+  let ppPool = ppUnused ?? []
+  if (ppPool.length < 5) {
+    const { data: ppAny } = await supabaseAdmin
+      .from('power_play_bank')
+      .select('id, question_text, answers')
+      .eq('league', league)
+      .eq('active', true)
+      .order('last_used_date', { ascending: true, nullsFirst: true })
+      .limit(20)
+    ppPool = ppAny ?? []
+  }
+
+  if (ppPool.length >= 5) {
+    const ppShuffled = seededShuffle(ppPool, rand)
+    const picked5 = ppShuffled.slice(0, 5)
+    powerPlay = {
+      league,
+      questions: picked5.map(p => ({
+        text: p.question_text,
+        answers: typeof p.answers === 'string' ? JSON.parse(p.answers) : p.answers,
+      })),
+    }
+    for (const p of picked5) {
+      await supabaseAdmin.from('power_play_bank').update({ last_used_date: date }).eq('id', p.id)
+    }
+  }
 
   const game = {
     date,
@@ -275,12 +467,14 @@ async function generateGameForDate(date: string, league: string): Promise<{ stat
     mystery_player: mysteryPlayer,
     blind_rank_players: blindRankPlayers,
     blind_rank_category: blindRankCategory,
-    showdown_player_a: { name: showdownA.name, team: showdownA.team, stats: {} },
-    showdown_player_b: { name: showdownB.name, team: showdownB.team, stats: {} },
-    showdown_category: showCategories[showCategoryIdx],
-    showdown_correct_answer: null, // auto-generated games don't have a curated answer
+    showdown_player_a: showdownPlayerA,
+    showdown_player_b: showdownPlayerB,
+    showdown_category: showdownCategory,
+    showdown_correct_answer: null,
     showdown_correct_reason: null,
     trivia_questions: triviaQuestions,
+    auto_complete: autoComplete,
+    power_play: powerPlay,
   }
 
   const { error: insertError } = await supabaseAdmin
@@ -324,6 +518,40 @@ Deno.serve(async (req: Request) => {
     const result = await generateGameForDate(targetDate, league)
     results[league] = result.status
     console.log(`  ${league}: ${result.status}`)
+  }
+
+  // Send "new content" push notifications (only for cron-triggered runs, not manual backfills)
+  const anyInserted = Object.values(results).some(s => s === 'inserted')
+  if (isPgCron && anyInserted) {
+    try {
+      const { data: users } = await supabaseAdmin
+        .from('profiles')
+        .select('push_token')
+        .eq('notify_new_content', true)
+        .neq('push_token', null)
+
+      if (users && users.length > 0) {
+        const messages = users.map(u => ({
+          to: u.push_token,
+          title: 'New Daily Games Available!',
+          body: 'Fresh games are ready. Play now to keep your streak alive!',
+          sound: 'default',
+          badge: 1,
+        }))
+
+        // Batch send (max 100 per request)
+        for (let i = 0; i < messages.length; i += 100) {
+          await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(messages.slice(i, i + 100)),
+          })
+        }
+        console.log(`Sent new-content push to ${users.length} users`)
+      }
+    } catch (e) {
+      console.error('Failed to send new-content push:', e)
+    }
   }
 
   return new Response(

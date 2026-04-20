@@ -2,7 +2,8 @@ import React, { useRef, useCallback } from 'react';
 import { View, Pressable, Animated, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home as HomeIcon, Gamepad2, TrendingUp, User } from 'lucide-react-native';
-import { colors, darkColors } from '../../../styles/theme';
+import { brand, dark, light } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 
 export type Tab = 'home' | 'games' | 'leaderboard' | 'profile';
 
@@ -23,11 +24,13 @@ function TabItem({
   Icon,
   isActive,
   onPress,
+  isDark,
 }: {
   id: Tab;
   Icon: React.ComponentType<any>;
   isActive: boolean;
   onPress: (tab: Tab) => void;
+  isDark: boolean;
 }) {
   const scale = useRef(new Animated.Value(isActive ? 1 : 1)).current;
   const activeScale = useRef(new Animated.Value(isActive ? 1 : 0.6)).current;
@@ -66,17 +69,19 @@ function TabItem({
     onPress(id);
   }, [id, onPress, scale, activeScale]);
 
+  const iconColor = isActive ? brand.primary : (isDark ? dark.textMuted : light.textMuted);
+
   return (
     <Animated.View style={[styles.tabItemWrap, { transform: [{ scale }] }]}>
       <Pressable
-        style={isActive ? styles.navItemActive : styles.navItem}
+        style={isActive ? [styles.navItemActive, { backgroundColor: brand.primary }] : styles.navItem}
         onPress={handlePress}
       >
         <Animated.View style={{ transform: [{ scale: isActive ? activeScale : scale }] }}>
           <Icon
-            color={colors.white}
+            color={isActive ? (isDark ? dark.textPrimary : light.card) : iconColor}
             size={24}
-            strokeOpacity={isActive ? 1 : 0.4}
+            strokeOpacity={isActive ? 1 : 0.6}
           />
         </Animated.View>
       </Pressable>
@@ -86,9 +91,16 @@ function TabItem({
 
 export default function BottomNav({ activeTab, onNavigate }: BottomNavProps) {
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
   return (
     <View style={[styles.navOuter, { bottom: insets.bottom + 16 }]}>
-      <View style={styles.navPill}>
+      <View style={[
+        styles.navPill,
+        {
+          backgroundColor: isDark ? dark.card : light.card,
+          borderColor: isDark ? dark.cardBorder : light.cardBorder,
+        },
+      ]}>
         {TABS.map(({ id, Icon }) => (
           <TabItem
             key={id}
@@ -96,6 +108,7 @@ export default function BottomNav({ activeTab, onNavigate }: BottomNavProps) {
             Icon={Icon}
             isActive={activeTab === id}
             onPress={onNavigate}
+            isDark={isDark}
           />
         ))}
       </View>
@@ -116,14 +129,12 @@ const styles = StyleSheet.create({
   navPill: {
     width: '85%',
     height: 72,
-    backgroundColor: darkColors.surface,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
-    shadowColor: '#000',
+    shadowColor: dark.background,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -143,7 +154,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.brand,
     borderRadius: 999,
   },
 });

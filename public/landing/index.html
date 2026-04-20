@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ball Knowledge — Daily Sports Games for NFL, NBA, MLB &amp; NHL Fans</title>
+  <meta name="description" content="Ball Knowledge is a free daily sports gaming platform. Play 6 daily games and 7 multiplayer party games across the NFL, NBA, MLB, and NHL. Earn XP, build streaks, and climb the leaderboard." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://ballknowledgeapp.com/landing" />
+  <meta property="og:title" content="Ball Knowledge — Daily Sports Games for Real Fans" />
+  <meta property="og:description" content="6 daily games. 7 party games. NFL, NBA, MLB, NHL. Free to play — earn XP, build streaks, and see where you rank." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://ballknowledgeapp.com/landing" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand: #FC345C;
+      --brand-dark: #C4163E;
+      --brand-light: #FEE2EA;
+      --heading: #1A1A2E;
+      --body: #2D2D2D;
+      --secondary: #6B7280;
+      --surface: #FAFAFA;
+      --border: #E5E7EB;
+      --white: #FFFFFF;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--body); background: var(--white); line-height: 1.6; }
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Nav */
+    nav { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--white); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { font-weight: 900; font-size: 22px; color: var(--brand); }
+    .nav-name { font-weight: 700; font-size: 15px; color: var(--heading); flex: 1; }
+    .nav-links { display: flex; align-items: center; gap: 20px; }
+    .nav-link { font-size: 14px; color: var(--secondary); }
+    .nav-cta { background: var(--brand); color: var(--white); font-weight: 700; font-size: 13px; padding: 8px 16px; border-radius: 8px; }
+    .nav-cta:hover { background: var(--brand-dark); text-decoration: none; }
+
+    /* Hero */
+    .hero { background: var(--brand); padding: 56px 20px; }
+    .hero-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.8); margin-bottom: 12px; }
+    .hero-headline { font-size: 36px; font-weight: 900; line-height: 1.15; color: var(--white); margin-bottom: 16px; max-width: 640px; }
+    .hero-body { font-size: 16px; line-height: 1.7; color: rgba(255,255,255,0.92); max-width: 600px; margin-bottom: 28px; }
+    .hero-cta { display: inline-block; background: var(--white); color: var(--brand); font-weight: 700; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
+    .hero-cta:hover { opacity: 0.92; text-decoration: none; }
+
+    /* Sections */
+    .section { padding: 48px 20px; max-width: 820px; margin: 0 auto; }
+    .section-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--brand); margin-bottom: 8px; }
+    .section-title { font-size: 26px; font-weight: 900; color: var(--heading); margin-bottom: 14px; line-height: 1.2; }
+    .section-body { font-size: 16px; line-height: 1.75; color: var(--body); margin-bottom: 24px; }
+    .section-divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+    .alt-bg { background: var(--surface); }
+
+    /* Cards */
+    .card-grid { display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .alt-bg .card { background: var(--white); }
+    .card-title { font-size: 17px; font-weight: 700; color: var(--heading); margin-bottom: 8px; }
+    .card-body { font-size: 15px; line-height: 1.7; color: var(--body); }
+    .card-detail { font-size: 13px; color: var(--secondary); margin-top: 8px; font-weight: 500; }
+
+    /* Levels strip */
+    .levels-strip { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .level-row { display: flex; align-items: center; gap: 12px; }
+    .level-num { font-size: 12px; font-weight: 700; color: var(--secondary); width: 24px; text-align: right; flex-shrink: 0; }
+    .level-name { font-size: 15px; font-weight: 600; color: var(--heading); }
+    .level-xp { font-size: 13px; color: var(--secondary); margin-left: auto; }
+    .level-row.highlight .level-name { color: var(--brand); font-weight: 700; }
+
+    /* League grid */
+    .league-grid { display: flex; flex-direction: column; gap: 12px; }
+    .league-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; }
+    .league-tag { font-size: 17px; font-weight: 900; color: var(--brand); margin-bottom: 4px; }
+    .league-desc { font-size: 15px; line-height: 1.65; color: var(--body); }
+
+    /* CTA section */
+    .cta-section { background: var(--brand); padding: 56px 20px; }
+    .cta-inner { max-width: 820px; margin: 0 auto; }
+    .cta-title { font-size: 28px; font-weight: 900; color: var(--white); margin-bottom: 12px; }
+    .cta-body { font-size: 16px; line-height: 1.7; color: rgba(255,255,255,0.92); max-width: 560px; margin-bottom: 24px; }
+    .cta-btn { display: inline-block; background: var(--white); color: var(--brand); font-weight: 700; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
+    .cta-btn:hover { opacity: 0.92; text-decoration: none; }
+
+    /* Footer */
+    footer { background: var(--heading); padding: 36px 20px; text-align: center; }
+    .footer-brand { font-size: 18px; font-weight: 900; color: var(--white); margin-bottom: 4px; }
+    .footer-tagline { font-size: 13px; color: var(--secondary); margin-bottom: 16px; }
+    .footer-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 16px; }
+    .footer-link { font-size: 13px; color: var(--secondary); }
+    .footer-link:hover { color: var(--white); }
+    .footer-copy { font-size: 12px; color: var(--secondary); }
+
+    @media (min-width: 640px) {
+      .hero { padding: 72px 40px; }
+      .hero-headline { font-size: 44px; }
+      .section { padding: 56px 40px; }
+      .card-grid { display: grid; grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <span class="nav-logo">BK</span>
+    <span class="nav-name">Ball Knowledge</span>
+    <div class="nav-links">
+      <a href="/about" class="nav-link">About</a>
+      <a href="/" class="nav-cta">Play Free</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <p class="hero-eyebrow">Free daily sports games</p>
+    <h1 class="hero-headline">Test your sports knowledge every single day.</h1>
+    <p class="hero-body">
+      Ball Knowledge is a free daily sports gaming platform for NFL, NBA, MLB, and NHL fans.
+      Six daily games reset every night at midnight. Build streaks, earn XP, level up from Rookie
+      to Ball Knowledge, and compete on the leaderboard.
+    </p>
+    <a href="/" class="hero-cta">Play Today's Games — It's Free</a>
+  </section>
+
+  <!-- Daily Games -->
+  <div class="alt-bg">
+    <section class="section">
+      <p class="section-label">Daily Games</p>
+      <h2 class="section-title">Six games. Four leagues. Every day.</h2>
+      <p class="section-body">
+        Six daily games reset every night at midnight ET across the NFL, NBA, MLB, and NHL.
+        Build a streak by coming back every day. Your progress, XP, and streaks are saved to your account.
+      </p>
+      <div class="card-grid">
+        <div class="card">
+          <h3 class="card-title">Mystery Player</h3>
+          <p class="card-body">
+            One hidden player per league per day. Guess by typing any player name and get color-coded
+            feedback on their attributes — team, position, age, height, college, draft round, years pro.
+            Green is exact. Yellow is close with a directional arrow. Gray is wrong. Up to 8 guesses
+            to identify the player through pure deduction.
+          </p>
+          <p class="card-detail">Max 8 guesses · Best score for a 1-guess solve</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Blind Showdown</h3>
+          <p class="card-body">
+            Two players side by side with only their stats visible — no names, no teams. Pick the
+            statistically superior player before the identity reveal. Matchups are curated to challenge
+            assumptions: a lesser-known player outproducing a star, or a former award winner up against
+            a rising challenger.
+          </p>
+          <p class="card-detail">New matchup every day per league</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Blind Rank 5</h3>
+          <p class="card-body">
+            Five players from the same league revealed one at a time. Place each player in one of five
+            ranked slots before the next reveal. Once placed, that slot is locked — no rearranging.
+            After all five, see how the entire community ranked the same set.
+          </p>
+          <p class="card-detail">Community results revealed after enough submissions</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Sports Trivia</h3>
+          <p class="card-body">
+            Three questions per league in ascending difficulty: Easy, Medium, and Ball Knowledge.
+            The Ball Knowledge tier separates fans who watch games from fans who study the sport.
+            A timer runs from your first question to your last answer. Personal bests tracked per league.
+          </p>
+          <p class="card-detail">3 questions · Timer tracks your best time</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Power Play</h3>
+          <p class="card-body">
+            A fast-money style daily challenge. Answer rapid-fire questions and hit the target score
+            before you run out of chances. Every question is different — this one rewards both
+            speed and accuracy.
+          </p>
+          <p class="card-detail">Target score to beat · New questions daily</p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Auto Complete</h3>
+          <p class="card-body">
+            Fill in the sports search results. You're shown the beginning of a sports-related search
+            query and have to predict how real fans actually complete it. Tests pop culture sports
+            knowledge as much as stats knowledge.
+          </p>
+          <p class="card-detail">New prompts daily</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- XP & Levels -->
+  <section class="section">
+    <p class="section-label">Progression</p>
+    <h2 class="section-title">Earn XP. Level up from Rookie to Ball Knowledge.</h2>
+    <p class="section-body">
+      Every game you play earns XP. Daily games award base XP plus performance bonuses — solve
+      the Mystery Player in fewer guesses, get trivia questions right, or nail Showdown picks for
+      extra XP. There are 15 levels total, starting at Rookie and ending at Ball Knowledge.
+      Your weekly XP resets every week so the leaderboard stays competitive.
+    </p>
+    <div class="levels-strip">
+      <div class="level-row"><span class="level-num">1</span><span class="level-name">Rookie</span><span class="level-xp">0 XP</span></div>
+      <div class="level-row"><span class="level-num">2</span><span class="level-name">Benchwarmer</span><span class="level-xp">10,000 XP</span></div>
+      <div class="level-row"><span class="level-num">3</span><span class="level-name">Starter</span><span class="level-xp">25,000 XP</span></div>
+      <div class="level-row"><span class="level-num">4</span><span class="level-name">Rotation Player</span><span class="level-xp">50,000 XP</span></div>
+      <div class="level-row"><span class="level-num">5</span><span class="level-name">Fan</span><span class="level-xp">85,000 XP</span></div>
+      <div class="level-row"><span class="level-num">6</span><span class="level-name">Superfan</span><span class="level-xp">130,000 XP</span></div>
+      <div class="level-row"><span class="level-num">7</span><span class="level-name">Scout</span><span class="level-xp">200,000 XP</span></div>
+      <div class="level-row"><span class="level-num">8</span><span class="level-name">Analyst</span><span class="level-xp">300,000 XP</span></div>
+      <div class="level-row"><span class="level-num">9</span><span class="level-name">Expert</span><span class="level-xp">425,000 XP</span></div>
+      <div class="level-row"><span class="level-num">10</span><span class="level-name">All-Star</span><span class="level-xp">600,000 XP</span></div>
+      <div class="level-row"><span class="level-num">11</span><span class="level-name">MVP</span><span class="level-xp">825,000 XP</span></div>
+      <div class="level-row"><span class="level-num">12</span><span class="level-name">Hall of Famer</span><span class="level-xp">1,100,000 XP</span></div>
+      <div class="level-row"><span class="level-num">13</span><span class="level-name">Legend</span><span class="level-xp">1,500,000 XP</span></div>
+      <div class="level-row"><span class="level-num">14</span><span class="level-name">GOAT</span><span class="level-xp">2,000,000 XP</span></div>
+      <div class="level-row highlight"><span class="level-num">15</span><span class="level-name">Ball Knowledge</span><span class="level-xp">2,750,000 XP</span></div>
+    </div>
+  </section>
+
+  <hr class="section-divider" />
+
+  <!-- Party Games -->
+  <div class="alt-bg">
+    <section class="section">
+      <p class="section-label">Multiplayer Games</p>
+      <h2 class="section-title">Seven games to play with friends.</h2>
+      <p class="section-body">
+        Seven multiplayer party games playable on a single device. Pass the phone around the group —
+        no extra accounts, no separate devices, no internet required during gameplay. Perfect for
+        watch parties or any group that thinks they know sports better than everyone else in the room.
+      </p>
+      <div class="card-grid">
+        <div class="card">
+          <h3 class="card-title">Sports Imposter</h3>
+          <p class="card-body">
+            Social deduction game. Most players get a real athlete's full career profile. One or two
+            impostors get nothing and must bluff through discussion. Vote out who you think is faking.
+            Difficulty settings from casual to Ball Knowledge tier.
+          </p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Sports Wavelength</h3>
+          <p class="card-body">
+            A spectrum guessing game. One player gives a sports reference as a clue pointing to a
+            hidden position on a spectrum — like "Clutch ↔ Choke Artist" or "Role Player ↔ Franchise
+            Player." Everyone else places their needle. Points for proximity to the target.
+          </p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Draft With Friends</h3>
+          <p class="card-body">
+            A snake draft with a random category: "Best Lakers of All Time," "Athletes You'd Want in
+            a Bar Fight," "Most Entertaining Players to Watch." Take turns picking. The board fills up,
+            you share it, and the group argues about who won.
+          </p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Who Am I?</h3>
+          <p class="card-body">
+            A sports guessing game where each player has an athlete attached to their forehead
+            (visible to everyone except them). Ask yes/no questions to figure out who you are
+            before anyone else does.
+          </p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">13 Words or Less</h3>
+          <p class="card-body">
+            Describe a player, team, or sports moment using 13 words or fewer. Fast, creative,
+            and harder than it sounds — especially when the category is a niche stat line or a
+            game that happened 20 years ago.
+          </p>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Custom Mystery Player</h3>
+          <p class="card-body">
+            Create a custom mystery player challenge and share it with friends via a code.
+            They get the same guessing experience as the daily game — but you chose the player.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Leagues -->
+  <section class="section">
+    <p class="section-label">Coverage</p>
+    <h2 class="section-title">All four major North American sports leagues.</h2>
+    <div class="league-grid">
+      <div class="league-card">
+        <p class="league-tag">NFL</p>
+        <p class="league-desc">National Football League — 32 teams. All 6 daily games available for NFL. Mystery Player attributes include position, college, draft round, height, and years pro. Select your favorite NFL team to personalize your home screen experience.</p>
+      </div>
+      <div class="league-card">
+        <p class="league-tag">NBA</p>
+        <p class="league-desc">National Basketball Association — 30 teams. The stat-heavy nature of basketball makes Blind Showdown especially interesting — PPG, APG, RPG, and shooting percentages all visible before the reveal. College and draft information adds depth to the Mystery Player game.</p>
+      </div>
+      <div class="league-card">
+        <p class="league-tag">MLB</p>
+        <p class="league-desc">Major League Baseball — 30 teams. Mystery Player attributes include batting hand, throwing arm, and college vs. international background — details that separate fans who grew up with the game from casual viewers. The deepest statistical sport in the game.</p>
+      </div>
+      <div class="league-card">
+        <p class="league-tag">NHL</p>
+        <p class="league-desc">National Hockey League — 32 teams. Nationality attributes and position groupings (Forward, Defense, Goalie) make NHL games uniquely different from the other three leagues. The international depth of hockey creates some of the hardest Mystery Player puzzles in the app.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <div class="cta-inner">
+      <h2 class="cta-title">Your streak starts today.</h2>
+      <p class="cta-body">
+        Free to play. No subscription. Create a free account to save your XP, streaks, and progress —
+        or jump in and play without signing up. Six daily games per league, every day.
+      </p>
+      <a href="/" class="cta-btn">Start Playing Free</a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p class="footer-brand">Ball Knowledge</p>
+    <p class="footer-tagline">NFL · NBA · MLB · NHL</p>
+    <div class="footer-links">
+      <a href="/about" class="footer-link">About</a>
+      <a href="/privacy" class="footer-link">Privacy Policy</a>
+      <a href="/terms" class="footer-link">Terms of Service</a>
+    </div>
+    <p class="footer-copy">&copy; 2025 Ball Knowledge. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>

@@ -1,19 +1,26 @@
-import * as Notifications from 'expo-notifications'
-import * as Device from 'expo-device'
 import { Platform } from 'react-native'
 import { supabase } from './supabase'
 
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-})
+let Notifications: any = null
+let Device: any = null
+try {
+  Notifications = require('expo-notifications')
+  Device = require('expo-device')
+  // Configure notification behavior — must be after successful import
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  })
+} catch {
+  // Notifications module not available
+}
 
 // Request permission and get push token
 export async function registerForPushNotifications(): Promise<string | null> {
+  if (!Notifications || !Device) return null
   if (!Device.isDevice) return null
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync()
@@ -34,7 +41,10 @@ export async function registerForPushNotifications(): Promise<string | null> {
     })
   }
 
-  const token = (await Notifications.getExpoPushTokenAsync()).data
+  let Constants: any = null;
+  try { Constants = require('expo-constants'); } catch {}
+  const projectId = Constants?.expoConfig?.extra?.eas?.projectId;
+  const token = (await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined)).data
   return token
 }
 
@@ -47,8 +57,19 @@ export async function savePushToken(token: string) {
 
 // Schedule daily reminder notification
 export async function scheduleDailyReminder(hourOfDay: number) {
+  if (!Notifications) return
   // Cancel existing daily reminder
   await Notifications.cancelAllScheduledNotificationsAsync()
+
+  // Check if daily reminder is enabled in preferences
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default
+    const prefs = await AsyncStorage.getItem('bk_notif_prefs')
+    if (prefs) {
+      const parsed = JSON.parse(prefs)
+      if (parsed.daily === false) return // User disabled daily reminders
+    }
+  } catch {}
 
   // Schedule for the same hour tomorrow
   const trigger = {
@@ -82,5 +103,6 @@ export async function updatePlayHour() {
 
 // Cancel all notifications (on logout)
 export async function cancelAllNotifications() {
+  if (!Notifications) return
   await Notifications.cancelAllScheduledNotificationsAsync()
 }

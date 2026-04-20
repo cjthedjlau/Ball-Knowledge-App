@@ -1,5 +1,6 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+// Sentry removed for launch — will re-add post-launch
 import { colors, darkColors, fontFamily } from '../styles/theme';
 
 interface Props {
@@ -9,29 +10,32 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  retryKey: number;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, retryKey: 0 };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log to console in dev; in production this is where Sentry would go
     console.error('[ErrorBoundary] Uncaught error:', error.message);
     console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
-
-    // TODO: Send to Sentry when configured
-    // Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+    // TODO: Re-add Sentry.captureException after launch
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: null });
+    // Increment retryKey to force a full remount of children (fresh state)
+    this.setState((prev) => ({
+      hasError: false,
+      error: null,
+      retryKey: prev.retryKey + 1,
+    }));
   };
 
   render() {
@@ -58,7 +62,12 @@ export default class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    return this.props.children;
+    // Key forces full unmount/remount on retry, ensuring fresh component state
+    return (
+      <View key={this.state.retryKey} style={{ flex: 1 }}>
+        {this.props.children}
+      </View>
+    );
   }
 }
 

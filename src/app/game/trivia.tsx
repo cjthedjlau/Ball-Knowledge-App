@@ -207,8 +207,17 @@ export default function TriviaScreen({ onBack, onNavigate, archiveDate }: Props)
       if (completed !== null) {
         setPlayedTodayCache(prev => ({ ...prev, [selectedLeague]: completed }));
       }
-      if (!data?.trivia_questions) { setLoadError(true); return; }
-      setQuestions(buildQuestionsFromSupabase(data.trivia_questions));
+      if (!data?.trivia_questions || !Array.isArray(data.trivia_questions) || data.trivia_questions.length === 0) {
+        setLoadError(true);
+        return;
+      }
+      const built = buildQuestionsFromSupabase(data.trivia_questions);
+      if (built.length === 0) { setLoadError(true); return; }
+      setQuestions(built);
+    }).catch((err) => {
+      console.error('[Trivia] Failed to load game:', err);
+      setIsLoading(false);
+      setLoadError(true);
     });
   }, [selectedLeague]);
 
@@ -431,6 +440,42 @@ export default function TriviaScreen({ onBack, onNavigate, archiveDate }: Props)
         ) : (loadError || questions.length === 0) ? (
           <View style={s.centerState}>
             <Text style={s.errorText}>No game available today</Text>
+            <Text style={s.errorSubText}>Check back later or try a different league.</Text>
+            <Pressable
+              style={({ pressed }) => [s.retryBtn, pressed && s.retryBtnPressed]}
+              onPress={() => {
+                setIsLoading(true);
+                setLoadError(false);
+                setQuestions([]);
+                setCurrentQuestion(0);
+                setSelectedAnswer(null);
+                setFillInAnswer('');
+                setFillInSubmitted(false);
+                setFillInCorrect(false);
+                setCorrectResults([]);
+                setGameComplete(false);
+                setXpEarned(null);
+                setHintRevealed(false);
+                const fetchGame = isArchive
+                  ? getArchiveGame(selectedLeague, archiveDate!)
+                  : getTodaysDailyGame(selectedLeague);
+                void fetchGame.then((data) => {
+                  setIsLoading(false);
+                  if (!data?.trivia_questions || !Array.isArray(data.trivia_questions) || data.trivia_questions.length === 0) {
+                    setLoadError(true);
+                    return;
+                  }
+                  const built = buildQuestionsFromSupabase(data.trivia_questions);
+                  if (built.length === 0) { setLoadError(true); return; }
+                  setQuestions(built);
+                }).catch(() => {
+                  setIsLoading(false);
+                  setLoadError(true);
+                });
+              }}
+            >
+              <Text style={s.retryBtnText}>TRY AGAIN</Text>
+            </Pressable>
           </View>
         ) : (!isArchive && playedTodayCache[selectedLeague] && !gameComplete) ? (
           <View style={s.alreadyPlayedCard}>
@@ -547,6 +592,17 @@ export default function TriviaScreen({ onBack, onNavigate, archiveDate }: Props)
                 <GhostButton label="PLAY ARCHIVE" onPress={() => onNavigate('archive' as Tab)} />
               )}
             </View>
+          </View>
+        ) : !q ? (
+          /* ── Safety fallback if question is somehow undefined ── */
+          <View style={s.centerState}>
+            <Text style={s.errorText}>Unable to load question</Text>
+            <Pressable
+              style={({ pressed }) => [s.retryBtn, pressed && s.retryBtnPressed]}
+              onPress={onBack}
+            >
+              <Text style={s.retryBtnText}>GO BACK</Text>
+            </Pressable>
           </View>
         ) : (
           /* ── Question + options ── */
@@ -685,7 +741,7 @@ function createStyles(isDark: boolean) {
     root: { flex: 1, backgroundColor: 'transparent' },
 
     // Zone 1
-    zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing['4xl'], borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+    zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing['4xl'] },
     zone1TopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xs },
     backBtn: { padding: spacing.sm, marginLeft: -spacing.sm },
     liveScore: { flexDirection: 'row', alignItems: 'baseline', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 20, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
@@ -697,10 +753,14 @@ function createStyles(isDark: boolean) {
     zone1Title: { fontFamily: fonts.display, fontSize: 28, color: '#FFFFFF', letterSpacing: 4, textAlign: 'center' },
     switcherRow: { marginTop: spacing.md },
     centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
-    errorText: { fontFamily: fonts.bodyMedium, fontSize: 15, color: txtSec, textAlign: 'center' },
+    errorText: { fontFamily: fonts.bodySemiBold, fontSize: 16, color: txt, textAlign: 'center' },
+    errorSubText: { fontFamily: fonts.bodyMedium, fontSize: 14, color: txtSec, textAlign: 'center', marginTop: spacing.sm, marginBottom: spacing.lg },
+    retryBtn: { backgroundColor: brand.primary, borderRadius: radius.primary, paddingHorizontal: spacing['2xl'], paddingVertical: spacing.md },
+    retryBtnPressed: { opacity: 0.85 },
+    retryBtnText: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.white, letterSpacing: 1.5 },
     zone1Counter: { fontFamily: fonts.bodyMedium, fontSize: 11, color: 'rgba(255,255,255,0.65)', letterSpacing: 1, marginTop: 4, textAlign: 'center' },
     dotsRow: { marginTop: spacing.md },
-    zone1Gradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+    zone1Gradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 40 },
 
     // Ladder steps
     ladderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
@@ -715,7 +775,7 @@ function createStyles(isDark: boolean) {
     ladderTierLabel: { fontFamily: fonts.bodySemiBold, fontSize: 9, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5 },
 
     // Zone 2
-    zone2: { flex: 1, backgroundColor: 'transparent', borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -32 },
+    zone2: { flex: 1, backgroundColor: 'transparent' },
     zone2Content: { paddingHorizontal: spacing.lg, paddingTop: spacing['2xl'], paddingBottom: 120, gap: spacing.md },
 
     // Question card

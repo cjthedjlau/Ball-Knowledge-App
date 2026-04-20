@@ -9,11 +9,12 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing, radius } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { calculateMultiplayerXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { supabase } from '../../lib/supabase';
 import { getNormalPlayers, type Player } from '../../lib/playersPool';
-import BottomNav, { type Tab } from '../components/ui/BottomNav';
+import { type Tab } from '../components/ui/BottomNav';
 import PrimaryButton from '../../screens/components/ui/PrimaryButton';
 import GhostButton from '../../screens/components/ui/GhostButton';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
@@ -60,6 +61,19 @@ type LeagueKey = 'NBA' | 'NFL' | 'MLB' | 'NHL';
 
 const FETCH_COUNT = 30;
 
+import draftTopicsData from '../../data/draft-topics.json';
+
+interface DraftTopic { id: string; text: string; type: string; leagues: string[] }
+
+function getRandomCategory(league: LeagueKey): string {
+  const topics = (draftTopicsData as DraftTopic[]).filter(
+    t => t.leagues.includes(league) || t.leagues.length === 4
+  );
+  if (topics.length === 0) return `Best ${league} Players of All Time`;
+  return topics[Math.floor(Math.random() * topics.length)].text;
+}
+
+// Fallback for reverse lookups — kept for online broadcast compatibility
 const LEAGUE_CATEGORIES: Record<LeagueKey, string> = {
   NBA: 'Best NBA Players of All Time',
   NFL: 'Greatest NFL Players of All Time',
@@ -127,9 +141,11 @@ function AthleteRow({
 interface Props {
   onBack: () => void;
   onNavigate: (tab: Tab) => void;
+  joinedLobby?: { lobbyId: string; playerIndex: number; code: string; gameType: string };
 }
 
-export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
+export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby }: Props) {
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   // ── State ──
@@ -202,6 +218,13 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
     });
   }, []);
 
+  // ── Auto-join lobby when navigated from Games hub Join Game ──
+  useEffect(() => {
+    if (!joinedLobby) return;
+    setMode('online');
+    handleJoinSuccess(joinedLobby.lobbyId, joinedLobby.playerIndex, joinedLobby.code);
+  }, [joinedLobby]);
+
   // ── useLobby hook for realtime ──
   const { presencePlayers, isConnected, broadcast, onEvent } = useLobby({
     code: lobbyCode,
@@ -210,9 +233,23 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
     playerIndex: myPlayerIndex,
   });
 
+  // ── Refresh lobby players when presence changes ──
+  useEffect(() => {
+    if (!lobbyId || onlinePhase !== 'lobby') return;
+    getLobbyPlayers(lobbyId).then(players => {
+      setLobbyPlayers(players);
+    }).catch(() => {});
+  }, [presencePlayers.length, lobbyId, onlinePhase]);
+
   // ── Online event listeners ──
   useEffect(() => {
     if (mode !== 'online' || !lobbyCode) return;
+
+    const unsubReady = onEvent('player:ready', () => {
+      if (lobbyId) {
+        getLobbyPlayers(lobbyId).then(players => setLobbyPlayers(players)).catch(() => {});
+      }
+    });
 
     const unsubDraftStart = onEvent('game:draft_start', (payload: any) => {
       // All clients receive category, draft order, athlete pool, player names, rounds
@@ -249,29 +286,58 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
     const unsubGameOver = onEvent('game:over', () => {
       setOnlinePhase('results');
       setPhase('results');
-      const xp = calculateMultiplayerXP(rounds);
-      setXpEarned(xp);
-      void (async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await saveGameResult(user.id, 'draft-with-friends', xp, rounds);
-          await updateUserXPAndStreak(user.id, xp, false);
-        }
-      })();
+      // Use functional updater to guard against duplicate XP awards
+      setXpEarned(prev => {
+        if (prev !== null) return prev;
+        const xp = calculateMultiplayerXP(rounds);
+        void (async () => {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await saveGameResult(user.id, 'draft-with-friends', xp, rounds);
+              await updateUserXPAndStreak(user.id, xp, false);
+            }
+          } catch {
+            // silently fail - XP is non-critical
+          }
+        })();
+        return xp;
+      });
     });
 
-    const unsubSettings = onEvent('lobby:settings', (payload: any) => {
+    const unsubSettings = onEvent('lobby:settings', async (payload: any) => {
       if (payload.settings) {
         setLobby(prev => prev ? { ...prev, settings: payload.settings } : prev);
         if (payload.settings.league) setSelectedLeague(payload.settings.league);
         if (payload.settings.rounds) setRounds(payload.settings.rounds);
+
+        // Reload athlete pool when league changes so non-host setup screen stays in sync
+        if (payload.settings.league && payload.settings.league !== selectedLeague) {
+          const newPlayers = await getNormalPlayers(payload.settings.league);
+          const newAthletes = [...newPlayers]
+            .sort(() => Math.random() - 0.5)
+            .slice(0, FETCH_COUNT)
+            .map((p, i) => ({
+              id: p.id || `${payload.settings.league.toLowerCase()}-${i}`,
+              name: p.name,
+              team: p.team,
+              era: '',
+              keyStat: '',
+            }));
+          setLeagueAthletes(newAthletes);
+        }
       }
     });
 
-    return () => { unsubDraftStart(); unsubPick(); unsubGameOver(); unsubSettings(); };
+    return () => { unsubReady(); unsubDraftStart(); unsubPick(); unsubGameOver(); unsubSettings(); };
   }, [mode, lobbyCode, onEvent, rounds]);
 
-  const leagueCategory = LEAGUE_CATEGORIES[selectedLeague];
+  const [leagueCategory, setLeagueCategory] = useState(() => getRandomCategory(selectedLeague));
+
+  // Pick a new random category when league changes
+  useEffect(() => {
+    setLeagueCategory(getRandomCategory(selectedLeague));
+  }, [selectedLeague]);
 
   // ── Pick order: use online order when in online mode, local otherwise ──
   const activePlayerNames = mode === 'online' && onlineDraftStarted ? onlinePlayerNames : playerNames;
@@ -402,81 +468,92 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
     }
   }, [userId, displayName]);
 
-  const handleJoinSuccess = useCallback(async (joinedLobbyId: string, joinedPlayerIndex: number) => {
+  const handleJoinSuccess = useCallback(async (joinedLobbyId: string, joinedPlayerIndex: number, joinedCode: string) => {
     setLobbyId(joinedLobbyId);
     setMyPlayerIndex(joinedPlayerIndex);
+    setLobbyCode(joinedCode);
     setOnlinePhase('lobby');
-    const players = await getLobbyPlayers(joinedLobbyId);
-    setLobbyPlayers(players);
-    const me = players.find(p => p.player_index === joinedPlayerIndex);
-    setMyPlayerId(me?.id || null);
-    if (players.length > 0) {
+    try {
+      const players = await getLobbyPlayers(joinedLobbyId);
+      setLobbyPlayers(players);
+      const me = players.find(p => p.player_index === joinedPlayerIndex);
+      setMyPlayerId(me?.id || null);
       setLobby({
         id: joinedLobbyId,
-        code: lobbyCode || '',
+        code: joinedCode,
         game_type: 'draft',
         host_user_id: '',
         status: 'waiting',
         settings: {},
         game_state: {},
       });
+    } catch (e: any) {
+      setOnlineError(e.message || 'Failed to load lobby players');
     }
-  }, [lobbyCode]);
+  }, []);
 
   const handleToggleReady = useCallback(async () => {
     if (!myPlayerId) return;
     const newReady = !isReady;
     setIsReady(newReady);
-    await togglePlayerReady(myPlayerId, newReady);
-    broadcast('player:ready', { playerIndex: myPlayerIndex, isReady: newReady });
-    if (lobbyId) {
-      const players = await getLobbyPlayers(lobbyId);
-      setLobbyPlayers(players);
+    try {
+      await togglePlayerReady(myPlayerId, newReady);
+      broadcast('player:ready', { playerIndex: myPlayerIndex, isReady: newReady });
+      if (lobbyId) {
+        const players = await getLobbyPlayers(lobbyId);
+        setLobbyPlayers(players);
+      }
+    } catch (e: any) {
+      setIsReady(!newReady);
+      setOnlineError(e.message || 'Failed to toggle ready');
     }
   }, [myPlayerId, isReady, myPlayerIndex, broadcast, lobbyId]);
 
   const handleOnlineStart = useCallback(async () => {
     if (!isHost || !lobbyId) return;
+    try {
+      // Generate draft data
+      const pNames = lobbyPlayers.map(p => p.display_name);
+      const draftOrder = getPickOrder(pNames.length, rounds);
 
-    // Generate draft data
-    const pNames = lobbyPlayers.map(p => p.display_name);
-    const draftOrder = getPickOrder(pNames.length, rounds);
+      // Load athletes for the selected league
+      const players = await getNormalPlayers(selectedLeague);
+      const athletes: Athlete[] = [...players]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, FETCH_COUNT)
+        .map((p, i) => ({
+          id: p.id || `${selectedLeague.toLowerCase()}-${i}`,
+          name: p.name,
+          team: p.team,
+          era: '',
+          keyStat: '',
+        }));
 
-    // Load athletes for the selected league
-    const players = await getNormalPlayers(selectedLeague);
-    const athletes: Athlete[] = [...players]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, FETCH_COUNT)
-      .map((p, i) => ({
-        id: p.id || `${selectedLeague.toLowerCase()}-${i}`,
-        name: p.name,
-        team: p.team,
-        era: '',
-        keyStat: '',
-      }));
+      // Set local state
+      setLeagueAthletes(athletes);
+      setOnlinePlayerNames(pNames);
+      setPlayerNames(pNames);
+      setOnlinePickOrder(draftOrder);
+      setOnlineCurrentPickIndex(0);
+      setPicks([]);
+      setOnlineDraftStarted(true);
 
-    // Set local state
-    setLeagueAthletes(athletes);
-    setOnlinePlayerNames(pNames);
-    setPlayerNames(pNames);
-    setOnlinePickOrder(draftOrder);
-    setOnlineCurrentPickIndex(0);
-    setPicks([]);
-    setOnlineDraftStarted(true);
+      // Broadcast to all clients before updating status so clients receive game data first
+      broadcast('game:draft_start', {
+        category: leagueCategory,
+        draftOrder,
+        leagueAthletes: athletes,
+        rounds,
+        playerNames: pNames,
+      });
 
-    await updateLobbyStatus(lobbyId, 'playing');
+      await updateLobbyStatus(lobbyId, 'playing');
 
-    // Broadcast to all clients
-    broadcast('game:draft_start', {
-      category: LEAGUE_CATEGORIES[selectedLeague],
-      draftOrder,
-      leagueAthletes: athletes,
-      rounds,
-      playerNames: pNames,
-    });
-
-    setOnlinePhase('draft');
-    setPhase('draft');
+      setOnlinePhase('draft');
+      setPhase('draft');
+    } catch (e: any) {
+      setOnlineError(e.message || 'Failed to start game');
+    }
   }, [isHost, lobbyId, lobbyPlayers, rounds, selectedLeague, broadcast]);
 
   const handleOnlinePick = useCallback((athleteId: string) => {
@@ -505,10 +582,14 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
       const xp = calculateMultiplayerXP(rounds);
       setXpEarned(xp);
       void (async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await saveGameResult(user.id, 'draft-with-friends', xp, rounds);
-          await updateUserXPAndStreak(user.id, xp, false);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await saveGameResult(user.id, 'draft-with-friends', xp, rounds);
+            await updateUserXPAndStreak(user.id, xp, false);
+          }
+        } catch {
+          // silently fail - XP is non-critical
         }
       })();
     }
@@ -516,7 +597,11 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
 
   const handleLeaveOnline = useCallback(async () => {
     if (lobbyId && myPlayerId) {
-      await leaveLobby(lobbyId, myPlayerId);
+      try {
+        await leaveLobby(lobbyId, myPlayerId);
+      } catch {
+        // silently fail - still reset state
+      }
     }
     // Reset online state
     setLobbyCode(null);
@@ -539,7 +624,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
 
   // ── Host disconnect detection ──
   useEffect(() => {
-    if (mode !== 'online' || isHost || onlinePhase === 'lobby' || onlinePhase === 'choose' || onlinePhase === 'join') return;
+    if (mode !== 'online' || isHost || onlinePhase === 'choose' || onlinePhase === 'join') return;
 
     const hostPlayer = lobbyPlayers.find(p => p.is_host);
     if (!hostPlayer) return;
@@ -664,12 +749,12 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
         return (
           <SafeAreaView style={styles.root}>
             <JoinLobby
-              onJoin={(joinedLobbyId, joinedPlayerIndex) => {
-                handleJoinSuccess(joinedLobbyId, joinedPlayerIndex);
+              onJoin={(joinedLobbyId, joinedPlayerIndex, joinedCode) => {
+                handleJoinSuccess(joinedLobbyId, joinedPlayerIndex, joinedCode);
               }}
               onBack={() => setOnlinePhase('choose')}
             />
-            <BottomNav activeTab="games" onNavigate={onNavigate} />
+
           </SafeAreaView>
         );
       }
@@ -733,7 +818,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
                 </View>
               )}
             />
-            <BottomNav activeTab="games" onNavigate={onNavigate} />
+
           </SafeAreaView>
         );
       }
@@ -753,7 +838,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
             style={styles.zone2Scroll}
             contentContainerStyle={[
               styles.zone2Content,
-              { paddingBottom: insets.bottom + 80 },
+              { paddingBottom: insets.bottom + 120 },
             ]}
           >
             <ModeToggle mode={mode} onModeChange={(m) => { setMode(m); setOnlinePhase('choose'); }} />
@@ -770,8 +855,6 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
               <Text style={onlineStyles.errorText}>{onlineError}</Text>
             )}
           </ScrollView>
-
-          <BottomNav activeTab="games" onNavigate={onNavigate} />
         </SafeAreaView>
       );
     }
@@ -794,7 +877,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
           style={styles.zone2Scroll}
           contentContainerStyle={[
             styles.zone2Content,
-            { paddingBottom: insets.bottom + 80 },
+            { paddingBottom: insets.bottom + 120 },
           ]}
           keyboardShouldPersistTaps="handled"
         >
@@ -873,8 +956,6 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
           <View style={{ height: 24 }} />
           <PrimaryButton label="START DRAFT" onPress={handleStartDraft} />
         </ScrollView>
-
-        <BottomNav activeTab="games" onNavigate={onNavigate} />
       </SafeAreaView>
     );
   }
@@ -887,7 +968,6 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
       return (
         <SafeAreaView style={[styles.root, styles.passRoot]}>
           {renderPass()}
-          <BottomNav activeTab="games" onNavigate={onNavigate} />
         </SafeAreaView>
       );
     }
@@ -926,7 +1006,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
         {/* Scrollable content: board strip + athlete list */}
         <ScrollView
           style={styles.draftScroll}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
           keyboardShouldPersistTaps="handled"
         >
           {/* Draft Board Strip */}
@@ -949,19 +1029,26 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
                   </Text>
                   {Array.from({ length: rounds }).map((_, rIdx) => {
                     const athleteId = playerPicks[rIdx];
-                    const athlete = athleteId ? leagueAthletes.find((a) => a.id === athleteId) : null;
+                    const isSkipped = athleteId === '__skipped__';
+                    const athlete = (athleteId && !isSkipped) ? leagueAthletes.find((a) => a.id === athleteId) : null;
                     return (
                       <View
                         key={rIdx}
                         style={[
                           styles.boardCell,
-                          athlete ? styles.boardCellFilled : styles.boardCellEmpty,
-                          isActive && !athlete && styles.boardCellActiveEmpty,
+                          (athlete || isSkipped) ? styles.boardCellFilled : styles.boardCellEmpty,
+                          isActive && !athlete && !isSkipped && styles.boardCellActiveEmpty,
                         ]}
                       >
                         <Text style={styles.boardCellRound}>{rIdx + 1}</Text>
-                        <Text style={styles.boardCellName} numberOfLines={2}>
-                          {athlete ? athlete.name : '—'}
+                        <Text
+                          style={[
+                            styles.boardCellName,
+                            isSkipped && { color: colors.midGray, fontStyle: 'italic' },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {isSkipped ? 'Skipped' : athlete ? athlete.name : '—'}
                         </Text>
                       </View>
                     );
@@ -995,8 +1082,6 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
             </View>
           )}
         </ScrollView>
-
-        <BottomNav activeTab="games" onNavigate={onNavigate} />
       </SafeAreaView>
     );
   }
@@ -1017,7 +1102,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
       {/* Zone 2 */}
       <ScrollView
         style={styles.zone2Scroll}
-        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 80 }]}
+        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 120 }]}
       >
         {activePlayerNames.map((pName, pIdx) => {
           const playerPicks = board[pIdx] || [];
@@ -1026,10 +1111,17 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
               <Text style={styles.resultPlayerName}>{pName}</Text>
               <View style={styles.resultPickList}>
                 {playerPicks.map((aId, rIdx) => {
-                  const athlete = leagueAthletes.find((a) => a.id === aId);
+                  const isSkipped = aId === '__skipped__';
+                  const athlete = isSkipped ? null : leagueAthletes.find((a) => a.id === aId);
                   return (
-                    <Text key={rIdx} style={styles.resultPickItem}>
-                      R{rIdx + 1}: {athlete?.name ?? '—'}
+                    <Text
+                      key={rIdx}
+                      style={[
+                        styles.resultPickItem,
+                        isSkipped && { color: colors.midGray, fontStyle: 'italic' },
+                      ]}
+                    >
+                      R{rIdx + 1}: {isSkipped ? 'Skipped' : athlete?.name ?? '—'}
                     </Text>
                   );
                 })}
@@ -1067,8 +1159,6 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate }: Props) {
           </>
         )}
       </ScrollView>
-
-      <BottomNav activeTab="games" onNavigate={onNavigate} />
     </SafeAreaView>
   );
 }
@@ -1210,7 +1300,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    marginTop: -32,
+    marginTop: 0,
   },
   zone2Content: {
     paddingTop: 28,

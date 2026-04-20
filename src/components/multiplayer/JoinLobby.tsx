@@ -9,16 +9,18 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native'
-import { colors, darkColors, fontFamily, spacing, radius, layout } from '../../styles/theme'
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing, radius, layout } from '../../styles/theme'
+import { useTheme } from '../../hooks/useTheme'
 import { joinLobby } from '../../lib/multiplayer'
 import { supabase } from '../../lib/supabase'
 
 interface JoinLobbyProps {
-  onJoin: (lobbyId: string, playerIndex: number) => void
+  onJoin: (lobbyId: string, playerIndex: number, lobbyCode: string, gameType: string) => void
   onBack: () => void
 }
 
 export function JoinLobby({ onJoin, onBack }: JoinLobbyProps) {
+  const { isDark } = useTheme()
   const [code, setCode] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [userId, setUserId] = useState<string | undefined>(undefined)
@@ -60,8 +62,9 @@ export function JoinLobby({ onJoin, onBack }: JoinLobbyProps) {
     setError(null)
 
     try {
-      const result = await joinLobby(code.toUpperCase(), displayName.trim(), userId)
-      onJoin(result.lobbyId, result.playerIndex)
+      const upperCode = code.toUpperCase()
+      const result = await joinLobby(upperCode, displayName.trim(), userId)
+      onJoin(result.lobbyId, result.playerIndex, upperCode, result.lobby.game_type)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to join lobby'
       setError(message)
@@ -72,7 +75,7 @@ export function JoinLobby({ onJoin, onBack }: JoinLobbyProps) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: isDark ? dark.background : light.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.inner}>
@@ -83,22 +86,26 @@ export function JoinLobby({ onJoin, onBack }: JoinLobbyProps) {
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={styles.backText}>{'<'}</Text>
+          <Text style={[styles.backText, { color: isDark ? dark.textPrimary : light.textPrimary }]}>{'<'}</Text>
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={styles.title}>JOIN GAME</Text>
+        <Text style={[styles.title, { color: isDark ? dark.textPrimary : light.textPrimary }]}>JOIN GAME</Text>
 
         {/* Code input */}
         <TextInput
-          style={[styles.codeInput, codeFocused && styles.codeInputFocused]}
+          style={[
+            styles.codeInput,
+            { backgroundColor: isDark ? dark.inputBg : light.inputBg, borderColor: isDark ? dark.inputBorder : light.inputBorder, color: isDark ? dark.textPrimary : light.textPrimary },
+            codeFocused && styles.codeInputFocused,
+          ]}
           value={code}
           onChangeText={(text) => {
             setCode(text.toUpperCase())
             setError(null)
           }}
           placeholder="ABCDEF"
-          placeholderTextColor={darkColors.border}
+          placeholderTextColor={isDark ? dark.textMuted : light.textMuted}
           autoCapitalize="characters"
           maxLength={6}
           onFocus={() => setCodeFocused(true)}
@@ -110,14 +117,14 @@ export function JoinLobby({ onJoin, onBack }: JoinLobbyProps) {
         {/* Display name input */}
         <TextInput
           ref={nameInputRef}
-          style={styles.nameInput}
+          style={[styles.nameInput, { backgroundColor: isDark ? dark.inputBg : light.inputBg, color: isDark ? dark.textPrimary : light.textPrimary }]}
           value={displayName}
           onChangeText={(text) => {
             setDisplayName(text)
             setError(null)
           }}
           placeholder="Your Display Name"
-          placeholderTextColor={darkColors.textSecondary}
+          placeholderTextColor={isDark ? dark.textSecondary : light.textSecondary}
           maxLength={30}
           returnKeyType="go"
           onSubmitEditing={handleJoin}
@@ -131,7 +138,7 @@ export function JoinLobby({ onJoin, onBack }: JoinLobbyProps) {
           activeOpacity={0.7}
         >
           {loading ? (
-            <ActivityIndicator color={colors.white} />
+            <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.joinButtonText}>JOIN GAME</Text>
           )}
@@ -147,7 +154,6 @@ export function JoinLobby({ onJoin, onBack }: JoinLobbyProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: darkColors.background,
   },
   inner: {
     flex: 1,
@@ -162,46 +168,39 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   backText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 22,
-    color: colors.white,
   },
   title: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 22,
-    color: colors.white,
     textAlign: 'center',
     marginTop: spacing.lg,
     marginBottom: spacing['3xl'],
   },
   codeInput: {
-    backgroundColor: darkColors.surfaceElevated,
     borderWidth: 2,
-    borderColor: darkColors.border,
     borderRadius: radius.primary,
     height: 64,
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 32,
-    color: colors.white,
     textAlign: 'center',
     letterSpacing: 8,
     marginBottom: spacing.lg,
   },
   codeInputFocused: {
-    borderColor: colors.brand,
+    borderColor: brand.primary,
   },
   nameInput: {
-    backgroundColor: darkColors.surfaceElevated,
     borderRadius: radius.secondary,
     height: layout.inputHeight,
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
-    color: colors.white,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing['2xl'],
   },
   joinButton: {
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
     borderRadius: radius.primary,
     height: layout.buttonHeight,
     alignItems: 'center',
@@ -211,14 +210,14 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   joinButtonText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 16,
-    color: colors.white,
+    color: '#FFFFFF',
   },
   errorText: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
-    color: colors.brandDark,
+    color: brand.dark,
     textAlign: 'center',
     marginTop: spacing.md,
   },

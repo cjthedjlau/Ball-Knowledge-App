@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontFamily } from '../../../styles/theme';
+import { brand, dark, light, fonts, radius } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 
 interface RightRow {
   label: string;
@@ -18,20 +19,65 @@ export default function InnerAccentCard({
   leftLabel,
   rightRows,
 }: InnerAccentCardProps) {
+  const { isDark } = useTheme();
+
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: isDark ? dark.card : light.card,
+          borderColor: isDark ? dark.cardBorder : light.cardBorder,
+          ...(isDark
+            ? {}
+            : {
+                shadowColor: '#000',
+                shadowOpacity: 0.06,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 2,
+              }),
+        },
+      ]}
+    >
       <View style={styles.leftSection}>
         <View style={styles.iconWrap}>{leftIcon}</View>
-        <Text style={styles.leftLabel}>{leftLabel}</Text>
+        <Text
+          style={[
+            styles.leftLabel,
+            { color: isDark ? dark.textSecondary : light.textSecondary },
+          ]}
+        >
+          {leftLabel}
+        </Text>
       </View>
 
-      <View style={styles.divider} />
+      <View
+        style={[
+          styles.divider,
+          { backgroundColor: isDark ? dark.divider : light.divider },
+        ]}
+      />
 
       <View style={styles.rightSection}>
         {rightRows.map((row, i) => (
           <View key={i} style={i > 0 ? styles.rightRow : undefined}>
-            <Text style={styles.rowLabel}>{row.label}</Text>
-            <Text style={styles.rowValue}>{row.value}</Text>
+            <Text
+              style={[
+                styles.rowLabel,
+                { color: isDark ? dark.textSecondary : light.textSecondary },
+              ]}
+            >
+              {row.label}
+            </Text>
+            <Text
+              style={[
+                styles.rowValue,
+                { color: isDark ? dark.textPrimary : light.textPrimary },
+              ]}
+            >
+              {row.value}
+            </Text>
           </View>
         ))}
       </View>
@@ -42,20 +88,11 @@ export default function InnerAccentCard({
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: colors.accentCyan,
-    borderRadius: 16,
+    borderRadius: radius.primary,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    borderWidth: 1,
   },
   leftSection: {
     alignItems: 'center',
@@ -69,16 +106,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   leftLabel: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 15,
-    color: 'rgba(255,255,255,0.80)',
     marginTop: 4,
   },
   divider: {
     width: 1,
     alignSelf: 'stretch',
-    backgroundColor: 'rgba(255,255,255,0.30)',
   },
   rightSection: {
     flex: 1,
@@ -88,17 +123,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   rowLabel: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 15,
-    color: 'rgba(255,255,255,0.80)',
   },
   rowValue: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 18,
     letterSpacing: 1,
-    color: colors.white,
     marginTop: 2,
   },
 });

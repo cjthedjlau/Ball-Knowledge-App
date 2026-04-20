@@ -1,7 +1,8 @@
 import React, { ReactNode } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Lock } from 'lucide-react-native';
-import { colors, darkColors, fontFamily } from '../../../styles/theme';
+import { brand, dark, light, fonts, radius } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 
 interface AchievementBadgeProps {
   icon: ReactNode;
@@ -11,18 +12,48 @@ interface AchievementBadgeProps {
 }
 
 export default function AchievementBadge({ icon, label, unlocked, accentColor }: AchievementBadgeProps) {
+  const { isDark } = useTheme();
+
   const unlockedStyle = accentColor
-    ? { backgroundColor: accentColor, shadowColor: accentColor }
-    : {};
+    ? { backgroundColor: accentColor }
+    : { backgroundColor: brand.primary };
 
   return (
-    <View style={[styles.tile, unlocked ? [styles.tileUnlocked, unlockedStyle] : styles.tileLocked]}>
+    <View
+      style={[
+        styles.tile,
+        unlocked
+          ? unlockedStyle
+          : {
+              backgroundColor: isDark ? dark.card : light.card,
+              borderWidth: 1,
+              borderColor: isDark ? dark.cardBorder : light.cardBorder,
+              opacity: 0.4,
+              ...(isDark
+                ? {}
+                : {
+                    shadowColor: '#000',
+                    shadowOpacity: 0.06,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 2 },
+                    elevation: 2,
+                  }),
+            },
+      ]}
+    >
       <View style={styles.iconWrap}>{icon}</View>
-      <Text style={styles.label}>{label}</Text>
+      <Text
+        style={[
+          styles.label,
+          { color: unlocked ? dark.textPrimary : (isDark ? dark.textPrimary : light.textPrimary) },
+        ]}
+      >
+        {label}
+      </Text>
 
       {!unlocked && (
         <View style={styles.padlock}>
-          <Lock color={colors.white} size={16} />
+          <Lock color={isDark ? dark.textSecondary : light.textSecondary} size={16} />
         </View>
       )}
     </View>
@@ -33,35 +64,10 @@ const styles = StyleSheet.create({
   tile: {
     width: 96,
     height: 96,
-    borderRadius: 18,
+    borderRadius: radius.primary,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 8,
-  },
-  tileUnlocked: {
-    backgroundColor: colors.brand,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  tileLocked: {
-    backgroundColor: darkColors.surfaceElevated,
-    opacity: 0.4,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
   },
   iconWrap: {
     marginBottom: 4,
@@ -69,11 +75,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 13,
     letterSpacing: 1,
-    color: colors.white,
     textAlign: 'center',
   },
   padlock: {

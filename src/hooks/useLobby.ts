@@ -56,11 +56,13 @@ export function useLobby({
       return
     }
 
+    let stale = false
     const channel = subscribeLobby(code)
     channelRef.current = channel
 
     // Listen for presence sync events
     channel.on('presence', { event: 'sync' }, () => {
+      if (stale) return
       const state = channel.presenceState()
       const players: PresencePlayer[] = []
 
@@ -83,6 +85,7 @@ export function useLobby({
 
     // Single broadcast listener that dispatches to registered callbacks
     channel.on('broadcast', { event: '*' }, (message: { event: string; payload: unknown }) => {
+      if (stale) return
       const listeners = eventListenersRef.current.get(message.event)
       if (listeners) {
         for (const cb of listeners) {
@@ -93,6 +96,7 @@ export function useLobby({
 
     // Subscribe and track presence once connected
     channel.subscribe((status) => {
+      if (stale) return
       if (status === 'SUBSCRIBED') {
         setIsConnected(true)
         channel.track({
@@ -100,11 +104,15 @@ export function useLobby({
           playerIndex,
           userId,
         })
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        setIsConnected(false)
+        console.error(`Realtime channel error: ${status}`)
       }
     })
 
     // Cleanup on code change or unmount
     return () => {
+      stale = true
       channel.unsubscribe()
       channelRef.current = null
       setIsConnected(false)

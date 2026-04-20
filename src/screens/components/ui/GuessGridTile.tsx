@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { colors, darkColors, fontFamily } from '../../../styles/theme';
+import { brand, dark, light, fonts, colors, radius } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 
 type TileState = 'empty' | 'correct' | 'close' | 'wrong' | 'higher' | 'lower' | 'close_higher' | 'close_lower';
 
@@ -13,14 +14,27 @@ interface GuessGridTileProps {
 }
 
 export default function GuessGridTile({ value, state, flex: flexProp, flipDelay = 0 }: GuessGridTileProps) {
+  const { isDark } = useTheme();
   const sizeStyle = flexProp !== undefined ? { flex: flexProp } : undefined;
 
   if (state === 'empty') {
-    return <View style={[styles.tile, sizeStyle, styles.tileEmpty]} />;
+    return (
+      <View
+        style={[
+          styles.tile,
+          sizeStyle,
+          {
+            backgroundColor: isDark ? dark.surface : light.surface,
+            borderWidth: 1,
+            borderColor: isDark ? dark.cardBorder : light.cardBorder,
+          },
+        ]}
+      />
+    );
   }
 
   return (
-    <FlipTile value={value} state={state} sizeStyle={sizeStyle} flipDelay={flipDelay} />
+    <FlipTile value={value} state={state} sizeStyle={sizeStyle} flipDelay={flipDelay} isDark={isDark} />
   );
 }
 
@@ -29,11 +43,13 @@ function FlipTile({
   state,
   sizeStyle,
   flipDelay,
+  isDark,
 }: {
   value: string;
   state: Exclude<TileState, 'empty'>;
   sizeStyle: any;
   flipDelay: number;
+  isDark: boolean;
 }) {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const hasFlipped = useRef(false);
@@ -72,32 +88,51 @@ function FlipTile({
   const arrowDirection = (state === 'higher' || state === 'close_higher') ? '↑' : '↓';
   const isClose = state === 'close' || state === 'close_higher' || state === 'close_lower';
 
+  const bgForState: Record<Exclude<TileState, 'empty'>, string> = {
+    correct: colors.accentGreen,
+    close: colors.warningBg,
+    close_higher: colors.warningBg,
+    close_lower: colors.warningBg,
+    wrong: isDark ? dark.surface : light.surface,
+    higher: isDark ? dark.surface : light.surface,
+    lower: isDark ? dark.surface : light.surface,
+  };
+
   return (
     <View style={[styles.tile, sizeStyle, { backgroundColor: 'transparent' }]}>
-      {/* Front face — dark placeholder */}
+      {/* Front face -- dark placeholder */}
       <Animated.View
         style={[
           styles.tile,
-          styles.tileFront,
           StyleSheet.absoluteFill,
-          { transform: [{ rotateX: frontRotate }] },
+          {
+            backgroundColor: isDark ? dark.surface : light.surface,
+            borderWidth: 1,
+            borderColor: isDark ? dark.cardBorder : light.cardBorder,
+            transform: [{ rotateX: frontRotate }],
+          },
         ]}
       />
 
-      {/* Back face — colored result */}
+      {/* Back face -- colored result */}
       <Animated.View
         style={[
           styles.tile,
           StyleSheet.absoluteFill,
-          backgroundForState[state],
           {
+            backgroundColor: bgForState[state],
             transform: [{ rotateX: backRotate }, { scale: backScale }],
             backfaceVisibility: 'hidden',
           },
         ]}
       >
         <Text
-          style={[styles.value, hasArrow && styles.valueCompact, isClose && styles.valueDark]}
+          style={[
+            styles.value,
+            { color: isDark ? dark.textPrimary : light.textPrimary },
+            hasArrow && styles.valueCompact,
+            isClose && { color: light.textPrimary },
+          ]}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.55}
@@ -105,7 +140,13 @@ function FlipTile({
           {value}
         </Text>
         {hasArrow && (
-          <Text style={[styles.arrow, (state === 'close_higher' || state === 'close_lower') && styles.arrowDark]}>
+          <Text
+            style={[
+              styles.arrow,
+              { color: isDark ? dark.textPrimary : light.textPrimary },
+              (state === 'close_higher' || state === 'close_lower') && { color: light.textPrimary },
+            ]}
+          >
             {arrowDirection}
           </Text>
         )}
@@ -114,56 +155,28 @@ function FlipTile({
   );
 }
 
-const backgroundForState: Record<Exclude<TileState, 'empty'>, { backgroundColor: string }> = {
-  correct: { backgroundColor: '#00C897' },
-  close: { backgroundColor: '#FFD700' },
-  close_higher: { backgroundColor: '#FFD700' },
-  close_lower: { backgroundColor: '#FFD700' },
-  wrong: { backgroundColor: '#383838' },
-  higher: { backgroundColor: '#383838' },
-  lower: { backgroundColor: '#383838' },
-};
-
 const styles = StyleSheet.create({
   tile: {
     height: 68,
-    borderRadius: 12,
+    borderRadius: radius.primary,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
   },
-  tileEmpty: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  tileFront: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
   value: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 16,
-    color: colors.white,
     textAlign: 'center',
   },
   valueCompact: {
     marginTop: 2,
     fontSize: 15,
   },
-  valueDark: {
-    color: '#1A1A2E',
-  },
   arrow: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 13,
-    color: colors.white,
     marginTop: -2,
-  },
-  arrowDark: {
-    color: '#1A1A2E',
   },
 });

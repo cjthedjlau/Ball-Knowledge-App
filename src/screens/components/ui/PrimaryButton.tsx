@@ -7,7 +7,8 @@ import {
   StyleSheet,
   type PressableProps,
 } from 'react-native';
-import { colors, fontFamily } from '../../../styles/theme';
+import { brand, dark, light, fonts, radius } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 
 interface PrimaryButtonProps extends Omit<PressableProps, 'children'> {
   label: string;
@@ -23,6 +24,7 @@ export default function PrimaryButton({
   loading = false,
   ...rest
 }: PrimaryButtonProps) {
+  const { isDark } = useTheme();
   const isDisabled = disabled || loading;
   const scale = useRef(new Animated.Value(1)).current;
   const glowOpacity = useRef(new Animated.Value(1)).current;
@@ -73,7 +75,7 @@ export default function PrimaryButton({
         {...rest}
       >
         {loading ? (
-          <ActivityIndicator color={colors.white} size="small" />
+          <ActivityIndicator color={dark.textPrimary} size="small" />
         ) : (
           <Text style={styles.label}>{label}</Text>
         )}
@@ -86,34 +88,22 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     height: 52,
-    backgroundColor: colors.brand,
-    borderRadius: 999,
+    backgroundColor: brand.primary,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.15)',
-    borderBottomWidth: 3,
-    borderBottomColor: 'rgba(0,0,0,0.6)',
-    shadowColor: '#FC345C',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 10,
   },
   pressed: {
-    backgroundColor: colors.brandDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    elevation: 4,
+    backgroundColor: brand.dark,
   },
   disabled: {
     opacity: 0.3,
   },
   label: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 17,
     letterSpacing: 1,
-    color: colors.white,
+    color: dark.textPrimary,
   },
 });

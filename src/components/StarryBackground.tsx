@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { Animated, Platform, View, StyleSheet, Easing } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
+import { brand } from '../styles/theme';
 
 const useNative = Platform.OS !== 'web';
 
@@ -42,11 +43,11 @@ const DEFAULT_STARS = buildStars(100);
 function resolveColor(colorType: StarData['colorType'], isDark: boolean): string {
   switch (colorType) {
     case 'white':
-      return isDark ? '#FFFFFF' : '#000000';
+      return isDark ? 'rgba(255,255,255,0.6)' : 'rgba(252,52,92,0.15)';
     case 'cyan':
-      return '#07bccc';
+      return brand.teal;
     case 'brand':
-      return '#FC345C';
+      return brand.primary;
   }
 }
 
@@ -160,7 +161,7 @@ function ShootingStar({ isDark }: { isDark: boolean }) {
   const posY = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
-  const starColor = isDark ? '#FFFFFF' : '#000000';
+  const starColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(252,52,92,0.15)';
 
   useEffect(() => {
     function launchStar() {

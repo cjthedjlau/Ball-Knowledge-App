@@ -7,10 +7,11 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, User, Calendar } from 'lucide-react-native';
 import MidnightCountdown from '../../components/MidnightCountdown';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, fonts, colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import GhostButton from '../../screens/components/ui/GhostButton';
 import { type Tab } from '../components/ui/BottomNav';
@@ -19,7 +20,7 @@ import { shareShowdown } from '../../lib/shareResults';
 import { notifyFriendsOfResult } from '../../lib/friends';
 import { supabase } from '../../lib/supabase';
 import { getTodaysDailyGame, getArchiveGame } from '../../lib/dailyGames';
-import { saveGameResult as saveCompletionResult, getGameResultToday } from '../../lib/gameResults';
+import { saveGameResult as saveCompletionResult, getGameResultToday, getTodayEST } from '../../lib/gameResults';
 import { updatePlayHour } from '../../lib/notifications';
 import { useGameAnalytics } from '../../lib/analytics';
 
@@ -61,6 +62,9 @@ function buildMatchupFromData(data: any): Matchup {
 
 export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
   const isArchive = !!archiveDate;
+  const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
+  const s = createStyles(isDark);
   const { trackGameStart, trackGameComplete, trackGameAbandoned } = useGameAnalytics();
   const [selectedLeague, setSelectedLeague] = useState('NBA');
   // Per-league pick: null = not picked, 'A' | 'B' = picked
@@ -139,7 +143,7 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
         void updatePlayHour();
       }
       // Fetch community vote split
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayEST();
       void supabase
         .from('user_game_results')
         .select('score')
@@ -169,58 +173,59 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
   // ── Player card render ──────────────────────────────────────────────────
 
   const renderCard = (side: 'A' | 'B') => {
+    if (!matchup) return null;
     const player = side === 'A' ? matchup.playerA : matchup.playerB;
     const isSelected = selectedSide === side;
     const votes = communityVotes[selectedLeague];
     const pct = votes ? (side === 'A' ? votes.percentA : votes.percentB) : null;
 
     const cardStyleList = [
-      styles.card,
-      selectedSide && isSelected && styles.cardSelected,
-      selectedSide && !isSelected && styles.cardDimmed,
+      s.card,
+      selectedSide && isSelected && s.cardSelected,
+      selectedSide && !isSelected && s.cardDimmed,
     ].filter(Boolean) as object[];
 
     return (
       <Pressable
         style={({ pressed }) => [
           ...cardStyleList,
-          pressed && !selectedSide && styles.cardPressed,
+          pressed && !selectedSide && s.cardPressed,
         ]}
         onPress={() => handleSelect(side)}
         disabled={!!selectedSide}
       >
         {/* Side label */}
-        <Text style={styles.cardSideLabel}>PLAYER {side}</Text>
+        <Text style={s.cardSideLabel}>PLAYER {side}</Text>
 
         {/* Silhouette */}
-        <View style={styles.silhouetteWrapper}>
-          <View style={styles.silhouette}>
-            <User size={28} color='#9A9A9A' strokeWidth={1.5} />
+        <View style={s.silhouetteWrapper}>
+          <View style={s.silhouette}>
+            <User size={36} color={isDark ? dark.textSecondary : light.textSecondary} strokeWidth={1.5} />
           </View>
         </View>
 
         {/* Player name — hidden until reveal */}
         {isRevealed ? (
-          <Text style={styles.playerName} numberOfLines={2}>
+          <Text style={s.playerName} numberOfLines={2}>
             {player.name}
           </Text>
         ) : (
-          <View style={styles.namePlaceholder} />
+          <View style={s.namePlaceholder} />
         )}
 
         {/* Community vote — shown after reveal */}
         {isRevealed && pct !== null ? (
-          <Text style={styles.communityPct}>{pct}% picked</Text>
+          <Text style={s.communityPct}>{pct}% picked</Text>
         ) : isRevealed ? (
-          <Text style={styles.communityPct}>—</Text>
+          <Text style={s.communityPct}>—</Text>
         ) : null}
 
         {/* Stats — always visible */}
-        <View style={styles.statsBlock}>
+        <View style={s.statsBlock}>
           {player.stats.map(({ label, value }) => (
-            <View key={label} style={styles.statRow}>
-              <Text style={styles.statLabel}>{label}</Text>
-              <Text style={styles.statValue}>{value}</Text>
+            <View key={label} style={s.statRow}>
+              <Text style={s.statLabel}>{label}</Text>
+              <Text style={s.statValue}>{value}</Text>
             </View>
           ))}
         </View>
@@ -231,26 +236,26 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={s.root}>
       {/* ── Zone 1 ── */}
-      <View style={styles.zone1}>
-        <View style={styles.zone1TopRow}>
-          <Pressable onPress={() => { if (!picks[selectedLeague]) trackGameAbandoned('blind-showdown', selectedLeague); onBack(); }} hitSlop={8} style={styles.backBtn}>
+      <View style={[s.zone1, { paddingTop: insets.top + 16 }]}>
+        <View style={s.zone1TopRow}>
+          <Pressable onPress={() => { if (!picks[selectedLeague]) trackGameAbandoned('blind-showdown', selectedLeague); onBack(); }} hitSlop={8} style={s.backBtn}>
             <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
           </Pressable>
         </View>
 
-        <View style={styles.zone1Center}>
-          <Text style={styles.zone1Title}>SHOWDOWN</Text>
-          <Text style={styles.zone1Sub}>One matchup per league, per day</Text>
+        <View style={s.zone1Center}>
+          <Text style={s.zone1Title}>SHOWDOWN</Text>
+          <Text style={s.zone1Sub}>One matchup per league, per day</Text>
         </View>
 
         {isArchive ? (
-          <View style={styles.archiveBanner}>
-            <Text style={styles.archiveBannerText}>ARCHIVE — {archiveDate}</Text>
+          <View style={s.archiveBanner}>
+            <Text style={s.archiveBannerText}>ARCHIVE — {archiveDate}</Text>
           </View>
         ) : (
-          <View style={styles.switcherRow}>
+          <View style={s.switcherRow}>
             <LeagueSwitcher selected={selectedLeague} onChange={setSelectedLeague} />
           </View>
         )}
@@ -258,47 +263,47 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
 
       {/* ── Zone 2 ── */}
       <ScrollView
-        style={styles.zone2}
-        contentContainerStyle={styles.zone2Content}
+        style={s.zone2}
+        contentContainerStyle={s.zone2Content}
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
-          <View style={styles.centerState}>
-            <ActivityIndicator size="large" color="#FC345C" />
+          <View style={s.centerState}>
+            <ActivityIndicator size="large" color={brand.primary} />
           </View>
         ) : (loadError || !matchup) ? (
-          <View style={styles.centerState}>
-            <Text style={styles.errorText}>No game available today</Text>
+          <View style={s.centerState}>
+            <Text style={s.errorText}>No game available today</Text>
           </View>
         ) : (!isArchive && playedTodayCache[selectedLeague]) ? (
-          <View style={styles.alreadyPlayedCard}>
-            <Text style={styles.alreadyPlayedBadge}>ALREADY PLAYED TODAY</Text>
-            <Text style={styles.alreadyPlayedScore}>
+          <View style={s.alreadyPlayedCard}>
+            <Text style={s.alreadyPlayedBadge}>ALREADY PLAYED TODAY</Text>
+            <Text style={s.alreadyPlayedScore}>
             PLAYER {(playedTodayCache[selectedLeague]?.score ?? 0) === 0 ? 'A' : 'B'}
           </Text>
-            <View style={styles.alreadyPlayedXpRow}>
-              <Text style={styles.alreadyPlayedXpLabel}>XP EARNED</Text>
-              <Text style={styles.alreadyPlayedXp}>+{playedTodayCache[selectedLeague]?.xp ?? 0}</Text>
+            <View style={s.alreadyPlayedXpRow}>
+              <Text style={s.alreadyPlayedXpLabel}>XP EARNED</Text>
+              <Text style={s.alreadyPlayedXp}>+{playedTodayCache[selectedLeague]?.xp ?? 0}</Text>
             </View>
-            <View style={styles.alreadyPlayedDivider} />
-            <Text style={styles.alreadyPlayedCta}>COME BACK TOMORROW</Text>
-            <Text style={styles.alreadyPlayedSub}>A new matchup drops every day. Switch leagues to play more.</Text>
+            <View style={s.alreadyPlayedDivider} />
+            <Text style={s.alreadyPlayedCta}>COME BACK TOMORROW</Text>
+            <Text style={s.alreadyPlayedSub}>A new matchup drops every day. Switch leagues to play more.</Text>
             <MidnightCountdown />
             <GhostButton label="VIEW ARCHIVE" onPress={() => onNavigate('archive' as Tab)} />
           </View>
         ) : (<>
         {/* Category label — only shown after reveal to avoid spoiling identities */}
         {isRevealed && matchup.categoryLabel ? (
-          <Text style={styles.categoryLabel}>{matchup.categoryLabel}</Text>
+          <Text style={s.categoryLabel}>{matchup.categoryLabel}</Text>
         ) : null}
 
         {/* Cards row */}
-        <View style={styles.cardsRow}>
+        <View style={s.cardsRow}>
           {renderCard('A')}
 
           {/* VS badge */}
-          <View style={styles.vsBadge}>
-            <Text style={styles.vsText}>VS</Text>
+          <View style={s.vsBadge}>
+            <Text style={s.vsText}>VS</Text>
           </View>
 
           {renderCard('B')}
@@ -306,9 +311,9 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
 
         {/* Post-reveal area */}
         {isRevealed && (
-          <View style={styles.revealSection}>
+          <View style={s.revealSection}>
             {/* Community agreement */}
-            <Text style={styles.communityAgreement}>
+            <Text style={s.communityAgreement}>
               {communityVotes[selectedLeague]
                 ? `${selectedSide === 'A' ? (communityVotes[selectedLeague]?.percentA ?? 0) : (communityVotes[selectedLeague]?.percentB ?? 0)}% of fans made the same pick`
                 : 'Counting votes...'}
@@ -317,8 +322,8 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
             {/* Share button */}
             <Pressable
               style={({ pressed }) => [
-                styles.shareBtn,
-                pressed && styles.shareBtnPressed,
+                s.shareBtn,
+                pressed && s.shareBtnPressed,
               ]}
               onPress={() => {
                 const votes = communityVotes[selectedLeague];
@@ -328,12 +333,12 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
                 shareShowdown(selectedLeague, false, votePct);
               }}
             >
-              <Text style={styles.shareBtnText}>SHARE RESULTS</Text>
+              <Text style={s.shareBtnText}>SHARE RESULTS</Text>
             </Pressable>
 
             {/* Notify Friends button */}
             <Pressable
-              style={({ pressed }) => [styles.notifyBtn, pressed && styles.notifyBtnPressed, notifyState === 'done' && styles.notifyBtnDone]}
+              style={({ pressed }) => [s.notifyBtn, pressed && s.notifyBtnPressed, notifyState === 'done' && s.notifyBtnDone]}
               onPress={() => { void (async () => {
                 if (notifyState !== 'idle') return;
                 setNotifyState('sending');
@@ -343,33 +348,33 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
               })(); }}
               disabled={notifyState === 'sending'}
             >
-              <Text style={styles.notifyBtnText}>
+              <Text style={s.notifyBtnText}>
                 {notifyState === 'sending' ? 'NOTIFYING...' : notifyState === 'done' ? 'FRIENDS NOTIFIED ✓' : 'NOTIFY FRIENDS'}
               </Text>
             </Pressable>
 
             {/* XP card */}
             {!isArchive && xpEarnedMap[selectedLeague] !== undefined && (
-              <View style={styles.xpCard}>
-                <Text style={styles.xpCardLabel}>⭐ XP EARNED</Text>
-                <Text style={styles.xpCardTotal}>+{xpEarnedMap[selectedLeague]}</Text>
-                <Text style={styles.xpCardBreakdown}>
+              <View style={s.xpCard}>
+                <Text style={s.xpCardLabel}>XP EARNED</Text>
+                <Text style={s.xpCardTotal}>+{xpEarnedMap[selectedLeague]}</Text>
+                <Text style={s.xpCardBreakdown}>
                   Base: 500 XP + Bonus: {xpEarnedMap[selectedLeague] - 500} XP
                 </Text>
               </View>
             )}
             {isArchive && (
-              <Text style={styles.archiveNotice}>ARCHIVE MODE — Results not saved</Text>
+              <Text style={s.archiveNotice}>ARCHIVE MODE — Results not saved</Text>
             )}
 
             {/* Come back tomorrow card */}
             {!isArchive && (
-              <View style={styles.tomorrowCard}>
-                <View style={styles.tomorrowIconRow}>
+              <View style={s.tomorrowCard}>
+                <View style={s.tomorrowIconRow}>
                   <Calendar size={20} color={colors.brand} strokeWidth={2} />
                 </View>
-                <Text style={styles.tomorrowTitle}>COME BACK TOMORROW</Text>
-                <Text style={styles.tomorrowSub}>
+                <Text style={s.tomorrowTitle}>COME BACK TOMORROW</Text>
+                <Text style={s.tomorrowSub}>
                   A new matchup drops every day. Switch leagues to play today's other matchups.
                 </Text>
                 <MidnightCountdown />
@@ -384,7 +389,7 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
         )}
         </>)}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -392,471 +397,409 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
 
 const CARD_BORDER_RADIUS = 16;
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
+function createStyles(isDark: boolean) {
+  const txt = isDark ? dark.textPrimary : light.textPrimary;
+  const txtSec = isDark ? dark.textSecondary : light.textSecondary;
+  const cardBg = isDark ? dark.card : light.card;
+  const surfaceBg = isDark ? dark.surface : light.surface;
+  const borderCol = isDark ? dark.cardBorder : light.cardBorder;
+  const dividerCol = isDark ? dark.divider : light.divider;
 
-  // Zone 1 ─────────────────────────────────────────────────────────────────
-  zone1: {
-    backgroundColor: colors.brand,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing['4xl'] + 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 12,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-  },
-  zone1TopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  backBtn: {
-    padding: spacing.sm,
-    marginLeft: -spacing.sm,
-  },
-  zone1Center: {
-    alignItems: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  zone1Title: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 24,
-    color: colors.white,
-    letterSpacing: 3,
-    textAlign: 'center',
-  },
-  zone1Sub: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.65)',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  switcherRow: {
-    marginTop: spacing.xs,
-  },
-  archiveBanner: {
-    marginTop: spacing.xs,
-    backgroundColor: 'rgba(0,0,0,0.20)',
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-  },
-  archiveBannerText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.80)',
-    letterSpacing: 1.5,
-  },
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: 'transparent',
+    },
 
-  // Zone 2 ─────────────────────────────────────────────────────────────────
-  zone2: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -32,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.10)',
-  },
-  zone2Content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing['2xl'],
-    paddingBottom: spacing['4xl'],
-  },
+    // Zone 1
+    zone1: {
+      backgroundColor: brand.primary,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing['4xl'] + 8,
+    },
+    zone1TopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: spacing.xs,
+    },
+    backBtn: {
+      padding: spacing.sm,
+      marginLeft: -spacing.sm,
+    },
+    zone1Center: {
+      alignItems: 'center',
+      marginTop: spacing.xs,
+      marginBottom: spacing.lg,
+    },
+    zone1Title: {
+      fontFamily: fonts.display,
+      fontSize: 24,
+      color: '#FFFFFF',
+      letterSpacing: 3,
+      textAlign: 'center',
+    },
+    zone1Sub: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 13,
+      color: 'rgba(255,255,255,0.65)',
+      marginTop: 4,
+      textAlign: 'center',
+    },
+    switcherRow: {
+      marginTop: spacing.xs,
+    },
+    archiveBanner: {
+      marginTop: spacing.xs,
+      backgroundColor: 'rgba(0,0,0,0.20)',
+      borderRadius: 8,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      alignItems: 'center',
+    },
+    archiveBannerText: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 11,
+      color: 'rgba(255,255,255,0.80)',
+      letterSpacing: 1.5,
+    },
 
-  // Loading / error
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-  },
-  errorText: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 15,
-    color: '#9A9A9A',
-    textAlign: 'center',
-  },
+    // Zone 2
+    zone2: {
+      flex: 1,
+      backgroundColor: 'transparent',
+      borderTopWidth: 1,
+      borderTopColor: dividerCol,
+    },
+    zone2Content: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing['2xl'],
+      paddingBottom: 120,
+    },
 
-  // Already played today
-  alreadyPlayedCard: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 24,
-    padding: spacing['3xl'],
-    alignItems: 'center',
-    gap: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  alreadyPlayedBadge: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 10,
-    letterSpacing: 2,
-    color: colors.brand,
-    textAlign: 'center',
-  },
-  alreadyPlayedScore: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 32,
-    color: colors.white,
-    lineHeight: 40,
-    letterSpacing: 2,
-  },
-  alreadyPlayedXpRow: {
-    alignItems: 'center',
-  },
-  alreadyPlayedXpLabel: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 10,
-    letterSpacing: 2,
-    color: '#9A9A9A',
-  },
-  alreadyPlayedXp: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 32,
-    color: colors.brand,
-    lineHeight: 38,
-  },
-  alreadyPlayedDivider: {
-    width: '100%',
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    marginVertical: spacing.xs,
-  },
-  alreadyPlayedCta: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 18,
-    color: colors.white,
-    letterSpacing: 2,
-    textAlign: 'center',
-  },
-  alreadyPlayedSub: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 13,
-    color: '#9A9A9A',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+    // Loading / error
+    centerState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: 80,
+    },
+    errorText: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 15,
+      color: txtSec,
+      textAlign: 'center',
+    },
 
-  // Category label
-  categoryLabel: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 11,
-    color: '#9A9A9A',
-    letterSpacing: 1,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
+    // Already played today
+    alreadyPlayedCard: {
+      backgroundColor: cardBg,
+      borderRadius: 24,
+      padding: spacing['3xl'],
+      alignItems: 'center',
+      gap: spacing.md,
+      borderWidth: 1,
+      borderColor: borderCol,
+    },
+    alreadyPlayedBadge: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 10,
+      letterSpacing: 2,
+      color: brand.primary,
+      textAlign: 'center',
+    },
+    alreadyPlayedScore: {
+      fontFamily: fonts.display,
+      fontSize: 32,
+      color: txt,
+      lineHeight: 40,
+      letterSpacing: 2,
+    },
+    alreadyPlayedXpRow: {
+      alignItems: 'center',
+    },
+    alreadyPlayedXpLabel: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 10,
+      letterSpacing: 2,
+      color: txtSec,
+    },
+    alreadyPlayedXp: {
+      fontFamily: fonts.display,
+      fontSize: 32,
+      color: brand.primary,
+      lineHeight: 38,
+    },
+    alreadyPlayedDivider: {
+      width: '100%' as any,
+      height: 1,
+      backgroundColor: dividerCol,
+      marginVertical: spacing.xs,
+    },
+    alreadyPlayedCta: {
+      fontFamily: fonts.display,
+      fontSize: 18,
+      color: txt,
+      letterSpacing: 2,
+      textAlign: 'center',
+    },
+    alreadyPlayedSub: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 13,
+      color: txtSec,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
 
-  // Cards row ───────────────────────────────────────────────────────────────
-  cardsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+    // Category label
+    categoryLabel: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 11,
+      color: txtSec,
+      letterSpacing: 1,
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+    },
 
-  // Player card
-  card: {
-    flex: 1,
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: CARD_BORDER_RADIUS,
-    padding: spacing.md,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  cardPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.98 }],
-  },
-  cardSelected: {
-    borderColor: colors.brand,
-    shadowColor: colors.brand,
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  cardDimmed: {
-    opacity: 0.4,
-  },
-  // Card internals
-  cardSideLabel: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 10,
-    letterSpacing: 1,
-    color: '#9A9A9A',
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  silhouetteWrapper: {
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  silhouette: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: darkColors.surface,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: '#4A4A4A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playerName: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 11,
-    color: colors.white,
-    textAlign: 'center',
-    lineHeight: 15,
-    marginBottom: spacing.sm,
-  },
-  namePlaceholder: {
-    width: '80%',
-    height: 10,
-    backgroundColor: '#383838',
-    borderRadius: 4,
-    marginBottom: spacing.sm,
-  },
-  statsBlock: {
-    width: '100%',
-    gap: 4,
-  },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 2,
-  },
-  statLabel: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 10,
-    color: '#9A9A9A',
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 14,
-    color: colors.white,
-  },
+    // Cards row
+    cardsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
 
-  // VS badge
-  vsBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: darkColors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: spacing.sm,
-  },
-  vsText: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 10,
-    color: '#9A9A9A',
-    letterSpacing: 0.5,
-  },
+    // Player card
+    card: {
+      flex: 1,
+      backgroundColor: cardBg,
+      borderRadius: CARD_BORDER_RADIUS,
+      padding: spacing.lg,
+      paddingVertical: spacing.xl,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    cardPressed: {
+      opacity: 0.88,
+      transform: [{ scale: 0.98 }],
+    },
+    cardSelected: {
+      borderColor: brand.primary,
+    },
+    cardDimmed: {
+      opacity: 0.4,
+    },
+    // Card internals
+    cardSideLabel: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 12,
+      letterSpacing: 1.5,
+      color: txtSec,
+      textAlign: 'center',
+      marginBottom: spacing.md,
+    },
+    silhouetteWrapper: {
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    silhouette: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: surfaceBg,
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: borderCol,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    playerName: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 14,
+      color: txt,
+      textAlign: 'center',
+      lineHeight: 19,
+      marginBottom: spacing.sm,
+    },
+    namePlaceholder: {
+      width: '80%' as any,
+      height: 10,
+      backgroundColor: surfaceBg,
+      borderRadius: 4,
+      marginBottom: spacing.sm,
+    },
+    statsBlock: {
+      width: '100%',
+      gap: 6,
+      marginTop: spacing.sm,
+    },
+    statRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
+    statLabel: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 12,
+      color: txtSec,
+      letterSpacing: 0.5,
+    },
+    statValue: {
+      fontFamily: fonts.display,
+      fontSize: 18,
+      color: txt,
+    },
 
-  // Post-reveal section
-  revealSection: {
-    marginTop: spacing['2xl'],
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  communityAgreement: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 15,
-    color: colors.white,
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-  communityPct: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 13,
-    color: '#9A9A9A',
-    marginBottom: spacing.xs,
-  },
+    // VS badge
+    vsBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: cardBg,
+      borderWidth: 1,
+      borderColor: borderCol,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginHorizontal: spacing.sm,
+    },
+    vsText: {
+      fontFamily: fonts.display,
+      fontSize: 10,
+      color: txtSec,
+      letterSpacing: 0.5,
+    },
 
-  // XP card
-  xpCard: {
-    width: '100%',
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 16,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  xpCardLabel: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 13,
-    color: '#9A9A9A',
-    letterSpacing: 1,
-    marginBottom: spacing.xs,
-  },
-  xpCardTotal: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 48,
-    color: colors.brand,
-    lineHeight: 54,
-  },
-  xpCardBreakdown: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 13,
-    color: '#9A9A9A',
-    marginTop: spacing.xs,
-  },
+    // Post-reveal section
+    revealSection: {
+      marginTop: spacing['2xl'],
+      alignItems: 'center',
+      gap: spacing.lg,
+    },
+    communityAgreement: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 15,
+      color: txt,
+      textAlign: 'center',
+      letterSpacing: 0.5,
+    },
+    communityPct: {
+      fontFamily: fonts.display,
+      fontSize: 13,
+      color: txtSec,
+      marginBottom: spacing.xs,
+    },
 
-  // Tomorrow card
-  tomorrowCard: {
-    width: '100%',
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 20,
-    padding: spacing['2xl'],
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.4)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  tomorrowIconRow: {
-    marginBottom: spacing.md,
-  },
-  tomorrowTitle: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 18,
-    color: colors.white,
-    letterSpacing: 2,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  tomorrowSub: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 13,
-    color: '#9A9A9A',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  archiveNotice: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 13,
-    color: '#9A9A9A',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
+    // XP card
+    xpCard: {
+      width: '100%' as any,
+      backgroundColor: cardBg,
+      borderRadius: radius.primary,
+      paddingVertical: spacing.xl,
+      paddingHorizontal: spacing.lg,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: borderCol,
+    },
+    xpCardLabel: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 13,
+      color: txtSec,
+      letterSpacing: 1,
+      marginBottom: spacing.xs,
+    },
+    xpCardTotal: {
+      fontFamily: fonts.display,
+      fontSize: 48,
+      color: brand.primary,
+      lineHeight: 54,
+    },
+    xpCardBreakdown: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 13,
+      color: txtSec,
+      marginTop: spacing.xs,
+    },
 
-  // Share button
-  shareBtn: {
-    width: '100%',
-    height: 56,
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  shareBtnPressed: {
-    opacity: 0.75,
-    transform: [{ scale: 0.98 }],
-  },
-  shareBtnText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 15,
-    color: colors.white,
-    letterSpacing: 1.5,
-  },
-  notifyBtn: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    marginBottom: 12,
-    width: '100%',
-  },
-  notifyBtnPressed: {
-    opacity: 0.7,
-  },
-  notifyBtnDone: {
-    borderColor: 'rgba(0,200,151,0.40)',
-    backgroundColor: 'rgba(0,200,151,0.08)',
-  },
-  notifyBtnText: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900' as const,
-    fontSize: 15,
-    color: '#F5F5F5',
-    letterSpacing: 2,
-  },
-});
+    // Tomorrow card
+    tomorrowCard: {
+      width: '100%' as any,
+      backgroundColor: cardBg,
+      borderRadius: 20,
+      padding: spacing['2xl'],
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: borderCol,
+    },
+    tomorrowIconRow: {
+      marginBottom: spacing.md,
+    },
+    tomorrowTitle: {
+      fontFamily: fonts.display,
+      fontSize: 18,
+      color: txt,
+      letterSpacing: 2,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
+    tomorrowSub: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 13,
+      color: txtSec,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    archiveNotice: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: 13,
+      color: txtSec,
+      textAlign: 'center',
+      letterSpacing: 0.5,
+    },
+
+    // Share button
+    shareBtn: {
+      width: '100%' as any,
+      height: 56,
+      backgroundColor: cardBg,
+      borderRadius: radius.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: borderCol,
+    },
+    shareBtnPressed: {
+      opacity: 0.75,
+      transform: [{ scale: 0.98 }],
+    },
+    shareBtnText: {
+      fontFamily: fonts.bodySemiBold,
+      fontSize: 15,
+      color: txt,
+      letterSpacing: 1.5,
+    },
+    notifyBtn: {
+      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+      borderRadius: radius.primary,
+      paddingVertical: 16,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: borderCol,
+      marginBottom: 12,
+      width: '100%' as any,
+    },
+    notifyBtnPressed: {
+      opacity: 0.7,
+    },
+    notifyBtnDone: {
+      borderColor: 'rgba(0,200,151,0.40)',
+      backgroundColor: 'rgba(0,200,151,0.08)',
+    },
+    notifyBtnText: {
+      fontFamily: fonts.display,
+      fontSize: 15,
+      color: txt,
+      letterSpacing: 2,
+    },
+  });
+}
+
+const styles = createStyles(true);

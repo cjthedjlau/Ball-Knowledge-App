@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Search, Lock, UserSearch, Check } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { getActivePlayers } from '../../lib/playersPool';
 import GuessGridTile from '../../screens/components/ui/GuessGridTile';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
@@ -77,7 +78,7 @@ const NBA_ATTRS: Record<string, NBAAttrs> = {
   'Jalen Brunson':            { height: "6'2\"",  jersey: 11, team: 'New York Knicks',         position: 'PG', conference: 'Eastern', college: 'Villanova',    age: 28 },
   'Darius Garland':           { height: "6'1\"",  jersey: 10, team: 'Cleveland Cavaliers',     position: 'PG', conference: 'Eastern', college: 'Vanderbilt',   age: 25 },
   'Jaren Jackson Jr':         { height: "6'11\"", jersey: 13, team: 'Memphis Grizzlies',       position: 'PF', conference: 'Western', college: 'Michigan State', age: 25 },
-  "De'Aaron Fox":             { height: "6'3\"",  jersey: 5,  team: 'Sacramento Kings',        position: 'PG', conference: 'Western', college: 'Kentucky',     age: 27 },
+  "De'Aaron Fox":             { height: "6'3\"",  jersey: 5,  team: 'San Antonio Spurs',        position: 'PG', conference: 'Western', college: 'Kentucky',     age: 27 },
   'Michael Jordan':           { height: "6'6\"",  jersey: 23, team: 'Chicago Bulls',           position: 'SG', conference: 'Eastern', college: 'North Carolina', age: 62 },
   'Kobe Bryant':              { height: "6'6\"",  jersey: 24, team: 'Los Angeles Lakers',      position: 'SG', conference: 'Western', college: 'None (HS)',    age: 46 },
   "Shaquille O'Neal":         { height: "7'1\"",  jersey: 34, team: 'Los Angeles Lakers',      position: 'C',  conference: 'Western', college: 'LSU',          age: 53 },
@@ -111,7 +112,7 @@ const NFL_ATTRS: Record<string, NFLAttrs> = {
   'Tua Tagovailoa':     { height: "6'1\"",  jersey: 1,  team: 'Miami Dolphins',          position: 'QB',   conference: 'AFC', college: 'Alabama',          age: 27 },
   'CJ Stroud':          { height: "6'3\"",  jersey: 7,  team: 'Houston Texans',          position: 'QB',   conference: 'AFC', college: 'Ohio State',       age: 23 },
   'Brock Purdy':        { height: "6'1\"",  jersey: 13, team: 'San Francisco 49ers',     position: 'QB',   conference: 'NFC', college: 'Iowa State',       age: 25 },
-  'Tyreek Hill':        { height: "5'10\"", jersey: 10, team: 'Miami Dolphins',          position: 'WR',   conference: 'AFC', college: 'West Alabama',     age: 31 },
+  'Tyreek Hill':        { height: "5'10\"", jersey: 10, team: 'Dallas Cowboys',          position: 'WR',   conference: 'NFC', college: 'West Alabama',     age: 31 },
   'Davante Adams':      { height: "6'1\"",  jersey: 17, team: 'New York Jets',           position: 'WR',   conference: 'AFC', college: 'Fresno State',     age: 32 },
   'Justin Jefferson':   { height: "6'1\"",  jersey: 18, team: 'Minnesota Vikings',       position: 'WR',   conference: 'NFC', college: 'LSU',              age: 26 },
   "Ja'Marr Chase":      { height: "6'0\"",  jersey: 1,  team: 'Cincinnati Bengals',      position: 'WR',   conference: 'AFC', college: 'LSU',              age: 25 },
@@ -127,7 +128,7 @@ const NFL_ATTRS: Record<string, NFLAttrs> = {
   'Tony Pollard':       { height: "6'0\"",  jersey: 20, team: 'Tennessee Titans',        position: 'RB',   conference: 'AFC', college: 'Memphis',          age: 27 },
   'Aaron Donald':       { height: "6'1\"",  jersey: 99, team: 'Los Angeles Rams',        position: 'DT',   conference: 'NFC', college: 'Pittsburgh',       age: 34 },
   'Micah Parsons':      { height: "6'3\"",  jersey: 11, team: 'Dallas Cowboys',          position: 'EDGE', conference: 'NFC', college: 'Penn State',       age: 25 },
-  'Myles Garrett':      { height: "6'4\"",  jersey: 95, team: 'Cleveland Browns',        position: 'EDGE', conference: 'AFC', college: 'Texas A&M',        age: 29 },
+  'Myles Garrett':      { height: "6'4\"",  jersey: 95, team: 'Detroit Lions',           position: 'EDGE', conference: 'NFC', college: 'Texas A&M',        age: 29 },
   'TJ Watt':            { height: "6'4\"",  jersey: 90, team: 'Pittsburgh Steelers',     position: 'EDGE', conference: 'AFC', college: 'Wisconsin',        age: 30 },
   'Tom Brady':          { height: "6'4\"",  jersey: 12, team: 'New England Patriots',    position: 'QB',   conference: 'AFC', college: 'Michigan',         age: 47 },
   'Peyton Manning':     { height: "6'5\"",  jersey: 18, team: 'Indianapolis Colts',      position: 'QB',   conference: 'AFC', college: 'Tennessee',        age: 49 },
@@ -220,7 +221,7 @@ const NHL_ATTRS: Record<string, NHLAttrs> = {
   'Igor Shesterkin':      { height: "6'2\"",  jersey: 31, team: 'New York Rangers',        position: 'G',  conference: 'Eastern', country: 'Russia',   age: 29 },
   'Andrei Vasilevskiy':   { height: "6'3\"",  jersey: 88, team: 'Tampa Bay Lightning',     position: 'G',  conference: 'Eastern', country: 'Russia',   age: 30 },
   'Artemi Panarin':       { height: "5'11\"", jersey: 10, team: 'New York Rangers',        position: 'LW', conference: 'Eastern', country: 'Russia',   age: 33 },
-  'Mitchell Marner':      { height: "6'0\"",  jersey: 16, team: 'Toronto Maple Leafs',     position: 'RW', conference: 'Eastern', country: 'Canada',   age: 28 },
+  'Mitchell Marner':      { height: "6'0\"",  jersey: 16, team: 'Nashville Predators',     position: 'RW', conference: 'Western', country: 'Canada',   age: 28 },
   'Brad Marchand':        { height: "5'9\"",  jersey: 63, team: 'Boston Bruins',           position: 'LW', conference: 'Eastern', country: 'Canada',   age: 36 },
   'Mark Scheifele':       { height: "6'3\"",  jersey: 55, team: 'Winnipeg Jets',           position: 'C',  conference: 'Western', country: 'Canada',   age: 31 },
   'Kyle Connor':          { height: "6'1\"",  jersey: 81, team: 'Winnipeg Jets',           position: 'LW', conference: 'Western', country: 'USA',      age: 28 },
@@ -462,6 +463,7 @@ interface Props {
 }
 
 export default function CustomMysteryPlayer({ onBack }: Props) {
+  const { isDark } = useTheme();
   // Phase state
   const [phase, setPhase] = useState<'setup' | 'handoff' | 'guessing'>('setup');
   const [activeLeague, setActiveLeague] = useState<League>('NBA');

@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing, radius } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { calculateMultiplayerXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { supabase } from '../../lib/supabase';
 import { getGamePlayers, type Player } from '../../lib/playersPool';
@@ -72,11 +73,13 @@ function pickUniqueIndices(count: number, max: number): number[] {
 
 interface Props {
   onBack: () => void;
+  joinedLobby?: { lobbyId: string; playerIndex: number; code: string; gameType: string };
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function ImposterScreen({ onBack }: Props) {
+export default function ImposterScreen({ onBack, joinedLobby }: Props) {
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   // ── Setup state ──
@@ -131,6 +134,13 @@ export default function ImposterScreen({ onBack }: Props) {
     });
   }, []);
 
+  // ── Auto-join lobby when navigated from Games hub Join Game ──
+  useEffect(() => {
+    if (!joinedLobby) return;
+    setMode('online');
+    handleJoinSuccess(joinedLobby.lobbyId, joinedLobby.playerIndex, joinedLobby.code);
+  }, [joinedLobby]);
+
   // ── useLobby hook for realtime ──
   const { presencePlayers, isConnected, broadcast, onEvent } = useLobby({
     code: lobbyCode,
@@ -139,19 +149,31 @@ export default function ImposterScreen({ onBack }: Props) {
     playerIndex: myPlayerIndex,
   });
 
+  // ── Refresh lobby players when presence changes ──
+  useEffect(() => {
+    if (!lobbyId || onlinePhase !== 'lobby') return;
+    getLobbyPlayers(lobbyId).then(players => {
+      setLobbyPlayers(players);
+    }).catch(() => {});
+  }, [presencePlayers.length, lobbyId, onlinePhase]);
+
   // ── Online event listeners ──
   useEffect(() => {
     if (mode !== 'online' || !lobbyCode) return;
 
-    const unsubRoles = onEvent('game:roles', (payload: any) => {
-      const myData = payload[myPlayerIndex];
-      if (myData) {
-        setMyRole(myData.role);
-        if (myData.athlete) {
-          setAthlete(myData.athlete);
-        }
-        setPhase('reveal');
+    const unsubReady = onEvent('player:ready', () => {
+      if (lobbyId) {
+        getLobbyPlayers(lobbyId).then(players => setLobbyPlayers(players)).catch(() => {});
       }
+    });
+
+    const unsubRoles = onEvent('game:role_assign', (payload: any) => {
+      if (payload.targetIndex !== myPlayerIndex) return; // ignore other players' roles
+      const myData = payload;
+      if (!myData) return;
+      setMyRole(myData.role as 'detective' | 'imposter');
+      if (myData.athlete) setAthlete(myData.athlete);
+      setPhase('reveal');
     });
 
     const unsubReveal = onEvent('game:reveal', () => {
@@ -167,7 +189,7 @@ export default function ImposterScreen({ onBack }: Props) {
       }
     });
 
-    return () => { unsubRoles(); unsubReveal(); unsubSettings(); };
+    return () => { unsubReady(); unsubRoles(); unsubReveal(); unsubSettings(); };
   }, [mode, lobbyCode, myPlayerIndex, onEvent]);
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -224,10 +246,14 @@ export default function ImposterScreen({ onBack }: Props) {
     const xp = calculateMultiplayerXP(1);
     setXpEarned(xp);
     void (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await saveGameResult(user.id, 'imposter', xp, 1);
-        await updateUserXPAndStreak(user.id, xp, false);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await saveGameResult(user.id, 'imposter', xp, 1);
+          await updateUserXPAndStreak(user.id, xp, false);
+        }
+      } catch {
+        // silently fail - XP is non-critical
       }
     })();
     setPhase('results');
@@ -268,94 +294,123 @@ export default function ImposterScreen({ onBack }: Props) {
     }
   }, [userId, displayName]);
 
-  const handleJoinSuccess = useCallback(async (joinedLobbyId: string, joinedPlayerIndex: number) => {
+  const handleJoinSuccess = useCallback(async (joinedLobbyId: string, joinedPlayerIndex: number, joinedCode: string) => {
     setLobbyId(joinedLobbyId);
     setMyPlayerIndex(joinedPlayerIndex);
+    setLobbyCode(joinedCode);
     setOnlinePhase('lobby');
-    const players = await getLobbyPlayers(joinedLobbyId);
-    setLobbyPlayers(players);
-    const me = players.find(p => p.player_index === joinedPlayerIndex);
-    setMyPlayerId(me?.id || null);
-    // Find the lobby code from the first player's lobby_id
-    if (players.length > 0) {
-      const lobbyRow = players[0];
+    try {
+      const players = await getLobbyPlayers(joinedLobbyId);
+      setLobbyPlayers(players);
+      const me = players.find(p => p.player_index === joinedPlayerIndex);
+      setMyPlayerId(me?.id || null);
       setLobby({
         id: joinedLobbyId,
-        code: lobbyCode || '',
+        code: joinedCode,
         game_type: 'imposter',
         host_user_id: '',
         status: 'waiting',
         settings: {},
         game_state: {},
       });
+    } catch (e: any) {
+      setOnlineError(e.message || 'Failed to load lobby players');
     }
-  }, [lobbyCode]);
+  }, []);
 
   const handleToggleReady = useCallback(async () => {
     if (!myPlayerId) return;
     const newReady = !isReady;
     setIsReady(newReady);
-    await togglePlayerReady(myPlayerId, newReady);
-    broadcast('player:ready', { playerIndex: myPlayerIndex, isReady: newReady });
-    if (lobbyId) {
-      const players = await getLobbyPlayers(lobbyId);
-      setLobbyPlayers(players);
+    try {
+      await togglePlayerReady(myPlayerId, newReady);
+      broadcast('player:ready', { playerIndex: myPlayerIndex, isReady: newReady });
+      if (lobbyId) {
+        const players = await getLobbyPlayers(lobbyId);
+        setLobbyPlayers(players);
+      }
+    } catch (e: any) {
+      setIsReady(!newReady);
+      setOnlineError(e.message || 'Failed to toggle ready');
     }
   }, [myPlayerId, isReady, myPlayerIndex, broadcast, lobbyId]);
 
   const handleOnlineStart = useCallback(async () => {
     if (!isHost || !lobbyId) return;
-    const league = selectedLeague === 'ALL' ? 'NBA' : selectedLeague;
-    const pool = await getGamePlayers(league);
-    const fetched = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null;
-    if (!fetched) return;
-    const chosenAthlete: Athlete = {
-      name: fetched.name,
-      team: fetched.team,
-      league: (fetched.league as Exclude<LeagueOption, 'ALL'>) || 'NBA',
-      difficulty: selectedDifficulty,
-    };
-    const chosenImposters = pickUniqueIndices(imposterCount, lobbyPlayers.length);
+    try {
+      const league = selectedLeague === 'ALL' ? 'NBA' : selectedLeague;
+      const pool = await getGamePlayers(league);
+      const fetched = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null;
+      if (!fetched) return;
+      const chosenAthlete: Athlete = {
+        name: fetched.name,
+        team: fetched.team,
+        league: (fetched.league as Exclude<LeagueOption, 'ALL'>) || 'NBA',
+        difficulty: selectedDifficulty,
+      };
+      const chosenImposters = pickUniqueIndices(imposterCount, lobbyPlayers.length);
 
-    setAthlete(chosenAthlete);
-    setImposterIndices(chosenImposters);
+      setAthlete(chosenAthlete);
+      setImposterIndices(chosenImposters);
 
-    // Build roles map: { [playerIndex]: { role, athlete? } }
-    const roles: Record<number, { role: string; athlete?: Athlete }> = {};
-    lobbyPlayers.forEach(p => {
-      if (chosenImposters.includes(p.player_index)) {
-        roles[p.player_index] = { role: 'imposter' };
-      } else {
-        roles[p.player_index] = { role: 'detective', athlete: chosenAthlete };
+      // Build roles map: { [playerIndex]: { role, athlete? } }
+      const roles: Record<number, { role: string; athlete?: Athlete }> = {};
+      lobbyPlayers.forEach(p => {
+        if (chosenImposters.includes(p.player_index)) {
+          roles[p.player_index] = { role: 'imposter' };
+        } else {
+          roles[p.player_index] = { role: 'detective', athlete: chosenAthlete };
+        }
+      });
+
+      // Send each player only their own role to prevent role snooping
+      Object.entries(roles).forEach(([idx, roleData]) => {
+        broadcast('game:role_assign', { targetIndex: Number(idx), ...roleData });
+      });
+      await updateLobbyStatus(lobbyId, 'playing');
+
+      // Host also sets own role
+      const myData = roles[myPlayerIndex];
+      if (!myData) {
+        setOnlineError('Failed to assign role');
+        return;
       }
-    });
-
-    await updateLobbyStatus(lobbyId, 'playing');
-    broadcast('game:roles', roles);
-
-    // Host also sets own role
-    const myData = roles[myPlayerIndex];
-    setMyRole(myData.role as 'detective' | 'imposter');
-    setPhase('reveal');
+      setMyRole(myData.role as 'detective' | 'imposter');
+      setPhase('reveal');
+    } catch (e: any) {
+      setOnlineError(e.message || 'Failed to start game');
+    }
   }, [isHost, lobbyId, selectedLeague, selectedDifficulty, imposterCount, lobbyPlayers, broadcast, myPlayerIndex]);
 
   const handleOnlineReveal = useCallback(() => {
     broadcast('game:reveal', {});
-    const xp = calculateMultiplayerXP(1);
-    setXpEarned(xp);
-    void (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await saveGameResult(user.id, 'imposter', xp, 1);
-        await updateUserXPAndStreak(user.id, xp, false);
-      }
-    })();
+    // Guard against duplicate XP awards
+    setXpEarned(prev => {
+      if (prev !== null) return prev;
+      const xp = calculateMultiplayerXP(1);
+      void (async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await saveGameResult(user.id, 'imposter', xp, 1);
+            await updateUserXPAndStreak(user.id, xp, false);
+          }
+        } catch {
+          // silently fail - XP is non-critical
+        }
+      })();
+      return xp;
+    });
     setPhase('results');
   }, [broadcast]);
 
   const handleLeaveOnline = useCallback(async () => {
     if (lobbyId && myPlayerId) {
-      await leaveLobby(lobbyId, myPlayerId);
+      try {
+        await leaveLobby(lobbyId, myPlayerId);
+      } catch {
+        // silently fail - still reset state
+      }
     }
     // Reset online state
     setLobbyCode(null);
@@ -372,7 +427,7 @@ export default function ImposterScreen({ onBack }: Props) {
 
   // ── Host disconnect detection ──
   useEffect(() => {
-    if (mode !== 'online' || isHost || onlinePhase === 'lobby' || onlinePhase === 'choose' || onlinePhase === 'join') return;
+    if (mode !== 'online' || isHost || onlinePhase === 'choose' || onlinePhase === 'join') return;
 
     const hostPlayer = lobbyPlayers.find(p => p.is_host);
     if (!hostPlayer) return;
@@ -468,8 +523,8 @@ export default function ImposterScreen({ onBack }: Props) {
         return (
           <SafeAreaView style={styles.root}>
             <JoinLobby
-              onJoin={(joinedLobbyId, joinedPlayerIndex) => {
-                handleJoinSuccess(joinedLobbyId, joinedPlayerIndex);
+              onJoin={(joinedLobbyId, joinedPlayerIndex, joinedCode) => {
+                handleJoinSuccess(joinedLobbyId, joinedPlayerIndex, joinedCode);
               }}
               onBack={() => setOnlinePhase('choose')}
             />
@@ -565,7 +620,7 @@ export default function ImposterScreen({ onBack }: Props) {
           <Zone1>
             <Text style={styles.zone1Sub}>ONLINE</Text>
           </Zone1>
-          <View style={[styles.zone2, styles.zone2Center, { paddingBottom: insets.bottom + 24 }]}>
+          <View style={[styles.zone2, styles.zone2Center, { paddingBottom: 120 }]}>
             <ModeToggle mode={mode} onModeChange={(m) => { setMode(m); setOnlinePhase('choose'); }} />
             <View style={{ height: 32 }} />
             <PrimaryButton label="CREATE GAME" onPress={handleCreateGame} disabled={!userId || onlineLoading} />
@@ -595,7 +650,7 @@ export default function ImposterScreen({ onBack }: Props) {
 
         <ScrollView
           style={styles.zone2}
-          contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 24 }]}
+          contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]}
           keyboardShouldPersistTaps="handled"
         >
           {/* Mode Toggle */}
@@ -729,7 +784,7 @@ export default function ImposterScreen({ onBack }: Props) {
           <Zone1>
             <Text style={styles.zone1Sub}>YOUR ROLE</Text>
           </Zone1>
-          <View style={[styles.zone2, styles.zone2Center, { paddingBottom: insets.bottom + 20 }]}>
+          <View style={[styles.zone2, styles.zone2Center, { paddingBottom: 120 }]}>
             {myRole === 'imposter' ? (
               <View style={[styles.flipCard, styles.flipCardImposter]}>
                 <Text style={styles.flipCardRoleEmoji}>😈</Text>
@@ -768,7 +823,7 @@ export default function ImposterScreen({ onBack }: Props) {
           <Text style={styles.revealPassHint}>Don't show anyone else your screen</Text>
         </Zone1>
 
-        <View style={[styles.zone2, styles.zone2Center, { paddingBottom: insets.bottom + 20 }]}>
+        <View style={[styles.zone2, styles.zone2Center, { paddingBottom: 120 }]}>
           {/* Flip card */}
           <Pressable onPress={handleFlipCard} activeOpacity={0.9} style={styles.flipCardWrapper}>
             {!cardFlipped ? (
@@ -834,7 +889,7 @@ export default function ImposterScreen({ onBack }: Props) {
           <Text style={styles.zone1Sub}>DISCUSS</Text>
         </Zone1>
 
-        <View style={[styles.zone2, styles.zone2Center, { paddingBottom: insets.bottom + 24 }]}>
+        <View style={[styles.zone2, styles.zone2Center, { paddingBottom: 120 }]}>
           <View style={styles.discussCard}>
             <Text style={styles.discussEmoji}>🗣️</Text>
             <Text style={styles.discussTitle}>WHO IS THE IMPOSTER?</Text>
@@ -869,7 +924,7 @@ export default function ImposterScreen({ onBack }: Props) {
 
       <ScrollView
         style={styles.zone2}
-        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]}
       >
         {/* Imposter reveal */}
         <View style={styles.imposterRevealCard}>
@@ -898,7 +953,7 @@ export default function ImposterScreen({ onBack }: Props) {
         <View style={{ height: 20 }} />
         {xpEarned !== null && (
           <View style={styles.xpCard}>
-            <Text style={styles.xpCardLabel}>⭐ XP EARNED</Text>
+            <Text style={styles.xpCardLabel}>XP EARNED</Text>
             <Text style={styles.xpCardTotal}>+{xpEarned}</Text>
             <Text style={styles.xpCardBreakdown}>Multiplayer Bonus: {xpEarned} XP</Text>
           </View>
@@ -934,8 +989,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing['3xl'],
     paddingBottom: 24,
     paddingHorizontal: spacing.lg,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
     shadowColor: colors.brand,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.45,
@@ -970,9 +1023,6 @@ const styles = StyleSheet.create({
   zone2: {
     flex: 1,
     backgroundColor: 'transparent',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -32,
   },
   zone2Content: {
     paddingTop: 28,
@@ -1191,7 +1241,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   flipCardDetective: {
-    backgroundColor: '#0E0E0E',
+    backgroundColor: dark.background,
     borderTopWidth: 3,
     borderTopColor: colors.accentGreen,
     borderLeftWidth: 0,
@@ -1201,7 +1251,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   flipCardImposter: {
-    backgroundColor: '#0E0E0E',
+    backgroundColor: dark.background,
     borderTopWidth: 3,
     borderTopColor: colors.brand,
     borderLeftWidth: 0,
@@ -1406,7 +1456,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 1,
-    color: '#9A9A9A',
+    color: darkColors.textSecondary,
   },
   xpCardTotal: {
     fontFamily: fontFamily.black,
@@ -1418,7 +1468,7 @@ const styles = StyleSheet.create({
   xpCardBreakdown: {
     fontFamily: fontFamily.regular,
     fontSize: 13,
-    color: '#9A9A9A',
+    color: darkColors.textSecondary,
   },
 
   // ── Online mode ──

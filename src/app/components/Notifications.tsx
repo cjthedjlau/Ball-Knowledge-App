@@ -8,9 +8,10 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { supabase } from '../../lib/supabase';
 
 interface Props {
@@ -26,6 +27,8 @@ function formatHour(h: number): string {
 }
 
 export default function NotificationsScreen({ onBack }: Props) {
+  const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
   const [dailyReminder, setDailyReminder] = useState(true);
   const [streakAlert, setStreakAlert] = useState(true);
   const [newContent, setNewContent] = useState(true);
@@ -81,19 +84,19 @@ export default function NotificationsScreen({ onBack }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={styles.root}>
       {/* Zone 1 */}
-      <View style={styles.zone1}>
+      <View style={[styles.zone1, { backgroundColor: brand.primary, paddingTop: insets.top + spacing.lg }]}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+          <ArrowLeft size={22} color={dark.textPrimary} strokeWidth={2.5} />
         </Pressable>
         <Text style={styles.zone1Title}>NOTIFICATIONS</Text>
       </View>
 
       {/* Zone 2 */}
       <ScrollView
-        style={styles.zone2}
-        contentContainerStyle={styles.zone2Content}
+        style={[styles.zone2, { borderTopColor: isDark ? dark.cardBorder : light.cardBorder }]}
+        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
@@ -101,23 +104,26 @@ export default function NotificationsScreen({ onBack }: Props) {
         ) : (
           <>
             {/* Daily Reminder */}
-            <View style={styles.card}>
+            <View style={[styles.card, {
+              backgroundColor: isDark ? dark.card : light.card,
+              borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+            }]}>
               <View style={styles.toggleRow}>
                 <View style={styles.toggleTextWrap}>
-                  <Text style={styles.toggleLabel}>Daily Reminder</Text>
-                  <Text style={styles.toggleDesc}>Remind me to play each day</Text>
+                  <Text style={[styles.toggleLabel, { color: isDark ? dark.textPrimary : light.textPrimary }]}>Daily Reminder</Text>
+                  <Text style={[styles.toggleDesc, { color: isDark ? dark.textSecondary : light.textSecondary }]}>Remind me to play each day</Text>
                 </View>
                 <Switch
                   value={dailyReminder}
                   onValueChange={toggleDaily}
-                  trackColor={{ false: darkColors.surfaceElevated, true: colors.brand }}
-                  thumbColor={colors.white}
+                  trackColor={{ false: isDark ? dark.surface : light.surface, true: brand.primary }}
+                  thumbColor={isDark ? dark.textPrimary : light.card}
                 />
               </View>
 
               {dailyReminder && (
                 <View style={styles.timeSection}>
-                  <Text style={styles.timeLabel}>Reminder Time: {formatHour(reminderHour)}</Text>
+                  <Text style={[styles.timeLabel, { color: isDark ? dark.textSecondary : light.textSecondary }]}>Reminder Time: {formatHour(reminderHour)}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourRow}>
                     {HOURS.map(h => {
                       const isSelected = h === reminderHour;
@@ -125,9 +131,20 @@ export default function NotificationsScreen({ onBack }: Props) {
                         <Pressable
                           key={h}
                           onPress={() => selectHour(h)}
-                          style={[styles.hourPill, isSelected && styles.hourPillSelected]}
+                          style={[
+                            styles.hourPill,
+                            {
+                              backgroundColor: isDark ? dark.background : light.surface,
+                              borderColor: isDark ? dark.cardBorder : light.cardBorder,
+                            },
+                            isSelected && { backgroundColor: brand.primary, borderColor: brand.primary },
+                          ]}
                         >
-                          <Text style={[styles.hourPillText, isSelected && styles.hourPillTextSelected]}>
+                          <Text style={[
+                            styles.hourPillText,
+                            { color: isDark ? dark.textSecondary : light.textSecondary },
+                            isSelected && { color: dark.textPrimary },
+                          ]}>
                             {formatHour(h)}
                           </Text>
                         </Pressable>
@@ -139,40 +156,46 @@ export default function NotificationsScreen({ onBack }: Props) {
             </View>
 
             {/* Streak Alert */}
-            <View style={styles.card}>
+            <View style={[styles.card, {
+              backgroundColor: isDark ? dark.card : light.card,
+              borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+            }]}>
               <View style={styles.toggleRow}>
                 <View style={styles.toggleTextWrap}>
-                  <Text style={styles.toggleLabel}>Streak Alert</Text>
-                  <Text style={styles.toggleDesc}>Warn me when my streak is at risk</Text>
+                  <Text style={[styles.toggleLabel, { color: isDark ? dark.textPrimary : light.textPrimary }]}>Streak Alert</Text>
+                  <Text style={[styles.toggleDesc, { color: isDark ? dark.textSecondary : light.textSecondary }]}>Warn me when my streak is at risk</Text>
                 </View>
                 <Switch
                   value={streakAlert}
                   onValueChange={toggleStreak}
-                  trackColor={{ false: darkColors.surfaceElevated, true: colors.brand }}
-                  thumbColor={colors.white}
+                  trackColor={{ false: isDark ? dark.surface : light.surface, true: brand.primary }}
+                  thumbColor={isDark ? dark.textPrimary : light.card}
                 />
               </View>
             </View>
 
             {/* New Content */}
-            <View style={styles.card}>
+            <View style={[styles.card, {
+              backgroundColor: isDark ? dark.card : light.card,
+              borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+            }]}>
               <View style={styles.toggleRow}>
                 <View style={styles.toggleTextWrap}>
-                  <Text style={styles.toggleLabel}>New Content</Text>
-                  <Text style={styles.toggleDesc}>Notify me when new daily games are available</Text>
+                  <Text style={[styles.toggleLabel, { color: isDark ? dark.textPrimary : light.textPrimary }]}>New Content</Text>
+                  <Text style={[styles.toggleDesc, { color: isDark ? dark.textSecondary : light.textSecondary }]}>Notify me when new daily games are available</Text>
                 </View>
                 <Switch
                   value={newContent}
                   onValueChange={toggleContent}
-                  trackColor={{ false: darkColors.surfaceElevated, true: colors.brand }}
-                  thumbColor={colors.white}
+                  trackColor={{ false: isDark ? dark.surface : light.surface, true: brand.primary }}
+                  thumbColor={isDark ? dark.textPrimary : light.card}
                 />
               </View>
             </View>
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -182,7 +205,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   zone1: {
-    backgroundColor: colors.brand,
     paddingTop: spacing.lg,
     paddingBottom: spacing['3xl'] + spacing.md,
     paddingHorizontal: spacing.lg,
@@ -205,19 +227,19 @@ const styles = StyleSheet.create({
   zone1Title: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
-    fontSize: 28,
+    fontSize: 36,
+    lineHeight: 38,
     letterSpacing: 3,
-    color: colors.white,
+    color: dark.textPrimary,
   },
   zone2: {
     flex: 1,
     backgroundColor: 'transparent',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    marginTop: -32,
+    marginTop: 0,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    shadowColor: '#000',
+    shadowColor: dark.background,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -233,15 +255,13 @@ const styles = StyleSheet.create({
 
   // Cards
   card: {
-    backgroundColor: darkColors.surfaceElevated,
     borderRadius: 16,
     padding: spacing.lg,
     gap: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
     borderBottomWidth: 2,
     borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000',
+    shadowColor: dark.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -260,12 +280,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 15,
-    color: darkColors.text,
   },
   toggleDesc: {
     fontFamily: fontFamily.regular,
     fontSize: 13,
-    color: darkColors.textSecondary,
     marginTop: 2,
   },
 
@@ -277,7 +295,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 13,
-    color: darkColors.textSecondary,
   },
   hourRow: {
     flexDirection: 'row',
@@ -285,24 +302,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   hourPill: {
-    backgroundColor: darkColors.background,
     borderRadius: 999,
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: darkColors.border,
-  },
-  hourPillSelected: {
-    backgroundColor: colors.brand,
-    borderColor: colors.brand,
   },
   hourPillText: {
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 12,
-    color: darkColors.textSecondary,
-  },
-  hourPillTextSelected: {
-    color: colors.white,
   },
 });

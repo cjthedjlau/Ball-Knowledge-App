@@ -781,8 +781,6 @@ function createStyles(_isDark: boolean) {
     backgroundColor: brand.primary,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['4xl'] + 8,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
   },
   zone1TopRow: {
     flexDirection: 'row',
@@ -839,9 +837,6 @@ function createStyles(_isDark: boolean) {
   // Zone 2
   zone2: {
     flex: 1,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -32,
     overflow: 'hidden',
   },
 

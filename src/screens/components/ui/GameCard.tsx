@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, View, Text, StyleSheet, type PressableProps } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, darkColors, fontFamily } from '../../../styles/theme';
+import { brand, dark, light, fonts, radius, colors } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 import IconPill from './IconPill';
 
 type GameStatus = 'unplayed' | 'completed' | 'multiplayer';
@@ -16,24 +16,39 @@ interface GameCardProps extends Omit<PressableProps, 'children'> {
   isNew?: boolean;
 }
 
-function Badge({ status }: { status: GameStatus }) {
+function Badge({ status, isDark }: { status: GameStatus; isDark: boolean }) {
   switch (status) {
     case 'unplayed':
       return (
-        <View style={styles.badgePlay}>
-          <Text style={styles.badgePlayText}>Play</Text>
+        <View style={badgeStyles.badgePlay}>
+          <Text style={badgeStyles.badgePlayText}>Play</Text>
         </View>
       );
     case 'completed':
       return (
-        <View style={styles.badgeCheck}>
-          <Text style={styles.checkmark}>✓</Text>
+        <View style={badgeStyles.badgeCheck}>
+          <Text style={badgeStyles.checkmark}>✓</Text>
         </View>
       );
     case 'multiplayer':
       return (
-        <View style={styles.badgeMultiplayer}>
-          <Text style={styles.badgeMultiplayerText}>Multiplayer</Text>
+        <View
+          style={[
+            badgeStyles.badgeMultiplayer,
+            {
+              borderColor: isDark ? dark.cardBorder : light.cardBorder,
+              backgroundColor: isDark ? dark.surface : light.surface,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              badgeStyles.badgeMultiplayerText,
+              { color: isDark ? dark.textSecondary : light.textSecondary },
+            ]}
+          >
+            Multiplayer
+          </Text>
         </View>
       );
   }
@@ -49,12 +64,30 @@ export default function GameCard({
   isNew,
   ...rest
 }: GameCardProps) {
+  const { isDark } = useTheme();
+
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        isNew && styles.cardNew,
+        {
+          backgroundColor: isDark ? dark.card : light.card,
+          borderColor: isDark ? dark.cardBorder : light.cardBorder,
+          ...(isDark
+            ? {}
+            : {
+                shadowColor: '#000',
+                shadowOpacity: 0.06,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 2,
+              }),
+        },
+        isNew && {
+          borderColor: brand.primary,
+          borderWidth: 2,
+        },
         pressed && styles.pressed,
       ]}
       {...rest}
@@ -64,20 +97,35 @@ export default function GameCard({
           <Text style={styles.newBadgeText}>NEW</Text>
         </View>
       )}
-      {/* Always use vertical layout — readable at all screen sizes */}
       <View style={styles.mobileInner}>
-        <Text style={styles.titleMobile} numberOfLines={2}>{title}</Text>
+        <Text
+          style={[
+            styles.titleMobile,
+            { color: isDark ? dark.textPrimary : light.textPrimary },
+          ]}
+          numberOfLines={2}
+        >
+          {title}
+        </Text>
 
         <View style={styles.iconContainer}>
           <IconPill icon={icon} size="lg" />
         </View>
 
-        <Text style={styles.subtitleMobile} numberOfLines={2}>{subtitle}</Text>
+        <Text
+          style={[
+            styles.subtitleMobile,
+            { color: isDark ? dark.textSecondary : light.textSecondary },
+          ]}
+          numberOfLines={2}
+        >
+          {subtitle}
+        </Text>
 
         <View style={styles.badgeContainerMobile}>
           {onArchivePress ? (
             <View style={styles.badgeRow}>
-              <Badge status={status} />
+              <Badge status={status} isDark={isDark} />
               <Pressable
                 onPress={(e) => {
                   e.stopPropagation();
@@ -86,23 +134,34 @@ export default function GameCard({
                 hitSlop={8}
                 style={({ pressed: p }) => [
                   styles.badgeArchive,
+                  {
+                    borderColor: isDark ? dark.cardBorder : light.cardBorder,
+                    backgroundColor: isDark ? dark.surface : light.surface,
+                  },
                   p && styles.badgeArchivePressed,
                 ]}
               >
-                <Text style={styles.badgeArchiveText}>Archive</Text>
+                <Text
+                  style={[
+                    styles.badgeArchiveText,
+                    { color: isDark ? dark.textSecondary : light.textSecondary },
+                  ]}
+                >
+                  Archive
+                </Text>
               </Pressable>
             </View>
           ) : (
-            <Badge status={status} />
+            <Badge status={status} isDark={isDark} />
           )}
         </View>
       </View>
 
-      <LinearGradient
-        colors={['#FC345C', '#07bccc', '#e601c0', '#f40468']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.accentLine}
+      <View
+        style={[
+          styles.accentLine,
+          { backgroundColor: brand.primary },
+        ]}
       />
     </Pressable>
   );
@@ -111,32 +170,15 @@ export default function GameCard({
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 20,
+    borderRadius: radius.primary,
     overflow: 'hidden',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  cardNew: {
-    borderWidth: 2,
-    borderColor: colors.brand,
-    borderTopWidth: 2,
-    borderTopColor: colors.brand,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.brand,
+    borderWidth: 1,
   },
   newBadge: {
     position: 'absolute',
     top: 0,
     left: 12,
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
     paddingHorizontal: 12,
@@ -144,17 +186,15 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   newBadgeText: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 10,
     letterSpacing: 2,
-    color: colors.white,
+    color: dark.textPrimary,
   },
   pressed: {
     opacity: 0.85,
   },
-
-  // ── Mobile layout ────────────────────────────────────────────────────────────
   mobileInner: {
     flexDirection: 'column',
     alignItems: 'center',
@@ -162,11 +202,10 @@ const styles = StyleSheet.create({
     minHeight: 140,
   },
   titleMobile: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 14,
     letterSpacing: 0.5,
-    color: colors.white,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -175,9 +214,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitleMobile: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontSize: 11,
-    color: darkColors.textSecondary,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -185,60 +223,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 4,
   },
-
-  // ── Desktop layout ────────────────────────────────────────────────────────────
-  desktopInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 12,
-  },
-  desktopText: {
-    flex: 1,
-  },
-  titleDesktop: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 14,
-    letterSpacing: 0.5,
-    color: colors.white,
-    marginBottom: 4,
-  },
-  subtitleDesktop: {
-    fontFamily: fontFamily.medium,
-    fontSize: 11,
-    color: darkColors.textSecondary,
-  },
-  badgeContainerDesktop: {
-    alignItems: 'flex-end',
-  },
-  badgeRowDesktop: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-
   accentLine: {
     height: 2,
-    backgroundColor: colors.accentCyan,
   },
+  badgeRow: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 8,
+  },
+  badgeArchive: {
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  badgeArchivePressed: {
+    opacity: 0.7,
+  },
+  badgeArchiveText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+});
 
-  // Badge — unplayed
+const badgeStyles = StyleSheet.create({
   badgePlay: {
-    backgroundColor: colors.brand,
-    borderRadius: 999,
+    backgroundColor: brand.primary,
+    borderRadius: radius.pill,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   badgePlayText: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 14,
     letterSpacing: 1,
-    color: colors.white,
+    color: dark.textPrimary,
   },
-
-  // Badge — completed
   badgeCheck: {
     width: 32,
     height: 32,
@@ -248,48 +270,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkmark: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 16,
-    color: colors.white,
+    color: dark.textPrimary,
   },
-
-  // Badge row (Play + Archive stacked)
-  badgeRow: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 8,
-  },
-  badgeArchive: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: darkColors.surfaceElevated,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  badgeArchivePressed: {
-    opacity: 0.7,
-  },
-  badgeArchiveText: {
-    fontFamily: fontFamily.medium,
-    fontSize: 12,
-    letterSpacing: 0.5,
-    color: darkColors.textSecondary,
-  },
-
-  // Badge — multiplayer
   badgeMultiplayer: {
-    borderRadius: 999,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: darkColors.surfaceElevated,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   badgeMultiplayerText: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontSize: 13,
-    color: darkColors.textSecondary,
   },
 });

@@ -8,7 +8,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Smartphone, Trophy, Check, X } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing, radius } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { calculateMultiplayerXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { supabase } from '../../lib/supabase';
 import { getGamePlayers, type Player } from '../../lib/playersPool';
@@ -95,6 +96,7 @@ interface Props {
 }
 
 export default function WhoAmIScreen({ onBack }: Props) {
+  const { isDark } = useTheme();
   // ── Data ──
   const [selectedLeague, setSelectedLeague] = useState('NBA');
 
@@ -397,7 +399,7 @@ export default function WhoAmIScreen({ onBack }: Props) {
 
           {xpEarned !== null && (
             <View style={styles.xpCard}>
-              <Text style={styles.xpCardLabel}>⭐ XP EARNED</Text>
+              <Text style={styles.xpCardLabel}>XP EARNED</Text>
               <Text style={styles.xpCardTotal}>+{xpEarned}</Text>
               <Text style={styles.xpCardBreakdown}>Multiplayer Bonus: {xpEarned} XP</Text>
             </View>
@@ -682,8 +684,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['3xl'] + spacing.md,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
@@ -717,9 +717,6 @@ const styles = StyleSheet.create({
   zone2: {
     flex: 1,
     backgroundColor: 'transparent',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -32,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
     zIndex: 1,
@@ -727,7 +724,7 @@ const styles = StyleSheet.create({
   zone2Content: {
     paddingTop: spacing['2xl'],
     paddingHorizontal: spacing.lg,
-    paddingBottom: 48,
+    paddingBottom: 120,
     gap: spacing.lg,
   },
 
@@ -756,7 +753,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: spacing['4xl'],
     paddingHorizontal: spacing.lg,
-    paddingBottom: 48,
+    paddingBottom: 120,
     alignItems: 'center',
     gap: spacing.lg,
   },
@@ -952,7 +949,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 1,
-    color: '#9A9A9A',
+    color: darkColors.textSecondary,
   },
   xpCardTotal: {
     fontFamily: fontFamily.black,
@@ -964,7 +961,7 @@ const styles = StyleSheet.create({
   xpCardBreakdown: {
     fontFamily: fontFamily.regular,
     fontSize: 13,
-    color: '#9A9A9A',
+    color: darkColors.textSecondary,
   },
 });
 

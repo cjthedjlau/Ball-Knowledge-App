@@ -18,14 +18,15 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { supabase } from '../../lib/supabase';
 import useZoneEntrance from '../../hooks/useZoneEntrance';
 import useProfile from '../../lib/useProfile';
 import AnimatedCard from '../../components/AnimatedCard';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import ListRow from '../../screens/components/ui/ListRow';
-import BottomNav, { type Tab } from './ui/BottomNav';
+import { type Tab } from './ui/BottomNav';
 
 type ProfileScreen = 'my-stats' | 'favorite-teams' | 'achievements' | 'notifications' | 'settings';
 
@@ -65,7 +66,7 @@ const xpStyles = StyleSheet.create({
   track: {
     width: '100%',
     height: 8,
-    backgroundColor: 'rgba(0,0,0,0.30)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
     borderRadius: 999,
     overflow: 'hidden',
     marginTop: 8,
@@ -73,7 +74,7 @@ const xpStyles = StyleSheet.create({
   fill: {
     height: 8,
     borderRadius: 999,
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
   },
 });
 
@@ -87,6 +88,7 @@ export default function Profile({ onNavigate }: ProfileProps) {
   const [signingOut, setSigningOut] = useState(false);
   const { profile, levelInfo, nextLevelInfo, xpProgressPercent, loading } = useProfile();
   const { zone1Style, zone2Style } = useZoneEntrance();
+  const { isDark } = useTheme();
 
   // ── Real stats from user_game_results ──
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
@@ -134,9 +136,9 @@ export default function Profile({ onNavigate }: ProfileProps) {
     : (profile?.lifetime_xp ?? 0).toLocaleString();
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={styles.root}>
       {/* ── Zone 1: Header ── */}
-      <Animated.View style={[styles.zone1, zone1Style]}>
+      <Animated.View style={[styles.zone1, zone1Style, { backgroundColor: brand.primary, paddingTop: insets.top + spacing['2xl'] }]}>
         <Text style={styles.title}>Profile</Text>
 
         <View style={styles.avatarAnchor}>
@@ -165,8 +167,8 @@ export default function Profile({ onNavigate }: ProfileProps) {
             <ActivityIndicator color={colors.brand} style={{ marginBottom: 8 }} />
           ) : (
             <>
-              <Text style={styles.username}>{usernameDisplay}</Text>
-              <Text style={styles.xpValue}>{lifetimeXpDisplay}</Text>
+              <Text style={[styles.username, { color: isDark ? dark.textPrimary : light.textPrimary }]}>{usernameDisplay}</Text>
+              <Text style={[styles.xpValue, { color: brand.primary }]}>{lifetimeXpDisplay}</Text>
             </>
           )}
         </View>
@@ -174,8 +176,8 @@ export default function Profile({ onNavigate }: ProfileProps) {
         {/* Level progress bar */}
         <View style={styles.xpSection}>
           <View style={styles.xpLabelRow}>
-            <Text style={styles.xpLabel}>{levelLabel}</Text>
-            <Text style={styles.xpProgress}>{xpProgressLabel}</Text>
+            <Text style={[styles.xpLabel, { color: isDark ? dark.textSecondary : light.textSecondary }]}>{levelLabel}</Text>
+            <Text style={[styles.xpProgress, { color: isDark ? dark.textSecondary : light.textSecondary }]}>{xpProgressLabel}</Text>
           </View>
           <XpBar value={xpProgressPercent} total={100} />
         </View>
@@ -190,22 +192,25 @@ export default function Profile({ onNavigate }: ProfileProps) {
 
         {/* Stat strip */}
         <AnimatedCard delay={0}>
-          <View style={styles.statStrip}>
-            <View style={[styles.statItem, styles.statItemBorder]}>
-              <Text style={styles.statLabel}>GAMES</Text>
-              <Text style={styles.statValue}>
+          <View style={[styles.statStrip, {
+            backgroundColor: isDark ? dark.card : light.card,
+            borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+          }]}>
+            <View style={[styles.statItem, styles.statItemBorder, { borderRightColor: isDark ? dark.cardBorder : light.cardBorder }]}>
+              <Text style={[styles.statLabel, { color: isDark ? dark.textSecondary : light.textSecondary }]}>GAMES</Text>
+              <Text style={[styles.statValue, { color: brand.primary }]}>
                 {statsLoading ? '—' : (gamesPlayed ?? 0).toLocaleString()}
               </Text>
             </View>
-            <View style={[styles.statItem, styles.statItemBorder]}>
-              <Text style={styles.statLabel}>WIN RATE</Text>
-              <Text style={styles.statValue}>
+            <View style={[styles.statItem, styles.statItemBorder, { borderRightColor: isDark ? dark.cardBorder : light.cardBorder }]}>
+              <Text style={[styles.statLabel, { color: isDark ? dark.textSecondary : light.textSecondary }]}>WIN RATE</Text>
+              <Text style={[styles.statValue, { color: brand.primary }]}>
                 {statsLoading ? '—' : `${winRate ?? 0}%`}
               </Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>BEST STREAK</Text>
-              <Text style={styles.statValue}>
+              <Text style={[styles.statLabel, { color: isDark ? dark.textSecondary : light.textSecondary }]}>BEST STREAK</Text>
+              <Text style={[styles.statValue, { color: brand.primary }]}>
                 {statsLoading ? '—' : (bestStreak ?? 0).toString()}
               </Text>
             </View>
@@ -270,9 +275,7 @@ export default function Profile({ onNavigate }: ProfileProps) {
         </View>
       </ScrollView>
       </Animated.View>
-
-      <BottomNav activeTab="profile" onNavigate={onNavigate as (tab: Tab) => void} />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -286,7 +289,6 @@ const styles = StyleSheet.create({
 
   // ── Zone 1 ──
   zone1: {
-    backgroundColor: colors.brand,
     paddingTop: spacing['2xl'],
     paddingHorizontal: spacing.lg,
     minHeight: 260,
@@ -295,11 +297,13 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 32,
     alignItems: 'center',
     overflow: 'hidden',
+    zIndex: 10,
   },
   title: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
-    fontSize: 32,
+    fontSize: 42,
+    lineHeight: 44,
     letterSpacing: 1,
     color: colors.white,
     marginBottom: spacing.xl,
@@ -371,14 +375,12 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.black,
     fontWeight: '900',
     fontSize: 22,
-    color: colors.white,
     marginBottom: 4,
   },
   xpValue: {
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 14,
-    color: colors.brand,
     letterSpacing: 0.5,
   },
 
@@ -409,14 +411,12 @@ const styles = StyleSheet.create({
 
   statStrip: {
     flexDirection: 'row',
-    backgroundColor: darkColors.surfaceElevated,
     borderRadius: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
     borderBottomWidth: 2,
     borderBottomColor: 'rgba(0,0,0,0.5)',
     marginBottom: spacing['2xl'],
-    shadowColor: '#000',
+    shadowColor: dark.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -436,14 +436,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 10,
     letterSpacing: 1.5,
-    color: darkColors.textSecondary,
     marginBottom: 4,
   },
   statValue: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
     fontSize: 20,
-    color: colors.brand,
     letterSpacing: 0.5,
   },
 

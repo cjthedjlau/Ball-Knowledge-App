@@ -66,7 +66,7 @@ const games = [
   {
     date: '2026-03-17', league: 'NHL',
     mystery_player: { name: 'Alex Ovechkin', team: 'Washington Capitals', position: 'LW', height: "6'3\"", jerseyNumber: 8, conference: 'Eastern', country: 'Russia', age: 39, stats: { goals: 31, assists: 25, points: 56, plus_minus: -2 } },
-    showdown_player_a: { name: 'Mikko Rantanen', team: 'Colorado Avalanche', stats: { goals: 42, assists: 61, points: 103, plus_minus: 21, ppg_ice: 18.5 }, statLabel: '2024-25 Season' },
+    showdown_player_a: { name: 'Mikko Rantanen', team: 'Carolina Hurricanes', stats: { goals: 42, assists: 61, points: 103, plus_minus: 21, ppg_ice: 18.5 }, statLabel: '2024-25 Season' },
     showdown_player_b: { name: 'Leon Draisaitl', team: 'Edmonton Oilers', stats: { goals: 52, assists: 72, points: 124, plus_minus: 15, ppg_ice: 20.1 }, statLabel: '2024-25 Season' },
     showdown_category: 'WHO IS THE MORE COMPLETE FORWARD?',
     showdown_correct_answer: 'a',
@@ -204,7 +204,7 @@ const games = [
   {
     date: '2026-03-23', league: 'NHL',
     mystery_player: { name: 'Sidney Crosby', team: 'Pittsburgh Penguins', position: 'C', height: "5'11\"", jerseyNumber: 87, conference: 'Eastern', country: 'Canada', age: 37, stats: { goals: 28, assists: 56, points: 84, plus_minus: 12 } },
-    showdown_player_a: { name: 'Mitch Marner', team: 'Toronto Maple Leafs', stats: { goals: 22, assists: 63, points: 85, plus_minus: 11, ppg_ice: 19.2 }, statLabel: '2024-25 Season' },
+    showdown_player_a: { name: 'Mitch Marner', team: 'Nashville Predators', stats: { goals: 22, assists: 63, points: 85, plus_minus: 11, ppg_ice: 19.2 }, statLabel: '2024-25 Season' },
     showdown_player_b: { name: 'Nikita Kucherov', team: 'Tampa Bay Lightning', stats: { goals: 30, assists: 88, points: 118, plus_minus: 6, ppg_ice: 21.4 }, statLabel: '2024-25 Season' },
     showdown_category: 'WHO IS THE BETTER PLAYMAKER?',
     showdown_correct_answer: 'a',
@@ -273,7 +273,7 @@ const games = [
   {
     date: '2026-03-26', league: 'NHL',
     mystery_player: { name: 'Brett Hull', team: 'St. Louis Blues', position: 'RW', height: "5'10\"", jerseyNumber: 16, conference: 'Western', country: 'Canada', age: 60, stats: { goals: 86, assists: 45, points: 131, plus_minus: 23 } },
-    showdown_player_a: { name: 'Martin Necas', team: 'Carolina Hurricanes', stats: { goals: 34, assists: 55, points: 89, plus_minus: 20, shooting_pct: 14.8 }, statLabel: '2024-25 Season' },
+    showdown_player_a: { name: 'Martin Necas', team: 'Colorado Avalanche', stats: { goals: 34, assists: 55, points: 89, plus_minus: 20, shooting_pct: 14.8 }, statLabel: '2024-25 Season' },
     showdown_player_b: { name: 'Jack Hughes', team: 'New Jersey Devils', stats: { goals: 31, assists: 57, points: 88, plus_minus: -4, shooting_pct: 11.9 }, statLabel: '2024-25 Season' },
     showdown_category: 'WHO IS THE BETTER FORWARD?',
     showdown_correct_answer: 'a',
@@ -397,7 +397,7 @@ const games = [
       { name: 'Quinn Hughes', team: 'Vancouver Canucks', rankingStat: 94, statLabel: 'Points (2024-25, defenseman)' },
       { name: 'Cale Makar', team: 'Colorado Avalanche', rankingStat: 96, statLabel: 'Points (2024-25, defenseman)' },
       { name: 'Roman Josi', team: 'Nashville Predators', rankingStat: 72, statLabel: 'Points (2024-25)' },
-      { name: 'Brent Burns', team: 'San Jose Sharks', rankingStat: 83, statLabel: 'Points (best season, 2016-17)' },
+      { name: 'Brent Burns', team: 'Carolina Hurricanes', rankingStat: 83, statLabel: 'Points (best season, 2016-17)' },
       { name: 'Erik Karlsson', team: 'Pittsburgh Penguins', rankingStat: 100, statLabel: 'Points (best season, 2022-23)' },
     ],
     blind_rank_category: 'RANK BY PURE SKILL',
@@ -527,7 +527,7 @@ const games = [
     date: '2026-04-06', league: 'NHL',
     mystery_player: { name: 'Nathan MacKinnon', team: 'Colorado Avalanche', position: 'C', height: "6'0\"", jerseyNumber: 29, conference: 'Western', country: 'Canada', age: 29, stats: { goals: 40, assists: 75, points: 115, plus_minus: 18 } },
     showdown_player_a: { name: 'Tim Stutzle', team: 'Ottawa Senators', stats: { goals: 33, assists: 48, points: 81, plus_minus: -2, shooting_pct: 14.1 }, statLabel: '2024-25 Season' },
-    showdown_player_b: { name: 'Mika Zibanejad', team: 'New York Rangers', stats: { goals: 21, assists: 35, points: 56, plus_minus: -8, shooting_pct: 10.2 }, statLabel: '2024-25 Season' },
+    showdown_player_b: { name: 'Mika Zibanejad', team: 'Pittsburgh Penguins', stats: { goals: 21, assists: 35, points: 56, plus_minus: -8, shooting_pct: 10.2 }, statLabel: '2024-25 Season' },
     showdown_category: 'WHO IS THE BETTER CENTER?',
     showdown_correct_answer: 'a',
     showdown_correct_reason: 'Stutzle outscored Zibanejad by 25 points with a far higher shooting percentage — the 23-year-old former Senators teammate is already better than the established Ranger.',
@@ -664,7 +664,7 @@ const games = [
   {
     date: '2026-04-12', league: 'NHL',
     mystery_player: { name: 'Nikita Kucherov', team: 'Tampa Bay Lightning', position: 'RW', height: "5'11\"", jerseyNumber: 86, conference: 'Eastern', country: 'Russia', age: 31, stats: { goals: 30, assists: 72, points: 102, plus_minus: 10 } },
-    showdown_player_a: { name: 'Juuse Saros', team: 'Nashville Predators', stats: { wins: 28, gaa: 2.68, save_pct: .914, shutouts: 4 }, statLabel: '2024-25 Season' },
+    showdown_player_a: { name: 'Juuse Saros', team: 'Colorado Avalanche', stats: { wins: 28, gaa: 2.68, save_pct: .914, shutouts: 4 }, statLabel: '2024-25 Season' },
     showdown_player_b: { name: 'Connor Hellebuyck', team: 'Winnipeg Jets', stats: { wins: 42, gaa: 2.09, save_pct: .925, shutouts: 6 }, statLabel: '2024-25 Season' },
     showdown_category: 'WHO IS CARRYING A HEAVIER LOAD?',
     showdown_correct_answer: 'a',

@@ -12,12 +12,13 @@ Deno.serve(async () => {
 
   const today = new Date().toISOString().split('T')[0]
 
-  // Get all users with streak > 0 who haven't played today
+  // Get all users with streak > 0 who haven't played today AND have streak alerts enabled
   const { data: usersAtRisk } = await supabase
     .from('profiles')
-    .select('id, push_token, streak, username')
+    .select('id, push_token, streak, username, notify_streak_alert')
     .gt('streak', 0)
     .neq('push_token', null)
+    .eq('notify_streak_alert', true)
     .or(`last_game_date.is.null,last_game_date.lt.${today}`)
 
   if (!usersAtRisk?.length) {

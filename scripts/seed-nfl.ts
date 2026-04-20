@@ -51,7 +51,7 @@ const games = [
     blind_rank_players: [
       { name: 'Ja\'Marr Chase', team: 'Cincinnati Bengals', rankingStat: 1708, statLabel: 'Rec Yds' },
       { name: 'Justin Jefferson', team: 'Minnesota Vikings', rankingStat: 1533, statLabel: 'Rec Yds' },
-      { name: 'Tyreek Hill', team: 'Miami Dolphins', rankingStat: 1158, statLabel: 'Rec Yds' },
+      { name: 'Tyreek Hill', team: 'Dallas Cowboys', rankingStat: 1158, statLabel: 'Rec Yds' },
       { name: 'Davante Adams', team: 'New York Jets', rankingStat: 1144, statLabel: 'Rec Yds' },
       { name: 'Travis Kelce', team: 'Kansas City Chiefs', rankingStat: 823, statLabel: 'Rec Yds' },
     ],
@@ -66,8 +66,8 @@ const games = [
   {
     date: '2026-03-17', league: 'NFL',
     mystery_player: { name: 'Travis Kelce', team: 'Kansas City Chiefs', position: 'TE', height: "6'5\"", jerseyNumber: 87, conference: 'AFC', college: 'Cincinnati', age: 35, stats: { receptions: 97, receiving_yards: 823, tds: 3 } },
-    showdown_player_a: { name: 'Myles Garrett', team: 'Cleveland Browns', stats: { sacks: 14.0, tackles: 42, forced_fumbles: 4, qb_hits: 30 }, statLabel: '2024 Season' },
-    showdown_player_b: { name: 'Trey Hendrickson', team: 'Cincinnati Bengals', stats: { sacks: 17.5, tackles: 51, forced_fumbles: 5, qb_hits: 34 }, statLabel: '2024 Season' },
+    showdown_player_a: { name: 'Myles Garrett', team: 'Detroit Lions', stats: { sacks: 14.0, tackles: 42, forced_fumbles: 4, qb_hits: 30 }, statLabel: '2024 Season' },
+    showdown_player_b: { name: 'Trey Hendrickson', team: 'Kansas City Chiefs', stats: { sacks: 17.5, tackles: 51, forced_fumbles: 5, qb_hits: 34 }, statLabel: '2024 Season' },
     showdown_category: 'WHO WAS THE BETTER PASS RUSHER IN 2024?',
     showdown_correct_answer: 'b',
     showdown_correct_reason: 'Trey Hendrickson led the NFL with 17.5 sacks, outpacing reigning DPOY Myles Garrett in sacks, tackles, forced fumbles, AND QB hits — yet Garrett gets all the headlines.',
@@ -134,14 +134,14 @@ const games = [
   // ─── 2026-03-20 ───────────────────────────────────────────────────────────
   {
     date: '2026-03-20', league: 'NFL',
-    mystery_player: { name: 'Tyreek Hill', team: 'Miami Dolphins', position: 'WR', height: "5'10\"", jerseyNumber: 10, conference: 'AFC', college: 'West Alabama', age: 30, stats: { receptions: 81, receiving_yards: 959, tds: 6 } },
+    mystery_player: { name: 'Tyreek Hill', team: 'Dallas Cowboys', position: 'WR', height: "5'10\"", jerseyNumber: 10, conference: 'NFC', college: 'West Alabama', age: 30, stats: { receptions: 81, receiving_yards: 959, tds: 6 } },
     showdown_player_a: { name: 'Zack Baun', team: 'Philadelphia Eagles', stats: { tackles: 151, sacks: 3.5, ints: 3, forced_fumbles: 2 }, statLabel: '2024 Season' },
     showdown_player_b: { name: 'Roquan Smith', team: 'Baltimore Ravens', stats: { tackles: 129, sacks: 2.0, ints: 1, forced_fumbles: 1 }, statLabel: '2024 Season' },
     showdown_category: 'WHO WAS THE BETTER LINEBACKER IN 2024?',
     showdown_correct_answer: 'a',
     showdown_correct_reason: 'Zack Baun — a former career backup — exploded into a First-Team All-Pro in 2024, leading the NFL in tackles (151) and outperforming established star Roquan Smith in every major category. Nobody saw this coming.',
     blind_rank_players: [
-      { name: 'Tyreek Hill', team: 'Miami Dolphins', rankingStat: 14.3, statLabel: 'Yards/Reception' },
+      { name: 'Tyreek Hill', team: 'Dallas Cowboys', rankingStat: 14.3, statLabel: 'Yards/Reception' },
       { name: 'Justin Jefferson', team: 'Minnesota Vikings', rankingStat: 14.9, statLabel: 'Yards/Reception' },
       { name: 'Ja\'Marr Chase', team: 'Cincinnati Bengals', rankingStat: 13.4, statLabel: 'Yards/Reception' },
       { name: 'Davante Adams', team: 'New York Jets', rankingStat: 13.1, statLabel: 'Yards/Reception' },
@@ -181,14 +181,14 @@ const games = [
   {
     date: '2026-03-22', league: 'NFL',
     mystery_player: { name: 'Davante Adams', team: 'New York Jets', position: 'WR', height: "6'1\"", jerseyNumber: 17, conference: 'AFC', college: 'Fresno State', age: 32, stats: { receptions: 91, receiving_yards: 1144, tds: 12 } },
-    showdown_player_a: { name: 'Tyreek Hill', team: 'Miami Dolphins', stats: { rec: 81, rec_yds: 959, rec_tds: 6, yds_per_rec: 11.8 }, statLabel: '2024 Season' },
+    showdown_player_a: { name: 'Tyreek Hill', team: 'Dallas Cowboys', stats: { rec: 81, rec_yds: 959, rec_tds: 6, yds_per_rec: 11.8 }, statLabel: '2024 Season' },
     showdown_player_b: { name: 'Brian Thomas Jr.', team: 'Jacksonville Jaguars', stats: { rec: 87, rec_yds: 1282, rec_tds: 10, yds_per_rec: 14.7 }, statLabel: '2024 Season (Rookie)' },
     showdown_category: 'WHO WAS THE BETTER RECEIVER IN 2024?',
     showdown_correct_answer: 'b',
     showdown_correct_reason: 'A rookie nobody talks about outproduced Tyreek Hill in every single category — more catches, more yards, more TDs, better yards per catch. Brian Thomas Jr. had a quietly elite season while Hill\'s production cratered.',
     blind_rank_players: [
       { name: 'Davante Adams', team: 'New York Jets', rankingStat: 9, statLabel: 'Receiving TDs (2024)' },
-      { name: 'Tyreek Hill', team: 'Miami Dolphins', rankingStat: 7, statLabel: 'Receiving TDs (2024)' },
+      { name: 'Tyreek Hill', team: 'Dallas Cowboys', rankingStat: 7, statLabel: 'Receiving TDs (2024)' },
       { name: 'Justin Jefferson', team: 'Minnesota Vikings', rankingStat: 10, statLabel: 'Receiving TDs (2024)' },
       { name: 'Ja\'Marr Chase', team: 'Cincinnati Bengals', rankingStat: 17, statLabel: 'Receiving TDs (2024)' },
       { name: 'Travis Kelce', team: 'Kansas City Chiefs', rankingStat: 11, statLabel: 'Receiving TDs (2024)' },
@@ -490,7 +490,7 @@ const games = [
       { name: 'Randy Moss', team: 'Minnesota Vikings', rankingStat: 15.6, statLabel: 'Career Yards Per Reception' },
       { name: 'Jerry Rice', team: 'San Francisco 49ers', rankingStat: 14.8, statLabel: 'Career Yards Per Reception' },
       { name: 'Davante Adams', team: 'New York Jets', rankingStat: 13.1, statLabel: 'Career Yards Per Reception' },
-      { name: 'Tyreek Hill', team: 'Miami Dolphins', rankingStat: 14.3, statLabel: 'Career Yards Per Reception' },
+      { name: 'Tyreek Hill', team: 'Dallas Cowboys', rankingStat: 14.3, statLabel: 'Career Yards Per Reception' },
     ],
     blind_rank_category: 'RANK BY CLUTCH PERFORMANCE',
     trivia_questions: [
@@ -550,7 +550,7 @@ const games = [
     date: '2026-04-07', league: 'NFL',
     mystery_player: { name: 'Joe Montana', team: 'San Francisco 49ers', position: 'QB', height: "6'2\"", jerseyNumber: 16, conference: 'NFC', college: 'Notre Dame', age: 69, stats: { passing_yards: 40551, tds: 273, qbr: 92.3 } },
     showdown_player_a: { name: 'Amari Cooper', team: 'Buffalo Bills', stats: { rec: 55, rec_yds: 737, rec_tds: 4, yds_per_rec: 13.4 }, statLabel: '2024 Season' },
-    showdown_player_b: { name: 'Tee Higgins', team: 'Cincinnati Bengals', stats: { rec: 73, rec_yds: 911, rec_tds: 10, yds_per_rec: 12.5 }, statLabel: '2024 Season' },
+    showdown_player_b: { name: 'Tee Higgins', team: 'Kansas City Chiefs', stats: { rec: 73, rec_yds: 911, rec_tds: 10, yds_per_rec: 12.5 }, statLabel: '2024 Season' },
     showdown_category: 'WHO WAS THE BETTER #2 RECEIVER IN 2024?',
     showdown_correct_answer: 'b',
     showdown_correct_reason: 'Tee Higgins outproduced Amari Cooper in catches, yards, and TDs while being the clear second option behind Ja\'Marr Chase. Cooper, a former All-Pro, had his worst season in years after being traded to Buffalo.',

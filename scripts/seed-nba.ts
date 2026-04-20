@@ -170,7 +170,7 @@ const games = [
       { name: 'Devin Booker', team: 'Phoenix Suns', rankingStat: 25.1, statLabel: 'PPG' },
       { name: 'Damian Lillard', team: 'Milwaukee Bucks', rankingStat: 25.2, statLabel: 'PPG' },
       { name: 'Donovan Mitchell', team: 'Cleveland Cavaliers', rankingStat: 24.7, statLabel: 'PPG' },
-      { name: 'De\'Aaron Fox', team: 'Sacramento Kings', rankingStat: 23.5, statLabel: 'PPG' },
+      { name: 'De\'Aaron Fox', team: 'San Antonio Spurs', rankingStat: 23.5, statLabel: 'PPG' },
       { name: 'Bam Adebayo', team: 'Miami Heat', rankingStat: 18.7, statLabel: 'PPG' },
     ],
     blind_rank_category: 'RANK BY CONSISTENCY',
@@ -194,7 +194,7 @@ const games = [
       { name: 'Cade Cunningham', team: 'Detroit Pistons', rankingStat: 8.1, statLabel: 'APG' },
       { name: 'LaMelo Ball', team: 'Charlotte Hornets', rankingStat: 8.2, statLabel: 'APG' },
       { name: 'Jalen Brunson', team: 'New York Knicks', rankingStat: 7.2, statLabel: 'APG' },
-      { name: 'De\'Aaron Fox', team: 'Sacramento Kings', rankingStat: 7.1, statLabel: 'APG' },
+      { name: 'De\'Aaron Fox', team: 'San Antonio Spurs', rankingStat: 7.1, statLabel: 'APG' },
     ],
     blind_rank_category: 'RANK BY OVERALL GREATNESS',
     trivia_questions: [
@@ -222,7 +222,7 @@ const games = [
     blind_rank_category: 'WHO WOULD YOU BUILD A TEAM AROUND?',
     trivia_questions: [
       { question: 'Kevin Durant won the NBA Finals MVP in which year with the Golden State Warriors?', options: ['2016', '2017', '2018', 'Both 2017 and 2018'], correctIndex: 3, explanation: 'Durant won back-to-back Finals MVPs in 2017 and 2018, cementing his legacy with Golden State.' },
-      { question: 'Damian Lillard played 11+ seasons for which team before being traded?', options: ['Sacramento Kings', 'Utah Jazz', 'Portland Trail Blazers', 'Memphis Grizzlies'], correctIndex: 2, explanation: 'Lillard spent his first 11 seasons in Portland, becoming the franchise\'s all-time leading scorer.' },
+      { question: 'Damian Lillard played 11+ seasons for which team before being traded?', options: ['San Antonio Spurs', 'Utah Jazz', 'Portland Trail Blazers', 'Memphis Grizzlies'], correctIndex: 2, explanation: 'Lillard spent his first 11 seasons in Portland, becoming the franchise\'s all-time leading scorer.' },
       { question: 'Anthony Edwards was selected #1 overall in the 2020 NBA Draft by which team?', options: ['Detroit Pistons', 'Charlotte Hornets', 'Houston Rockets', 'Minnesota Timberwolves'], correctIndex: 3, explanation: 'Edwards was the first pick by Minnesota in 2020 and quickly became one of the NBA\'s brightest stars.' },
     ],
   },
@@ -344,7 +344,7 @@ const games = [
   // ─── 2026-03-29 ───────────────────────────────────────────────────────────
   {
     date: '2026-03-29', league: 'NBA',
-    mystery_player: { name: 'De\'Aaron Fox', team: 'Sacramento Kings', position: 'PG', height: "6'3\"", jerseyNumber: 5, conference: 'Western', college: 'Kentucky', age: 27, stats: { ppg: 23.5, apg: 7.1, rpg: 3.9, fg_pct: .468 } },
+    mystery_player: { name: 'De\'Aaron Fox', team: 'San Antonio Spurs', position: 'PG', height: "6'3\"", jerseyNumber: 5, conference: 'Western', college: 'Kentucky', age: 27, stats: { ppg: 23.5, apg: 7.1, rpg: 3.9, fg_pct: .468 } },
     showdown_player_a: { name: 'Anthony Edwards', team: 'Minnesota Timberwolves', stats: { ppg: 25.8, rpg: 5.2, apg: 5.1, spg: 1.3 }, statLabel: '2024-25 Season' },
     showdown_player_b: { name: 'Ja Morant', team: 'Memphis Grizzlies', stats: { ppg: 21.2, rpg: 4.0, apg: 8.1, spg: 1.0 }, statLabel: '2024-25 Season' },
     showdown_category: 'WHO IS THE MORE EXPLOSIVE GUARD?',
@@ -355,7 +355,7 @@ const games = [
       { name: 'Jalen Brunson', team: 'New York Knicks', rankingStat: 26.4, statLabel: 'PPG' },
       { name: 'Nikola Jokic', team: 'Denver Nuggets', rankingStat: 29.4, statLabel: 'PPG' },
       { name: 'Karl-Anthony Towns', team: 'New York Knicks', rankingStat: 24.4, statLabel: 'PPG' },
-      { name: 'De\'Aaron Fox', team: 'Sacramento Kings', rankingStat: 23.5, statLabel: 'PPG' },
+      { name: 'De\'Aaron Fox', team: 'San Antonio Spurs', rankingStat: 23.5, statLabel: 'PPG' },
     ],
     blind_rank_category: 'RANK BY OVERALL GREATNESS',
     trivia_questions: [
@@ -377,7 +377,7 @@ const games = [
       { name: 'Trae Young', team: 'Atlanta Hawks', rankingStat: 11.1, statLabel: 'APG' },
       { name: 'Tyrese Haliburton', team: 'Indiana Pacers', rankingStat: 10.9, statLabel: 'APG' },
       { name: 'Jalen Brunson', team: 'New York Knicks', rankingStat: 7.2, statLabel: 'APG' },
-      { name: 'De\'Aaron Fox', team: 'Sacramento Kings', rankingStat: 7.1, statLabel: 'APG' },
+      { name: 'De\'Aaron Fox', team: 'San Antonio Spurs', rankingStat: 7.1, statLabel: 'APG' },
       { name: 'Donovan Mitchell', team: 'Cleveland Cavaliers', rankingStat: 5.1, statLabel: 'APG' },
     ],
     blind_rank_category: 'WHO WOULD YOU BUILD A TEAM AROUND?',
@@ -644,7 +644,7 @@ const games = [
   {
     date: '2026-04-11', league: 'NBA',
     mystery_player: { name: 'Nikola Jokic', team: 'Denver Nuggets', position: 'C', height: "6'11\"", jerseyNumber: 15, conference: 'Western', college: 'Serbia (international)', age: 30, stats: { ppg: 29.4, apg: 10.2, rpg: 12.8, fg_pct: .582 } },
-    showdown_player_a: { name: 'De\'Aaron Fox', team: 'Sacramento Kings', stats: { ppg: 23.5, apg: 7.1, three_pct: .323, fg_pct: .468 }, statLabel: '2024-25 Season' },
+    showdown_player_a: { name: 'De\'Aaron Fox', team: 'San Antonio Spurs', stats: { ppg: 23.5, apg: 7.1, three_pct: .323, fg_pct: .468 }, statLabel: '2024-25 Season' },
     showdown_player_b: { name: 'Immanuel Quickley', team: 'Toronto Raptors', stats: { ppg: 18.6, apg: 6.8, three_pct: .381, fg_pct: .423 }, statLabel: '2024-25 Season' },
     showdown_category: 'WHO IS THE BETTER OUTSIDE SHOOTER?',
     showdown_correct_answer: 'b',

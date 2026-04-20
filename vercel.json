@@ -1,6 +1,10 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!landing|about|privacy|terms|robots\\.txt|sitemap\\.xml|ads\\.txt).*)",
+      "destination": "/index.html"
+    },
+    { "source": "/", "destination": "/index.html" }
   ],
   "headers": [
     {

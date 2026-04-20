@@ -7,9 +7,10 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Search, Swords, ListOrdered, Brain, Check, Zap, Type } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fontFamily, fonts, fontSizes, spacing, radius } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import LeagueSwitcher from '../../screens/components/ui/LeagueSwitcher';
 import { type Tab } from './ui/BottomNav';
 import { getAvailableArchiveDates } from '../../lib/dailyGames';
@@ -64,6 +65,9 @@ let _persistedLeague = 'NBA';
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function Archive({ onBack, onPlayArchiveGame }: Props) {
+  const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
+  const t = isDark ? dark : light;
   const [selectedLeague, setSelectedLeague] = useState(_persistedLeague);
 
   const handleLeagueChange = (league: string) => {
@@ -94,18 +98,18 @@ export default function Archive({ onBack, onPlayArchiveGame }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={[styles.root, { backgroundColor: t.background }]}>
       {/* ── Zone 1 ── */}
-      <View style={styles.zone1}>
+      <View style={[styles.zone1, { backgroundColor: brand.primary, paddingTop: insets.top }]}>
         <View style={styles.zone1TopRow}>
           <Pressable onPress={onBack} hitSlop={8} style={styles.backBtn}>
-            <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+            <ArrowLeft size={22} color={dark.textPrimary} strokeWidth={2.5} />
           </Pressable>
         </View>
 
         <View style={styles.zone1Center}>
-          <Text style={styles.zone1Title}>ARCHIVE</Text>
-          <Text style={styles.zone1Sub}>Play any past day's games</Text>
+          <Text style={[styles.zone1Title, { color: dark.textPrimary }]}>ARCHIVE</Text>
+          <Text style={[styles.zone1Sub, { color: dark.textSecondary }]}>Play any past day's games</Text>
         </View>
 
         <View style={styles.switcherRow}>
@@ -116,16 +120,16 @@ export default function Archive({ onBack, onPlayArchiveGame }: Props) {
       {/* ── Zone 2 ── */}
       <ScrollView
         style={styles.zone2}
-        contentContainerStyle={styles.zone2Content}
+        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
           <View style={styles.centerState}>
-            <ActivityIndicator size="large" color={colors.brand} />
+            <ActivityIndicator size="large" color={brand.primary} />
           </View>
         ) : dates.length === 0 ? (
           <View style={styles.centerState}>
-            <Text style={styles.emptyText}>No archive games available yet</Text>
+            <Text style={[styles.emptyText, { color: t.textSecondary }]}>No archive games available yet</Text>
           </View>
         ) : (
           dates.map(row => {
@@ -136,37 +140,39 @@ export default function Archive({ onBack, onPlayArchiveGame }: Props) {
                   onPress={() => toggleExpand(row.date)}
                   style={({ pressed }) => [
                     styles.dateCard,
+                    { backgroundColor: t.surface, borderColor: t.cardBorder },
                     pressed && styles.dateCardPressed,
                     isExpanded && styles.dateCardExpanded,
                   ]}
                 >
                   <View style={styles.dateCardLeft}>
-                    <Text style={styles.dateLabel} numberOfLines={1}>{row.label}</Text>
-                    <Text style={styles.daysAgo} numberOfLines={1}>{row.subLabel}</Text>
+                    <Text style={[styles.dateLabel, { color: t.textPrimary }]} numberOfLines={1}>{row.label}</Text>
+                    <Text style={[styles.daysAgo, { color: t.textSecondary }]} numberOfLines={1}>{row.subLabel}</Text>
                   </View>
 
                   <View style={styles.dateCardRight}>
                     {GAME_TYPES.map(g => (
-                      <View key={g.id} style={styles.gameIconDot}>
-                        <g.Icon size={14} color={colors.brand} strokeWidth={2} />
+                      <View key={g.id} style={[styles.gameIconDot, { backgroundColor: isDark ? 'rgba(252,52,92,0.12)' : light.tagBg }]}>
+                        <g.Icon size={14} color={brand.primary} strokeWidth={2} />
                       </View>
                     ))}
                   </View>
                 </Pressable>
 
                 {isExpanded && (
-                  <View style={styles.expandedRow}>
+                  <View style={[styles.expandedRow, { backgroundColor: t.surface, borderColor: t.divider }]}>
                     {GAME_TYPES.map(g => (
                       <Pressable
                         key={g.id}
                         onPress={() => onPlayArchiveGame(g.id, row.date)}
                         style={({ pressed }) => [
                           styles.gameBtn,
+                          { backgroundColor: t.card, borderColor: t.cardBorder },
                           pressed && styles.gameBtnPressed,
                         ]}
                       >
-                        <g.Icon size={16} color={colors.brand} strokeWidth={2} />
-                        <Text style={styles.gameBtnText}>{g.label}</Text>
+                        <g.Icon size={16} color={brand.primary} strokeWidth={2} />
+                        <Text style={[styles.gameBtnText, { color: t.textPrimary }]}>{g.label}</Text>
                       </Pressable>
                     ))}
                   </View>
@@ -176,7 +182,7 @@ export default function Archive({ onBack, onPlayArchiveGame }: Props) {
           })
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -185,21 +191,14 @@ export default function Archive({ onBack, onPlayArchiveGame }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
 
   // Zone 1
   zone1: {
-    backgroundColor: colors.brand,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['3xl'],
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 12,
+    borderBottomLeftRadius: radius.sheet,
+    borderBottomRightRadius: radius.sheet,
   },
   zone1TopRow: {
     flexDirection: 'row',
@@ -216,19 +215,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   zone1Title: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 24,
-    color: colors.white,
+    fontFamily: fonts.display,
+    fontSize: 36,
+    lineHeight: 38,
     letterSpacing: 3,
     textAlign: 'center',
   },
   zone1Sub: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.70)',
-    marginTop: 4,
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSizes.small.fontSize,
+    marginTop: spacing.xs,
     textAlign: 'center',
   },
   switcherRow: {
@@ -238,12 +234,9 @@ const styles = StyleSheet.create({
   // Zone 2
   zone2: {
     flex: 1,
-    backgroundColor: 'transparent',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -32,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.10)',
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    marginTop: -spacing['3xl'],
   },
   zone2Content: {
     paddingHorizontal: spacing.lg,
@@ -259,32 +252,20 @@ const styles = StyleSheet.create({
     paddingTop: 80,
   },
   emptyText: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 15,
-    color: '#9A9A9A',
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSizes.body.fontSize,
     textAlign: 'center',
   },
 
   // Date card
   dateCard: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 12,
+    borderRadius: radius.primary,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    // 3D raised effect
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.50)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    borderWidth: 1,
   },
   dateCardPressed: {
     opacity: 0.85,
@@ -293,22 +274,17 @@ const styles = StyleSheet.create({
   dateCardExpanded: {
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
-    borderBottomWidth: 0,
   },
   dateCardLeft: {
     flex: 1,
   },
   dateLabel: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
+    fontFamily: fonts.display,
     fontSize: 16,
-    color: colors.white,
   },
   daysAgo: {
-    fontFamily: fontFamily.medium,
-    fontWeight: '500',
-    fontSize: 13,
-    color: '#9A9A9A',
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSizes.small.fontSize,
     marginTop: 2,
   },
   dateCardRight: {
@@ -320,50 +296,38 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(252,52,92,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   // Expanded game buttons
   expandedRow: {
-    backgroundColor: darkColors.surfaceElevated,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    borderBottomLeftRadius: radius.primary,
+    borderBottomRightRadius: radius.primary,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xs,
     paddingBottom: spacing.lg,
     gap: spacing.sm,
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.50)',
-    borderLeftWidth: 1,
-    borderLeftColor: 'rgba(255,255,255,0.04)',
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderTopWidth: 0,
     marginTop: -1,
   },
   gameBtn: {
-    backgroundColor: darkColors.surface,
     borderRadius: 10,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.30)',
+    borderWidth: 1,
   },
   gameBtnPressed: {
     opacity: 0.7,
     transform: [{ scale: 0.98 }],
   },
   gameBtnText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 13,
-    color: colors.white,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSizes.small.fontSize,
     letterSpacing: 1,
   },
 });

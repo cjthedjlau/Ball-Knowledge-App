@@ -8,7 +8,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Check } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { calculateMultiplayerXP, saveGameResult, updateUserXPAndStreak } from '../../lib/xp';
 import { supabase } from '../../lib/supabase';
 import { getNormalPlayers, type Player } from '../../lib/playersPool';
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export default function ThirteenWordsScreen({ onBack }: Props) {
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   // ── Data ──
@@ -147,7 +149,7 @@ export default function ThirteenWordsScreen({ onBack }: Props) {
         style={styles.zone2}
         contentContainerStyle={[
           styles.zone2Content,
-          { paddingBottom: insets.bottom + 24 },
+          { paddingBottom: 120 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -239,7 +241,7 @@ export default function ThirteenWordsScreen({ onBack }: Props) {
         {/* ── XP Card (shown when all done) ── */}
         {allDone && xpEarned !== null && (
           <View style={styles.xpCard}>
-            <Text style={styles.xpCardLabel}>⭐ XP EARNED</Text>
+            <Text style={styles.xpCardLabel}>XP EARNED</Text>
             <Text style={styles.xpCardTotal}>+{xpEarned}</Text>
             <Text style={styles.xpCardBreakdown}>Multiplayer Bonus: {xpEarned} XP</Text>
           </View>
@@ -316,7 +318,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    marginTop: -32,
+    marginTop: 0,
   },
   zone2Content: {
     paddingTop: 24,
@@ -478,7 +480,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 1,
-    color: '#9A9A9A',
+    color: darkColors.textSecondary,
   },
   xpCardTotal: {
     fontFamily: fontFamily.black,
@@ -490,7 +492,7 @@ const styles = StyleSheet.create({
   xpCardBreakdown: {
     fontFamily: fontFamily.regular,
     fontSize: 13,
-    color: '#9A9A9A',
+    color: darkColors.textSecondary,
   },
 
 });

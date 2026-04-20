@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet, Easing } from 'react-native';
-import { colors, fontFamily } from '../../../styles/theme';
+import { brand, dark, light, fonts } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 
 interface DailyProgressBarProps {
   completed: number;
@@ -11,6 +12,7 @@ export default function DailyProgressBar({
   completed,
   total = 4,
 }: DailyProgressBarProps) {
+  const { isDark } = useTheme();
   const anim = useRef(new Animated.Value(0)).current;
   const fraction = total > 0 ? completed / total : 0;
 
@@ -32,16 +34,37 @@ export default function DailyProgressBar({
   return (
     <View style={styles.container}>
       <View style={styles.labelRow}>
-        <Text style={styles.title}>Daily Games</Text>
-        <Text style={styles.status}>{completed} of {total} Complete</Text>
+        <Text
+          style={[
+            styles.title,
+            { color: '#FFFFFF' },
+          ]}
+        >
+          Daily Games
+        </Text>
+        <Text
+          style={[
+            styles.status,
+            { color: 'rgba(255,255,255,0.7)' },
+          ]}
+        >
+          {completed} of {total} Complete
+        </Text>
       </View>
-      <View style={styles.track}>
+      <View
+        style={[
+          styles.track,
+          {
+            backgroundColor: 'rgba(255,255,255,0.2)',
+          },
+        ]}
+      >
         <Animated.View
           style={[
             styles.fill,
             {
               width: fillWidth,
-              backgroundColor: colors.white,
+              backgroundColor: '#FFFFFF',
             },
           ]}
         />
@@ -61,27 +84,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 16,
     letterSpacing: 1,
-    color: colors.white,
   },
   status: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 15,
-    color: 'rgba(255,255,255,0.70)',
   },
   track: {
     width: '100%',
-    height: 8,
-    backgroundColor: 'rgba(0,0,0,0.20)',
-    borderRadius: 999,
+    height: 3,
+    borderRadius: 2,
     overflow: 'hidden',
   },
   fill: {
-    height: 8,
-    borderRadius: 999,
+    height: 3,
+    borderRadius: 2,
   },
 });

@@ -10,12 +10,20 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
+  brand,
+  dark,
+  light,
   colors,
   darkColors,
+  fonts,
   fontFamily,
   spacing,
+  radius,
 } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
+import { LinearGradient } from 'expo-linear-gradient';
 import AdBanner from '../../components/AdBanner';
+import GhostWatermark from './ui/GhostWatermark';
 
 import {
   Search,
@@ -41,27 +49,44 @@ import { LEVELS } from '../../lib/xp';
 import StreakBadge from './ui/StreakBadge';
 import DailyProgressBar from './ui/DailyProgressBar';
 import GameCard from './ui/GameCard';
+import GameCardWithPreview from './ui/GameCardWithPreview';
+import MysteryPlayerPreview from './ui/previews/MysteryPlayerPreview';
+import BlindRank5Preview from './ui/previews/BlindRank5Preview';
+import ShowdownPreview from './ui/previews/ShowdownPreview';
+import TriviaPreview from './ui/previews/TriviaPreview';
+import PowerPlayPreview from './ui/previews/PowerPlayPreview';
+import AutoCompletePreview from './ui/previews/AutoCompletePreview';
 import AnimatedCard from '../../components/AnimatedCard';
 import QuestionOfTheDay from '../../components/qotd/QuestionOfTheDay';
 import QOTDSheet from '../../components/qotd/QOTDSheet';
-import BottomNav, { type Tab } from '../../app/components/ui/BottomNav';
+import OnThisDay from '../../components/home/OnThisDay';
+import { type Tab } from '../../app/components/ui/BottomNav';
 
 interface HomeProps {
   onNavigate: (tab: Tab) => void;
   onGoToGame: (gameId: string) => void;
   onGoToArchive?: () => void;
+  onGoToNotifications?: () => void;
   refreshTrigger?: number;
 }
 
-export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTrigger }: HomeProps) {
+export default function Home({ onNavigate, onGoToGame, onGoToArchive, onGoToNotifications, refreshTrigger }: HomeProps) {
   const insets = useSafeAreaInsets();
   const isMobile = useIsMobile();
-  const { profile, levelInfo } = useProfile(refreshTrigger);
+  const { profile, levelInfo, loading, refetch } = useProfile(refreshTrigger);
   const { zone1Style, zone2Style } = useZoneEntrance();
+  const { isDark } = useTheme();
   const [completedGameTypes, setCompletedGameTypes] = useState<Set<string>>(new Set());
   const [qotdOpen, setQotdOpen] = useState(false);
   const [qotdQuestion, setQotdQuestion] = useState('');
   const [qotdQuestionId, setQotdQuestionId] = useState<string | null>(null);
+
+  // Fallback re-fetch if profile is null or has default values after initial load
+  useEffect(() => {
+    if (!loading && (!profile || profile.lifetime_xp === 0)) {
+      refetch();
+    }
+  }, [loading]);
 
   useEffect(() => {
     void getTodaysCompletedGames().then(results => {
@@ -78,11 +103,11 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
     <View style={styles.safe}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 108 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* ── ZONE 1: Brand Header ── */}
-        <Animated.View style={[styles.zone1, zone1Style, { paddingTop: insets.top + 16 }]}>
+        <Animated.View style={[styles.zone1, zone1Style, { paddingTop: insets.top + 16, backgroundColor: brand.primary }]}>
           {/* Top row: greeting + notification bell */}
           <View style={styles.headerRow}>
             <View>
@@ -93,7 +118,7 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
               <Pressable style={styles.notificationBtn} onPress={onGoToArchive}>
                 <Clock color={colors.white} size={20} />
               </Pressable>
-              <Pressable style={styles.notificationBtn}>
+              <Pressable style={styles.notificationBtn} onPress={onGoToNotifications}>
                 <Bell color={colors.white} size={20} />
               </Pressable>
             </View>
@@ -115,86 +140,171 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
         </Animated.View>
 
         {/* ── ZONE 2: Content Area ── */}
-        <Animated.View style={[styles.zone2, zone2Style]}>
+        <Animated.View style={[styles.zone2, zone2Style, {
+          borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+          backgroundColor: isDark ? dark.background : light.background,
+        }]}>
+          {/* Ghost watermark behind hero area (light mode only) */}
+          {!isDark && (
+            <GhostWatermark text="BK" color="rgba(252,52,92,0.05)" />
+          )}
+
           {/* Question of the Day */}
-          <QuestionOfTheDay
-            onPress={(q, id) => {
-              setQotdQuestion(q);
-              setQotdQuestionId(id);
-              setQotdOpen(true);
-            }}
-          />
+          <View style={{ marginHorizontal: -(spacing.screenHorizontal + 8), marginTop: 0, marginBottom: spacing.sm }}>
+            <QuestionOfTheDay
+              onPress={(q, id) => {
+                setQotdQuestion(q);
+                setQotdQuestionId(id);
+                setQotdOpen(true);
+              }}
+            />
+          </View>
 
           {/* Daily Games Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Daily Games</Text>
+            <Text style={[styles.sectionTitle, { color: isDark ? dark.textPrimary : light.textPrimary }]}>Daily Games</Text>
             <View style={isMobile ? styles.gameGrid : styles.gameRow}>
               <AnimatedCard delay={0} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
-                <GameCard
-                  title="Mystery Player"
-                  subtitle="Guess today's mystery player in 8 tries"
-                  icon={<Search color={colors.brand} size={24} />}
-                  status={completedGameTypes.has('mystery-player') ? 'completed' : 'unplayed'}
-                  onPress={() => onGoToGame('player-guess')}
-                />
+                <View style={[styles.gameCardWrapper, {
+                  backgroundColor: isDark ? dark.card : light.card,
+                  borderColor: isDark ? dark.cardBorder : light.cardBorder,
+                }]}>
+                  <LinearGradient
+                    colors={[brand.primary, brand.teal]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.gameCardAccentBar}
+                  />
+                  <GameCardWithPreview
+                    title="Mystery Player"
+                    subtitle="Guess today's mystery player in 8 tries"
+                    icon={<Search color={colors.brand} size={24} />}
+                    status={completedGameTypes.has('mystery-player') ? 'completed' : 'unplayed'}
+                    onPress={() => onGoToGame('player-guess')}
+                    PreviewComponent={MysteryPlayerPreview}
+                  />
+                </View>
               </AnimatedCard>
               <AnimatedCard delay={80} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
-                <GameCard
-                  title="Blind Rank 5"
-                  subtitle="Rank 5 hidden players"
-                  icon={<ListOrdered color={colors.brand} size={24} />}
-                  status={completedGameTypes.has('blind-rank-5') ? 'completed' : 'unplayed'}
-                  onPress={() => onGoToGame('blind-rank-5')}
-                />
+                <View style={[styles.gameCardWrapper, {
+                  backgroundColor: isDark ? dark.card : light.card,
+                  borderColor: isDark ? dark.cardBorder : light.cardBorder,
+                }]}>
+                  <LinearGradient
+                    colors={[brand.primary, brand.teal]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.gameCardAccentBar}
+                  />
+                  <GameCardWithPreview
+                    title="Blind Rank 5"
+                    subtitle="Rank 5 hidden players"
+                    icon={<ListOrdered color={colors.brand} size={24} />}
+                    status={completedGameTypes.has('blind-rank-5') ? 'completed' : 'unplayed'}
+                    onPress={() => onGoToGame('blind-rank-5')}
+                    PreviewComponent={BlindRank5Preview}
+                  />
+                </View>
               </AnimatedCard>
               <AnimatedCard delay={160} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
-                <GameCard
-                  title="Showdown"
-                  subtitle="Compare two mystery athletes"
-                  icon={<Swords color={colors.brand} size={24} />}
-                  status={completedGameTypes.has('showdown') ? 'completed' : 'unplayed'}
-                  onPress={() => onGoToGame('blind-showdown')}
-                />
+                <View style={[styles.gameCardWrapper, {
+                  backgroundColor: isDark ? dark.card : light.card,
+                  borderColor: isDark ? dark.cardBorder : light.cardBorder,
+                }]}>
+                  <LinearGradient
+                    colors={[brand.primary, brand.teal]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.gameCardAccentBar}
+                  />
+                  <GameCardWithPreview
+                    title="Showdown"
+                    subtitle="Compare two mystery athletes"
+                    icon={<Swords color={colors.brand} size={24} />}
+                    status={completedGameTypes.has('showdown') ? 'completed' : 'unplayed'}
+                    onPress={() => onGoToGame('blind-showdown')}
+                    PreviewComponent={ShowdownPreview}
+                  />
+                </View>
               </AnimatedCard>
               <AnimatedCard delay={240} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
-                <GameCard
-                  title="Trivia Game"
-                  subtitle="3 rapid-fire sports questions"
-                  icon={<Brain color={colors.brand} size={24} />}
-                  status={completedGameTypes.has('trivia') ? 'completed' : 'unplayed'}
-                  onPress={() => onGoToGame('trivia')}
-                />
+                <View style={[styles.gameCardWrapper, {
+                  backgroundColor: isDark ? dark.card : light.card,
+                  borderColor: isDark ? dark.cardBorder : light.cardBorder,
+                }]}>
+                  <LinearGradient
+                    colors={[brand.primary, brand.teal]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.gameCardAccentBar}
+                  />
+                  <GameCardWithPreview
+                    title="Ladder"
+                    subtitle="5 questions, climb the ladder"
+                    icon={<Brain color={colors.brand} size={24} />}
+                    status={completedGameTypes.has('trivia') ? 'completed' : 'unplayed'}
+                    onPress={() => onGoToGame('trivia')}
+                    PreviewComponent={TriviaPreview}
+                  />
+                </View>
               </AnimatedCard>
               <AnimatedCard delay={320} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
-                <GameCard
-                  title="Power Play"
-                  subtitle="Fast Money — hit 125 pts"
-                  icon={<Zap color={colors.brand} size={24} />}
-                  status={completedGameTypes.has('power-play') ? 'completed' : 'unplayed'}
-                  onPress={() => onGoToGame('power-play')}
-                  isNew
-                />
+                <View style={[styles.gameCardWrapper, {
+                  backgroundColor: isDark ? dark.card : light.card,
+                  borderColor: isDark ? dark.cardBorder : light.cardBorder,
+                }]}>
+                  <LinearGradient
+                    colors={[brand.primary, brand.teal]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.gameCardAccentBar}
+                  />
+                  <GameCardWithPreview
+                    title="Power Play"
+                    subtitle="Fast Money — hit 125 pts"
+                    icon={<Zap color={colors.brand} size={24} />}
+                    status={completedGameTypes.has('power-play') ? 'completed' : 'unplayed'}
+                    onPress={() => onGoToGame('power-play')}
+                    isNew
+                    PreviewComponent={PowerPlayPreview}
+                  />
+                </View>
               </AnimatedCard>
               <AnimatedCard delay={400} style={isMobile ? styles.gameGridItem : styles.gameRowItem}>
-                <GameCard
-                  title="Auto Complete"
-                  subtitle="Fill in the search"
-                  icon={<TextSearch color={colors.brand} size={24} />}
-                  status={completedGameTypes.has('auto-complete') ? 'completed' : 'unplayed'}
-                  onPress={() => onGoToGame('auto-complete')}
-                  isNew
-                />
+                <View style={[styles.gameCardWrapper, {
+                  backgroundColor: isDark ? dark.card : light.card,
+                  borderColor: isDark ? dark.cardBorder : light.cardBorder,
+                }]}>
+                  <LinearGradient
+                    colors={[brand.primary, brand.teal]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.gameCardAccentBar}
+                  />
+                  <GameCardWithPreview
+                    title="Auto Complete"
+                    subtitle="Fill in the search"
+                    icon={<TextSearch color={colors.brand} size={24} />}
+                    status={completedGameTypes.has('auto-complete') ? 'completed' : 'unplayed'}
+                    onPress={() => onGoToGame('auto-complete')}
+                    isNew
+                    PreviewComponent={AutoCompletePreview}
+                  />
+                </View>
               </AnimatedCard>
             </View>
 
             {/* Multiplayer CTA */}
             <Pressable
-              style={styles.multiplayerCta}
+              style={[styles.multiplayerCta, {
+                backgroundColor: isDark ? dark.card : light.card,
+                borderColor: isDark ? dark.cardBorder : light.cardBorder,
+              }]}
               onPress={() => onNavigate('games')}
             >
-              <Users color={colors.brand} size={20} strokeWidth={2} />
-              <Text style={styles.multiplayerCtaText}>Play with friends</Text>
-              <ChevronRight color={colors.midGray} size={18} strokeWidth={2} />
+              <Users color={brand.primary} size={20} strokeWidth={2} />
+              <Text style={[styles.multiplayerCtaText, { color: isDark ? dark.textPrimary : light.textPrimary }]}>Play with friends</Text>
+              <ChevronRight color={isDark ? dark.textMuted : light.textMuted} size={18} strokeWidth={2} />
             </Pressable>
           </View>
 
@@ -203,7 +313,7 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
 
           {/* Level Progression */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Level</Text>
+            <Text style={[styles.sectionTitle, { color: isDark ? dark.textPrimary : light.textPrimary }]}>Your Level</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -219,26 +329,34 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
                   <AnimatedCard key={lvl.level} delay={320 + i * 60}>
                     <View style={[
                       styles.levelTile,
-                      isPast && styles.levelTilePast,
-                      isCurrent && styles.levelTileCurrent,
-                      isFuture && styles.levelTileFuture,
+                      isPast && [styles.levelTilePast, {
+                        backgroundColor: isDark ? dark.surface : light.surface,
+                        borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+                      }],
+                      isCurrent && [styles.levelTileCurrent, { backgroundColor: brand.primary, shadowColor: brand.primary }],
+                      isFuture && [styles.levelTileFuture, {
+                        backgroundColor: isDark ? dark.surface : light.surface,
+                        borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
+                      }],
                     ]}>
                       <View style={styles.levelIconWrap}>
                         {isPast ? (
-                          <CheckCircle color={colors.white} size={24} strokeWidth={2} />
+                          <CheckCircle color={isDark ? dark.textPrimary : light.textPrimary} size={24} strokeWidth={2} />
                         ) : isCurrent ? (
-                          <Star color={colors.white} size={24} strokeWidth={2} fill={colors.white} />
+                          <Star color={isDark ? dark.textPrimary : light.card} size={24} strokeWidth={2} fill={isDark ? dark.textPrimary : light.card} />
                         ) : (
-                          <Lock color={colors.white} size={20} strokeWidth={2} />
+                          <Lock color={isDark ? dark.textMuted : light.textMuted} size={20} strokeWidth={2} />
                         )}
                       </View>
                       <Text style={[
                         styles.levelNumber,
-                        isCurrent && styles.levelNumberCurrent,
+                        { color: isDark ? dark.textSecondary : light.textSecondary },
+                        isCurrent && { color: isDark ? dark.textPrimary : light.card },
                       ]}>LVL {lvl.level}</Text>
                       <Text style={[
                         styles.levelName,
-                        isCurrent && styles.levelNameCurrent,
+                        { color: isDark ? dark.textSecondary : light.textSecondary },
+                        isCurrent && { color: isDark ? dark.textPrimary : light.card },
                       ]} numberOfLines={1}>{lvl.name}</Text>
                     </View>
                   </AnimatedCard>
@@ -246,11 +364,14 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, refreshTri
               })}
             </ScrollView>
           </View>
+
+          {/* ── This Day in Sports History ── */}
+          <View style={styles.section}>
+            <OnThisDay />
+          </View>
+
         </Animated.View>
       </ScrollView>
-
-      {/* ── Floating Pill Bottom Nav ── */}
-      <BottomNav activeTab="home" onNavigate={onNavigate} />
 
       {/* ── Question of the Day Sheet ── */}
       {qotdOpen && (
@@ -281,7 +402,6 @@ const styles = StyleSheet.create({
 
   // ── Zone 1: Brand header ──
   zone1: {
-    backgroundColor: colors.brand,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     paddingHorizontal: spacing.screenHorizontal + 8,
@@ -299,9 +419,10 @@ const styles = StyleSheet.create({
   greeting: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
-    fontSize: 32,
+    fontSize: 42,
+    lineHeight: 44,
     letterSpacing: 1,
-    color: colors.white,
+    color: dark.textPrimary,
   },
   subGreeting: {
     fontFamily: fontFamily.medium,
@@ -343,7 +464,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 34,
     letterSpacing: 1,
-    color: colors.white,
+    color: dark.textPrimary,
   },
   progressWrapper: {
     width: '100%',
@@ -373,8 +494,17 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 24,
     letterSpacing: 1,
-    color: colors.white,
     marginBottom: 16,
+  },
+  // Game card wrapper with accent bar
+  gameCardWrapper: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  gameCardAccentBar: {
+    height: 3,
+    width: '100%',
   },
   // Mobile: 2×2 wrap grid
   gameGrid: {
@@ -399,10 +529,8 @@ const styles = StyleSheet.create({
   multiplayerCta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: darkColors.surfaceElevated,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginTop: 16,
@@ -413,7 +541,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 15,
-    color: colors.white,
   },
   achievementRow: {
     gap: 12,
@@ -430,29 +557,23 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   levelTilePast: {
-    backgroundColor: darkColors.surfaceElevated,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
     borderBottomWidth: 2,
     borderBottomColor: 'rgba(0,0,0,0.5)',
   },
   levelTileCurrent: {
-    backgroundColor: colors.brand,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.15)',
     borderBottomWidth: 2,
     borderBottomColor: 'rgba(0,0,0,0.5)',
-    shadowColor: colors.brand,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 12,
     elevation: 12,
   },
   levelTileFuture: {
-    backgroundColor: darkColors.surfaceElevated,
     opacity: 0.35,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
     borderBottomWidth: 2,
     borderBottomColor: 'rgba(0,0,0,0.5)',
   },
@@ -466,22 +587,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 11,
     letterSpacing: 1,
-    color: darkColors.textSecondary,
     textAlign: 'center',
-  },
-  levelNumberCurrent: {
-    color: colors.white,
   },
   levelName: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
     fontSize: 10,
     letterSpacing: 0.5,
-    color: darkColors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
-  },
-  levelNameCurrent: {
-    color: colors.white,
   },
 });

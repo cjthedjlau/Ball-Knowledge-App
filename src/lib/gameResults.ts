@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { queueGameResult } from './offlineQueue'
 
 // Returns today's date as YYYY-MM-DD in America/New_York (EST/EDT).
 // All daily game resets happen at midnight Eastern time.
@@ -6,32 +7,41 @@ export function getTodayEST(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 }
 
-// Save a completed game result
+type GameType = 'mystery-player' | 'showdown' | 'blind-rank-5' | 'trivia' | 'power-play' | 'auto-complete';
+
+// Save a completed game result — falls back to offline queue on failure
 export async function saveGameResult(
   league: string,
-  gameType: 'mystery-player' | 'showdown' | 'blind-rank-5' | 'trivia' | 'power-play' | 'auto-complete',
+  gameType: GameType,
   score: number,
   xpEarned: number
 ) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const today = getTodayEST()
-  const { data, error } = await supabase
-    .from('user_game_results')
-    .upsert({
-      user_id: user.id,
-      date: today,
-      league,
-      game_type: gameType,
-      completed: true,
-      score,
-      xp_earned: xpEarned
-    }, { onConflict: 'user_id,date,league,game_type' })
-  if (error) {
-    console.error('Failed to save game result:', error.message)
+  try {
+    const { data, error } = await supabase
+      .from('user_game_results')
+      .upsert({
+        user_id: user.id,
+        date: today,
+        league,
+        game_type: gameType,
+        completed: true,
+        score,
+        xp_earned: xpEarned
+      }, { onConflict: 'user_id,date,league,game_type' })
+    if (error) {
+      console.warn('Save failed, queuing offline:', error.message)
+      await queueGameResult({ gameType, league, score, xpEarned, userId: user.id })
+      return null
+    }
+    return data
+  } catch (e) {
+    console.warn('Network error saving result, queuing offline:', e)
+    await queueGameResult({ gameType, league, score, xpEarned, userId: user.id })
     return null
   }
-  return data
 }
 
 // Get today's completed games for the current user

@@ -37,57 +37,79 @@ export default function QOTDSheet({ question, questionId, onClose }: Props) {
   const [hasAnswered, setHasAnswered] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+  const [resolvedQId, setResolvedQId] = useState<string | null>(questionId);
+
+  // Ensure we have a question ID — create the row if needed
+  useEffect(() => {
+    if (questionId) { setResolvedQId(questionId); return; }
+    if (!question) return;
+    void (async () => {
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const { data } = await supabase
+        .from('qotd_questions')
+        .upsert({ date: today, question }, { onConflict: 'date' })
+        .select('id')
+        .single();
+      if (data) setResolvedQId(data.id);
+    })();
+  }, [questionId, question]);
+
   const loadResponses = useCallback(async () => {
-    if (!questionId) { setLoading(false); return; }
+    if (!resolvedQId) { setLoading(false); return; }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    const uid = user?.id ?? null;
-    setCurrentUserId(uid);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const uid = user?.id ?? null;
+      setCurrentUserId(uid);
 
-    const { data } = await supabase
-      .from('qotd_responses')
-      .select('id, body, user_id, created_at')
-      .eq('question_id', questionId)
-      .order('created_at', { ascending: false })
-      .limit(50);
+      const { data } = await supabase
+        .from('qotd_responses')
+        .select('id, body, user_id, created_at')
+        .eq('question_id', resolvedQId)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-    if (data) {
-      // Fetch usernames for all responders
-      const userIds = [...new Set(data.map(r => r.user_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, username, display_name')
-        .in('id', userIds);
+      if (data) {
+        const userIds = [...new Set(data.map(r => r.user_id))];
+        const nameMap = new Map<string, string>();
 
-      const nameMap = new Map<string, string>();
-      profiles?.forEach(p => nameMap.set(p.id, p.display_name || p.username || 'Anonymous'));
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username, display_name')
+            .in('id', userIds);
+          profiles?.forEach(p => nameMap.set(p.id, p.display_name || p.username || 'Anonymous'));
+        }
 
-      const entries: ResponseEntry[] = data.map(r => ({
-        id: r.id,
-        body: r.body,
-        username: nameMap.get(r.user_id) ?? 'Anonymous',
-        created_at: r.created_at,
-        is_mine: r.user_id === uid,
-      }));
+        const entries: ResponseEntry[] = data.map(r => ({
+          id: r.id,
+          body: r.body,
+          username: nameMap.get(r.user_id) ?? 'Anonymous',
+          created_at: r.created_at,
+          is_mine: r.user_id === uid,
+        }));
 
-      setResponses(entries);
-      setHasAnswered(entries.some(e => e.is_mine));
+        setResponses(entries);
+        setHasAnswered(entries.some(e => e.is_mine));
+      }
+    } catch (err) {
+      console.warn('[QotD] Failed to load responses:', err);
     }
     setLoading(false);
-  }, [questionId]);
+  }, [resolvedQId]);
 
   useEffect(() => {
     void loadResponses();
   }, [loadResponses]);
 
   const handleSubmit = async () => {
-    if (!answer.trim() || !questionId || !currentUserId) return;
+    if (!answer.trim() || !resolvedQId || !currentUserId) return;
     setSubmitting(true);
 
     const { error } = await supabase
       .from('qotd_responses')
       .upsert({
-        question_id: questionId,
+        question_id: resolvedQId,
         user_id: currentUserId,
         body: answer.trim(),
       }, { onConflict: 'question_id,user_id' });

@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Zap, Trophy, Swords, Eye, Activity, HelpCircle, ChevronRight, Check, X, Search, Star, Users, Hash, Shuffle } from 'lucide-react-native';
-import { colors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, fonts, fontSizes, colors, darkColors, fontFamily, spacing, radius, layout } from '../../styles/theme';
 
 const { width: W, height: H } = Dimensions.get('window');
 const CARD_HALF = (W - 48 - 12) / 2;
@@ -119,7 +119,7 @@ function Scene1PowerPlay({ opacity }: { opacity: Animated.Value }) {
     return () => timers.current.forEach(clearTimeout);
   }, []);
 
-  const ptColor = (p: number) => p >= 30 ? colors.brand : p >= 12 ? colors.brandMid : 'rgba(255,255,255,0.4)';
+  const ptColor = (p: number) => p >= 30 ? colors.brand : p >= 12 ? colors.brandMid : dark.textMuted;
   return (
     <Animated.View style={[StyleSheet.absoluteFill, sc.sceneCol, { opacity }]}>
       <Animated.View style={[sc.gameTagRow, { opacity: badgeO }]}>
@@ -505,7 +505,7 @@ function Scene5Wavelength({ opacity }: { opacity: Animated.Value }) {
       {/* Score badge */}
       <Animated.View style={[sc.wavScoreBadge, { opacity: scoreO, transform: [{ scale: scoreS }] }]}>
         <Text style={sc.wavScoreText}>+4 PTS</Text>
-        <Text style={sc.wavScoreEmoji}>🎯 BULLSEYE!</Text>
+        <Text style={sc.wavScoreEmoji}>BULLSEYE!</Text>
       </Animated.View>
     </Animated.View>
   );
@@ -724,19 +724,19 @@ export default function GameIntro({ onFinish }: Props) {
 // Styles
 // ─────────────────────────────────────────────────────────────────────────────
 const sc = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#0F0F0F' },
+  root:   { flex: 1, backgroundColor: dark.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg },
   sceneCol: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingTop: 72,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: dark.background,
   },
   sceneWhoAmI: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingTop: 72,
-    backgroundColor: '#0C0C1A',
+    backgroundColor: dark.background,
   },
 
   // ── Welcome ──────────────────────────────────────────────────────────────
@@ -749,7 +749,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 13,
-    color: 'rgba(255,255,255,0.45)',
+    color: dark.textSecondary,
     letterSpacing: 4,
     marginBottom: 8,
   },
@@ -766,7 +766,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: dark.textMuted,
     letterSpacing: 3,
     marginTop: 20,
   },
@@ -779,9 +779,9 @@ const sc = StyleSheet.create({
     paddingHorizontal: 16,
   },
   gameBadge: {
-    backgroundColor: 'rgba(252,52,92,0.12)',
+    backgroundColor: colors.brandAlpha15,
     borderWidth: 1,
-    borderColor: 'rgba(252,52,92,0.3)',
+    borderColor: colors.brandAlpha15,
     borderRadius: 8,
     paddingVertical: 5,
     paddingHorizontal: 10,
@@ -805,7 +805,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
+    color: dark.textSecondary,
     letterSpacing: 2,
     flex: 1,
   },
@@ -823,7 +823,7 @@ const sc = StyleSheet.create({
     letterSpacing: 1,
   },
   timerPill: {
-    backgroundColor: 'rgba(252,52,92,0.15)',
+    backgroundColor: colors.brandAlpha15,
     borderWidth: 1,
     borderColor: colors.brand,
     borderRadius: 6,
@@ -840,25 +840,25 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     letterSpacing: 1,
   },
   roundLabel: {
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     letterSpacing: 1,
   },
 
   // ── Power Play ────────────────────────────────────────────────────────────
   questionCard: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: dark.surface,
     borderRadius: 14,
     padding: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(252,52,92,0.2)',
+    borderColor: colors.brandAlpha15,
   },
   questionMeta: {
     fontFamily: fontFamily.bold,
@@ -878,17 +878,17 @@ const sc = StyleSheet.create({
   answerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: dark.card,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
     marginBottom: 7,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: dark.cardBorder,
   },
   answerRank: {
     width: 22, height: 22, borderRadius: 6,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: dark.surface,
     alignItems: 'center', justifyContent: 'center',
     marginRight: 10,
   },
@@ -896,7 +896,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: dark.textMuted,
   },
   answerName: {
     fontFamily: fontFamily.medium,
@@ -914,11 +914,11 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontWeight: '400',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
   },
   timerTrack: {
     height: 5,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: dark.surface,
     borderRadius: 3,
     overflow: 'hidden',
     marginTop: 10,
@@ -931,27 +931,27 @@ const sc = StyleSheet.create({
 
   // ── Blind Rank 5 ─────────────────────────────────────────────────────────
   currentRevealCard: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: dark.surface,
     borderRadius: 14,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
     borderWidth: 1.5,
-    borderColor: 'rgba(252,52,92,0.4)',
+    borderColor: colors.brandAlpha15,
     gap: 12,
   },
   currentRevealLeft: { alignItems: 'center' },
   silhouetteAvatar: {
     width: 48, height: 48, borderRadius: 10,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: dark.surface,
     alignItems: 'center', justifyContent: 'center',
   },
   silhouetteQ: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
     fontSize: 22,
-    color: 'rgba(255,255,255,0.18)',
+    color: dark.textDisabled,
   },
   revealPlayerName: {
     fontFamily: fontFamily.bold,
@@ -964,7 +964,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: dark.textMuted,
     marginBottom: 3,
   },
   revealPlayerStat: {
@@ -985,28 +985,28 @@ const sc = StyleSheet.create({
   slot: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#161616',
+    backgroundColor: dark.background,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 14,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    borderColor: dark.cardBorder,
     gap: 12,
   },
   slotFilled: {
-    backgroundColor: '#1A1A1A',
-    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: dark.card,
+    borderColor: dark.cardBorder,
   },
   slotActive: {
     borderColor: colors.brand,
-    backgroundColor: 'rgba(252,52,92,0.08)',
+    backgroundColor: colors.brandAlpha15,
   },
   slotNum: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
     fontSize: 16,
-    color: 'rgba(255,255,255,0.2)',
+    color: dark.textDisabled,
     width: 20,
     textAlign: 'center',
   },
@@ -1021,13 +1021,13 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
   },
   slotEmpty: {
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.2)',
+    color: dark.textDisabled,
     letterSpacing: 1.5,
   },
 
@@ -1040,11 +1040,11 @@ const sc = StyleSheet.create({
   },
   showdownCard: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: dark.card,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: dark.cardBorder,
     alignItems: 'center',
   },
   showdownCardLabel: {
@@ -1057,10 +1057,10 @@ const sc = StyleSheet.create({
   },
   silhouetteMd: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: dark.surface,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: dark.cardBorder,
   },
   showdownStatRow: {
     alignItems: 'center',
@@ -1070,7 +1070,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 9,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     letterSpacing: 1,
     marginBottom: 1,
   },
@@ -1095,11 +1095,11 @@ const sc = StyleSheet.create({
     letterSpacing: 1,
   },
   revealOverlay: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: dark.card,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(252,52,92,0.3)',
+    borderColor: colors.brandAlpha15,
   },
   revealTitle: {
     fontFamily: fontFamily.bold,
@@ -1140,7 +1140,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.black,
     fontWeight: '900',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.2)',
+    color: dark.textDisabled,
     letterSpacing: 2,
   },
   voteBarRow: {
@@ -1161,13 +1161,13 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.black,
     fontWeight: '900',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.35)',
+    color: dark.textMuted,
     width: 40,
     textAlign: 'right',
   },
   voteTrack: {
     flex: 1, height: 5,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: dark.surface,
     borderRadius: 3, overflow: 'hidden',
   },
   voteBarA: {
@@ -1177,7 +1177,7 @@ const sc = StyleSheet.create({
   },
   voteBarB: {
     height: '100%',
-    backgroundColor: '#3A3A3A',
+    backgroundColor: dark.surface,
     borderRadius: 3,
   },
 
@@ -1194,7 +1194,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.7)',
+    color: dark.textSecondary,
     letterSpacing: 3,
     marginBottom: 2,
   },
@@ -1206,12 +1206,12 @@ const sc = StyleSheet.create({
     letterSpacing: 2,
   },
   imposterCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: dark.card,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: dark.inputBorder,
   },
   imposterCardEmoji: {
     fontSize: 44,
@@ -1228,14 +1228,14 @@ const sc = StyleSheet.create({
   imposterDivider: {
     width: '100%',
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: dark.tagBg,
     marginBottom: 16,
   },
   imposterAthleteLabel: {
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 10,
-    color: 'rgba(255,255,255,0.35)',
+    color: dark.textMuted,
     letterSpacing: 3,
     marginBottom: 6,
   },
@@ -1250,17 +1250,17 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.4)',
+    color: dark.textMuted,
   },
   imposterHint: {
     marginTop: 16,
-    backgroundColor: 'rgba(252,52,92,0.1)',
+    backgroundColor: colors.brandAlpha15,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(252,52,92,0.2)',
+    borderColor: colors.brandAlpha15,
     width: '100%',
   },
   imposterHintLabel: {
@@ -1275,7 +1275,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
+    color: dark.textSecondary,
     textAlign: 'center',
   },
 
@@ -1289,30 +1289,30 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.35)',
+    color: dark.textMuted,
   },
   axisRight: {
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.35)',
+    color: dark.textMuted,
   },
   dialContainer: {
     marginBottom: 16,
   },
   dialTrack: {
     height: 44,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: dark.card,
     borderRadius: 8,
     position: 'relative',
     overflow: 'visible',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: dark.cardBorder,
   },
   dialTargetZone: {
     position: 'absolute',
     top: 0, bottom: 0,
-    backgroundColor: 'rgba(0,200,151,0.3)',
+    backgroundColor: darkColors.successBg,
     borderRadius: 4,
   },
   dialNeedle: {
@@ -1338,22 +1338,22 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 10,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     letterSpacing: 1,
   },
   clueCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: dark.card,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: dark.cardBorder,
     marginBottom: 14,
   },
   clueLabel: {
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 9,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     letterSpacing: 3,
     marginBottom: 4,
   },
@@ -1361,11 +1361,11 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.black,
     fontWeight: '900',
     fontSize: 24,
-    color: '#07bccc',
+    color: brand.teal,
   },
   wavScoreBadge: {
     alignSelf: 'center',
-    backgroundColor: 'rgba(0,200,151,0.12)',
+    backgroundColor: darkColors.successBg,
     borderWidth: 1.5,
     borderColor: colors.accentGreen,
     borderRadius: 50,
@@ -1384,7 +1384,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 13,
-    color: 'rgba(255,255,255,0.4)',
+    color: dark.textMuted,
   },
 
   // ── Who Am I ──────────────────────────────────────────────────────────────
@@ -1427,18 +1427,18 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontWeight: '400',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     marginTop: 2,
   },
   whoAthleteCard: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: dark.card,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
     borderWidth: 1.5,
-    borderColor: 'rgba(252,52,92,0.3)',
+    borderColor: colors.brandAlpha15,
     paddingVertical: 24,
   },
   whoAthleteName: {
@@ -1455,7 +1455,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 16,
-    color: 'rgba(255,255,255,0.5)',
+    color: dark.textSecondary,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -1477,7 +1477,7 @@ const sc = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#FF4757',
+    backgroundColor: colors.accentRed,
     borderRadius: 14,
     paddingVertical: 16,
   },
@@ -1507,7 +1507,7 @@ const sc = StyleSheet.create({
   },
   correctFlash: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,200,151,0.55)',
+    backgroundColor: colors.accentGreen,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 0,
@@ -1542,9 +1542,9 @@ const sc = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(252,52,92,0.1)',
+    backgroundColor: colors.brandAlpha15,
     borderWidth: 1,
-    borderColor: 'rgba(252,52,92,0.25)',
+    borderColor: colors.brandAlpha15,
     borderRadius: 8,
     paddingVertical: 7,
     paddingHorizontal: 12,
@@ -1577,7 +1577,7 @@ const sc = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontWeight: '400',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     letterSpacing: 2,
   },
 
@@ -1592,13 +1592,13 @@ const sc = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: dark.tagBg,
   },
   skipText: {
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
+    color: dark.textSecondary,
     letterSpacing: 2,
   },
 });

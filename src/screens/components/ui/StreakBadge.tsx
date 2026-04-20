@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { Flame } from 'lucide-react-native';
-import { colors, fontFamily } from '../../../styles/theme';
+import { brand, dark, light, fonts, colors } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 
 const useNative = Platform.OS !== 'web';
 
@@ -11,6 +12,7 @@ interface StreakBadgeProps {
 }
 
 export default function StreakBadge({ count, atRisk = false }: StreakBadgeProps) {
+  const { isDark } = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0.85)).current;
 
@@ -51,12 +53,36 @@ export default function StreakBadge({ count, atRisk = false }: StreakBadgeProps)
   }, [count]);
 
   return (
-    <View style={styles.pill}>
+    <View
+      style={[
+        styles.pill,
+        {
+          backgroundColor: isDark
+            ? 'rgba(255,255,255,0.08)'
+            : 'rgba(0,0,0,0.06)',
+        },
+      ]}
+    >
       <Animated.View style={{ transform: [{ scale: scaleAnim }], opacity: opacityAnim }}>
         <Flame color={colors.white} fill={colors.white} size={22} />
       </Animated.View>
-      <Text style={[styles.count, atRisk && styles.countAtRisk]}>{count}</Text>
-      <Text style={styles.daysLabel}>Days</Text>
+      <Text
+        style={[
+          styles.count,
+          { color: colors.white },
+          atRisk && styles.countAtRisk,
+        ]}
+      >
+        {count}
+      </Text>
+      <Text
+        style={[
+          styles.daysLabel,
+          { color: 'rgba(255,255,255,0.7)' },
+        ]}
+      >
+        Days
+      </Text>
 
       {atRisk && <View style={styles.warningDot} />}
     </View>
@@ -68,27 +94,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(0,0,0,0.20)',
     borderRadius: 999,
     paddingVertical: 12,
     paddingHorizontal: 20,
     gap: 8,
   },
   count: {
-    fontFamily: fontFamily.black,
+    fontFamily: fonts.display,
     fontWeight: '900',
     fontSize: 34,
     letterSpacing: 1,
-    color: colors.white,
   },
   countAtRisk: {
     color: colors.accentRed,
   },
   daysLabel: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 16,
-    color: 'rgba(255,255,255,0.70)',
     marginTop: 4,
   },
   warningDot: {

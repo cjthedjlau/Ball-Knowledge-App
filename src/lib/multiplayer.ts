@@ -1,11 +1,27 @@
 import { RealtimeChannel } from '@supabase/supabase-js'
+import { Platform } from 'react-native'
 import { supabase } from './supabase'
+
+// Conditionally load SecureStore (native only)
+let SecureStore: any = null
+if (Platform.OS !== 'web') {
+  try { SecureStore = require('expo-secure-store'); } catch (e) {
+    console.error('[Multiplayer] SecureStore failed to load:', e);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type GameType = 'imposter' | 'wavelength' | 'draft'
+export interface JoinedLobbyInfo {
+  lobbyId: string
+  playerIndex: number
+  code: string
+  gameType: string
+}
+
+export type GameType = 'imposter' | 'wavelength' | 'draft' | 'hot-take-showdown'
 export type LobbyStatus = 'waiting' | 'playing' | 'finished'
 
 export interface GameLobby {
@@ -155,13 +171,12 @@ export async function joinLobby(
     )
   }
 
-  // Determine the next player_index
+  // Fetch all existing players for cap check and stale row cleanup
   const { data: existingPlayers, error: playersError } = await supabase
     .from('lobby_players')
-    .select('player_index')
+    .select('id, player_index, user_id')
     .eq('lobby_id', lobby.id)
     .order('player_index', { ascending: false })
-    .limit(1)
 
   if (playersError) {
     throw new Error(
@@ -169,22 +184,54 @@ export async function joinLobby(
     )
   }
 
+  // Max player cap per game type
+  const MAX_PLAYERS: Record<string, number> = {
+    imposter: 10,
+    wavelength: 10,
+    draft: 8,
+    'hot-take-showdown': 20, // 8 players + audience
+  }
+  const cap = MAX_PLAYERS[lobby.game_type] ?? 10
+  if (existingPlayers && existingPlayers.length >= cap) {
+    throw new Error(`Lobby is full (max ${cap} players).`)
+  }
+
+  // Clean up stale rows if this user already has one (e.g. from a previous disconnected session)
+  if (userId && existingPlayers) {
+    const staleRows = existingPlayers.filter(p => p.user_id === userId)
+    for (const stale of staleRows) {
+      await supabase.from('lobby_players').delete().eq('id', stale.id)
+    }
+  }
+
   const nextIndex =
     existingPlayers && existingPlayers.length > 0
       ? existingPlayers[0].player_index + 1
       : 0
 
-  const { error: insertError } = await supabase.from('lobby_players').insert({
-    lobby_id: lobby.id,
-    user_id: userId ?? null,
-    display_name: displayName,
-    player_index: nextIndex,
-    is_host: false,
-    is_ready: false,
-  })
+  const { data: insertedPlayer, error: insertError } = await supabase
+    .from('lobby_players')
+    .insert({
+      lobby_id: lobby.id,
+      user_id: userId ?? null,
+      display_name: displayName,
+      player_index: nextIndex,
+      is_host: false,
+      is_ready: false,
+    })
+    .select('id, session_token')
+    .single()
 
-  if (insertError) {
-    throw new Error(`Failed to join lobby: ${insertError.message}`)
+  if (insertError || !insertedPlayer) {
+    throw new Error(`Failed to join lobby: ${insertError?.message ?? 'Unknown error'}`)
+  }
+
+  // Store session token locally so guest players can toggle ready / leave
+  if (!userId && insertedPlayer.session_token && SecureStore) {
+    await SecureStore.setItemAsync(
+      `lobby_session_${insertedPlayer.id}`,
+      insertedPlayer.session_token,
+    )
   }
 
   return {
@@ -198,12 +245,30 @@ export async function joinLobby(
  * Leaves a lobby. If the player is the host the entire lobby is deleted
  * (cascade will clean up associated lobby_players rows). Otherwise only the
  * player's own row is removed.
+ * Guest players use the RPC function with a session token.
  */
 export async function leaveLobby(
   lobbyId: string,
   playerId: string,
 ): Promise<void> {
-  // Check if this player is the host
+  // Check if this player has a stored session token (guest path — native only)
+  const sessionToken = SecureStore ? await SecureStore.getItemAsync(`lobby_session_${playerId}`) : null
+
+  if (sessionToken) {
+    // Guest path: use RPC with session token verification
+    const { error } = await supabase.rpc('guest_leave_lobby', {
+      p_player_id: playerId,
+      p_session_token: sessionToken,
+    })
+    if (error) {
+      throw new Error(`Failed to leave lobby: ${error.message}`)
+    }
+    // Clean up stored session token
+    if (SecureStore) await SecureStore.deleteItemAsync(`lobby_session_${playerId}`)
+    return
+  }
+
+  // Authenticated path: direct operations via RLS
   const { data: player, error: fetchError } = await supabase
     .from('lobby_players')
     .select('is_host')
@@ -333,18 +398,35 @@ export async function updateLobbyGameState(
 
 /**
  * Toggles the is_ready flag for a specific player.
+ * Guest players (no auth session) use the RPC function with a session token.
  */
 export async function togglePlayerReady(
   playerId: string,
   isReady: boolean,
 ): Promise<void> {
-  const { error } = await supabase
-    .from('lobby_players')
-    .update({ is_ready: isReady })
-    .eq('id', playerId)
+  // Check if this player has a stored session token (guest path — native only)
+  const sessionToken = SecureStore ? await SecureStore.getItemAsync(`lobby_session_${playerId}`) : null
 
-  if (error) {
-    throw new Error(`Failed to update player ready state: ${error.message}`)
+  if (sessionToken) {
+    // Guest path: use RPC with session token verification
+    const { error } = await supabase.rpc('guest_toggle_ready', {
+      p_player_id: playerId,
+      p_session_token: sessionToken,
+      p_is_ready: isReady,
+    })
+    if (error) {
+      throw new Error(`Failed to update player ready state: ${error.message}`)
+    }
+  } else {
+    // Authenticated path: direct update via RLS
+    const { error } = await supabase
+      .from('lobby_players')
+      .update({ is_ready: isReady })
+      .eq('id', playerId)
+
+    if (error) {
+      throw new Error(`Failed to update player ready state: ${error.message}`)
+    }
   }
 }
 

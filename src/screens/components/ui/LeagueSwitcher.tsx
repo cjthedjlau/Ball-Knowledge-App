@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Pressable, Text, StyleSheet } from 'react-native';
-import { colors, darkColors, fontFamily } from '../../../styles/theme';
+import { brand, dark, light, fonts, radius } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 
 const LEAGUES = [
-  { key: 'NFL', emoji: '🏈' },
-  { key: 'NBA', emoji: '🏀' },
-  { key: 'MLB', emoji: '⚾' },
-  { key: 'NHL', emoji: '🏒' },
+  { key: 'NFL' },
+  { key: 'NBA' },
+  { key: 'MLB' },
+  { key: 'NHL' },
 ] as const;
 
 interface LeagueSwitcherProps {
@@ -15,9 +16,16 @@ interface LeagueSwitcherProps {
 }
 
 export default function LeagueSwitcher({ selected, onChange }: LeagueSwitcherProps) {
+  const { isDark } = useTheme();
+
   return (
-    <View style={styles.container}>
-      {LEAGUES.map(({ key, emoji }) => {
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: isDark ? dark.surface : light.surface },
+      ]}
+    >
+      {LEAGUES.map(({ key }) => {
         const isActive = selected === key;
         return (
           <Pressable
@@ -25,8 +33,18 @@ export default function LeagueSwitcher({ selected, onChange }: LeagueSwitcherPro
             onPress={() => onChange(key)}
             style={[styles.tab, isActive && styles.tabActive]}
           >
-            <Text style={styles.emoji}>{emoji}</Text>
-            <Text style={[styles.label, isActive && styles.labelActive]}>
+            <Text
+              style={[
+                styles.label,
+                {
+                  color: isActive
+                    ? dark.textPrimary
+                    : isDark
+                      ? dark.textSecondary
+                      : light.textSecondary,
+                },
+              ]}
+            >
               {key}
             </Text>
           </Pressable>
@@ -39,8 +57,7 @@ export default function LeagueSwitcher({ selected, onChange }: LeagueSwitcherPro
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     padding: 4,
   },
   tab: {
@@ -49,23 +66,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     gap: 4,
   },
   tabActive: {
-    backgroundColor: colors.brand,
+    backgroundColor: brand.primary,
   },
   emoji: {
     fontSize: 14,
   },
   label: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 14,
     letterSpacing: 1,
-    color: '#9A9A9A',
-  },
-  labelActive: {
-    color: colors.white,
   },
 });

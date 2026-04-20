@@ -1,7 +1,7 @@
 import { Share, Platform } from 'react-native';
 import { supabase } from './supabase';
 
-const APP_URL = 'https://ball-knowledge-app-olive.vercel.app';
+const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://ballknowledgeapp.com';
 
 /**
  * Get or create the current user's invite code.
@@ -85,7 +85,7 @@ export async function acceptInvite(code: string): Promise<{ success: boolean; er
   // Find the user who owns this invite code
   const { data: inviter } = await supabase
     .from('profiles')
-    .select('id, display_name')
+    .select('id, username')
     .eq('invite_code', code)
     .single();
 
@@ -135,10 +135,10 @@ export async function notifyFriendsOfResult(
   // Get sender's display name
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name')
+    .select('username')
     .eq('id', user.id)
     .single();
-  const senderName: string = (profile as any)?.display_name ?? 'A friend';
+  const senderName: string = (profile as any)?.username ?? 'A friend';
 
   // Collect friend IDs from both sides of the friendship
   const [{ data: asA }, { data: asB }] = await Promise.all([

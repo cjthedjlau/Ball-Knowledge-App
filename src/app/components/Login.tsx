@@ -12,12 +12,18 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Eye, EyeOff } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
-import { supabase, signInWithGoogle } from '../../lib/supabase';
+import GhostWatermark from '../../screens/components/ui/GhostWatermark';
+import { brand, dark, light, fonts, fontSizes, colors, darkColors, fontFamily, spacing, radius, layout } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
+import { supabase, signInWithGoogle, getRedirectUri } from '../../lib/supabase';
 import useZoneEntrance from '../../hooks/useZoneEntrance';
 import { useUserAnalytics } from '../../lib/analytics';
+// Conditionally load native Apple auth (iOS only)
+const AppleAuthentication = Platform.OS === 'ios' ? require('expo-apple-authentication') : null;
+const SHOW_APPLE_SIGN_IN = Platform.OS !== 'android'; // Show on iOS (native) and web (OAuth)
 
 interface LoginProps {
   onLogin?: () => void;
@@ -42,7 +48,7 @@ async function ensureProfile() {
         user.email?.split('@')[0] ||
         'Player';
 
-      const { error } = await supabase.from('profiles').upsert({
+      const { error } = await supabase.from('profiles').insert({
         id: user.id,
         username,
         lifetime_xp: 0,
@@ -51,10 +57,11 @@ async function ensureProfile() {
         streak: 0,
         streak_at_risk: false,
         favorite_league: 'NBA',
-      });
-      if (error) {
+      }).select().single();
+      if (error && error.code !== '23505') {
+        // 23505 = unique violation (profile already exists) — that's fine, skip it
         console.error('[Login] Profile creation failed:', error.message);
-      } else {
+      } else if (!error) {
         console.log('[Login] Profile created for user:', user.id);
       }
     }
@@ -64,17 +71,6 @@ async function ensureProfile() {
 }
 
 // ── Social icon SVGs ──────────────────────────────────────────────────────────
-
-function AppleIcon() {
-  return (
-    <Svg width={17} height={20} viewBox="0 0 170 200">
-      <Path
-        d="M150.4 172.3c-7.8 11.6-16.3 23.1-29.1 23.3-12.8.2-16.9-7.5-31.5-7.5-14.6 0-19.2 7.3-31.3 7.7-12.5.4-22-12.5-29.9-24.1C13 148.6 1.2 107.5 17.3 79.3c8-14 22.3-22.9 37.9-23.1 12.3-.2 24 8.3 31.5 8.3 7.5 0 21.7-10.3 36.5-8.8 6.2.3 23.7 2.5 34.9 19-0.9.6-20.9 12.2-20.7 36.4.2 28.9 25.4 38.5 25.6 38.6-.2.6-4 13.7-13.3 27.2l-0.3-.6zM119.9 20c6-7.3 10-17.3 8.9-27.4-8.6.4-19 5.7-25.2 13-5.5 6.4-10.4 16.7-9.1 26.6 9.6.7 19.4-4.9 25.4-12.2z"
-        fill={colors.white}
-      />
-    </Svg>
-  );
-}
 
 function GoogleIcon() {
   return (
@@ -87,9 +83,18 @@ function GoogleIcon() {
   );
 }
 
+function AppleIcon() {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24">
+      <Path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" fill="#000000" />
+    </Svg>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Login({ onLogin }: LoginProps) {
+  const { isDark } = useTheme();
   const { zone1Style, zone2Style } = useZoneEntrance();
   const { trackLogin, trackSignup } = useUserAnalytics();
   const [email, setEmail] = useState('');
@@ -130,18 +135,6 @@ export default function Login({ onLogin }: LoginProps) {
     }
   }
 
-  async function handleAppleSignIn() {
-    setErrorMsg('');
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'apple' });
-    setLoading(false);
-    if (error) {
-      setErrorMsg(error.message);
-    } else {
-      onLogin?.();
-    }
-  }
-
   async function handleGoogleSignIn() {
     setErrorMsg('');
     setSocialLoading(true);
@@ -156,6 +149,51 @@ export default function Login({ onLogin }: LoginProps) {
       onLogin?.();
     }
     // On web, the page redirects — onLogin is handled by AuthCallback / App.tsx
+  }
+
+  async function handleAppleSignIn() {
+    setErrorMsg('');
+    setSocialLoading(true);
+
+    if (Platform.OS === 'ios' && AppleAuthentication) {
+      // Native iOS: use expo-apple-authentication
+      try {
+        const credential = await AppleAuthentication.signInAsync({
+          requestedScopes: [0, 1], // FULL_NAME, EMAIL
+        });
+        if (credential.identityToken) {
+          const { error, data } = await supabase.auth.signInWithIdToken({
+            provider: 'apple',
+            token: credential.identityToken,
+          });
+          if (error) {
+            setErrorMsg(error.message);
+          } else if (data.user) {
+            trackLogin('apple', data.user.id);
+            await ensureProfile();
+            onLogin?.();
+          }
+        }
+      } catch (e: any) {
+        if (e.code !== 'ERR_REQUEST_CANCELED') {
+          setErrorMsg(e.message || 'Apple Sign In failed');
+        }
+      }
+    } else {
+      // Web: use Supabase OAuth redirect (same pattern as Google)
+      try {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: { redirectTo: getRedirectUri() },
+        });
+        if (error) setErrorMsg(error.message);
+        // On web, page redirects — onLogin handled by AuthCallback / App.tsx
+      } catch (e: any) {
+        setErrorMsg(e.message || 'Apple Sign In failed');
+      }
+    }
+
+    setSocialLoading(false);
   }
 
   async function handleSignUp() {
@@ -174,167 +212,187 @@ export default function Login({ onLogin }: LoginProps) {
   }
 
   return (
-    <SafeAreaView style={styles.root}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {/* ── Zone 1: Header ── */}
-        <Animated.View style={[styles.zone1, zone1Style]}>
-          <Text style={styles.title}>Welcome Back</Text>
-        </Animated.View>
-
-        {/* ── Zone 2: Content Sheet ── */}
-        <Animated.View style={[styles.zone2, zone2Style]}>
-        <ScrollView
-          contentContainerStyle={styles.zone2Content}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+    <View style={styles.root}>
+      <LinearGradient
+        colors={brand.gradient as unknown as string[]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.6, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <GhostWatermark text="BK" color="rgba(255,255,255,0.04)" />
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {/* Email / Username */}
-          <Text style={styles.fieldLabel}>Username or Email</Text>
-          <View style={[styles.inputWrap, emailFocused && styles.inputWrapFocused]}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your username or email"
-              placeholderTextColor={darkColors.textSecondary}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              onFocus={() => setEmailFocused(true)}
-              onBlur={() => setEmailFocused(false)}
-            />
-          </View>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* ── Logo circle ── */}
+            <View style={styles.logoCircle}>
+              <Text style={styles.logoText}>BK</Text>
+            </View>
 
-          {/* Password */}
-          <Text style={[styles.fieldLabel, { marginTop: 20 }]}>Password</Text>
-          <View style={[styles.inputWrap, passwordFocused && styles.inputWrapFocused]}>
-            <TextInput
-              style={[styles.input, { paddingRight: 8 }]}
-              placeholder="Enter your password"
-              placeholderTextColor={darkColors.textSecondary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              onFocus={() => setPasswordFocused(true)}
-              onBlur={() => setPasswordFocused(false)}
-            />
+            {/* ── Headline ── */}
+            <Text style={styles.headline}>Welcome{'\n'}Back</Text>
+            <Text style={styles.subtitle}>Sign in to continue tracking your knowledge</Text>
+
+            {/* Email / Username */}
+            <View style={[styles.inputWrap, emailFocused && styles.inputWrapFocused]}>
+              <TextInput
+                style={styles.input}
+                placeholder="Username or email"
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                onFocus={() => setEmailFocused(true)}
+                onBlur={() => setEmailFocused(false)}
+              />
+            </View>
+
+            {/* Password */}
+            <View style={[styles.inputWrap, passwordFocused && styles.inputWrapFocused]}>
+              <TextInput
+                style={[styles.input, { paddingRight: 8 }]}
+                placeholder="Password"
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                onFocus={() => setPasswordFocused(true)}
+                onBlur={() => setPasswordFocused(false)}
+              />
+              <Pressable
+                onPress={() => setShowPassword(v => !v)}
+                style={styles.eyeBtn}
+                hitSlop={8}
+              >
+                {showPassword
+                  ? <EyeOff color="rgba(255,255,255,0.5)" size={20} />
+                  : <Eye color="rgba(255,255,255,0.5)" size={20} />
+                }
+              </Pressable>
+            </View>
+
+            {/* Forgot Password */}
+            <Pressable style={styles.forgotWrap}>
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </Pressable>
+
+            {/* Log In — white pill */}
             <Pressable
-              onPress={() => setShowPassword(v => !v)}
-              style={styles.eyeBtn}
-              hitSlop={8}
+              style={[styles.authBtn, loading && styles.authBtnDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
             >
-              {showPassword
-                ? <EyeOff color={darkColors.textSecondary} size={20} />
-                : <Eye color={darkColors.textSecondary} size={20} />
+              {loading
+                ? <ActivityIndicator color={brand.dark} />
+                : <Text style={styles.authBtnText}>LOG IN</Text>
               }
             </Pressable>
-          </View>
 
-          {/* Forgot Password */}
-          <Pressable style={styles.forgotWrap}>
-            <Text style={styles.forgotText}>Forgot Password?</Text>
-          </Pressable>
-
-          {/* Log In */}
-          <Pressable
-            style={[styles.authBtn, loading && styles.authBtnDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color={colors.white} />
-              : <Text style={styles.authBtnText}>LOG IN</Text>
-            }
-          </Pressable>
-
-          {/* Sign Up */}
-          <Pressable
-            style={[styles.authBtn, styles.authBtnSecondary, loading && styles.authBtnDisabled]}
-            onPress={handleSignUp}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color={colors.white} />
-              : <Text style={styles.authBtnText}>SIGN UP</Text>
-            }
-          </Pressable>
-
-          {/* Feedback messages */}
-          {!!errorMsg && <Text style={styles.errorMsg}>{errorMsg}</Text>}
-
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Google Sign In — full-width button on web, icon circle on native */}
-          {Platform.OS === 'web' ? (
+            {/* Sign Up — white pill */}
             <Pressable
-              style={({ pressed }) => [
-                styles.googleWebBtn,
-                pressed && styles.googleWebBtnPressed,
-              ]}
-              onPress={handleGoogleSignIn}
-              disabled={loading || socialLoading}
+              style={[styles.authBtn, styles.authBtnOutline, loading && styles.authBtnDisabled]}
+              onPress={handleSignUp}
+              disabled={loading}
             >
-              {socialLoading ? (
-                <ActivityIndicator color={darkColors.text} />
-              ) : (
-                <>
-                  <GoogleIcon />
-                  <Text style={styles.googleWebBtnText}>Continue with Google</Text>
-                </>
-              )}
+              {loading
+                ? <ActivityIndicator color={brand.dark} />
+                : <Text style={[styles.authBtnText, styles.authBtnOutlineText]}>SIGN UP</Text>
+              }
             </Pressable>
-          ) : (
-            <View style={styles.socialRow}>
-              {/* TODO: TEMPORARY — Apple Sign In button removed until Apple OAuth credentials are configured.
-                  To restore: uncomment the Apple button below and remove this comment.
-                  See also: handleAppleSignIn() and AppleIcon() which are still in place. */}
-              {/* <Pressable
-                style={({ pressed }) => [
-                  styles.socialBtn,
-                  pressed && styles.socialBtnPressed,
-                ]}
-                onPress={handleAppleSignIn}
-                disabled={loading}
-              >
-                <AppleIcon />
-              </Pressable> */}
+
+            {/* Feedback messages */}
+            {!!errorMsg && <Text style={styles.errorMsg}>{errorMsg}</Text>}
+
+            {/* Divider */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or continue with</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Google Sign In — white pill */}
+            {Platform.OS === 'web' ? (
               <Pressable
                 style={({ pressed }) => [
-                  styles.socialBtn,
-                  pressed && styles.socialBtnPressed,
+                  styles.authBtn,
+                  pressed && { opacity: 0.85 },
                 ]}
                 onPress={handleGoogleSignIn}
                 disabled={loading || socialLoading}
               >
                 {socialLoading ? (
-                  <ActivityIndicator color={darkColors.textSecondary} size="small" />
+                  <ActivityIndicator color={brand.dark} />
                 ) : (
-                  <GoogleIcon />
+                  <View style={styles.googleRow}>
+                    <GoogleIcon />
+                    <Text style={styles.authBtnText}>Continue with Google</Text>
+                  </View>
                 )}
               </Pressable>
-            </View>
-          )}
+            ) : (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.authBtn,
+                  pressed && { opacity: 0.85 },
+                ]}
+                onPress={handleGoogleSignIn}
+                disabled={loading || socialLoading}
+              >
+                {socialLoading ? (
+                  <ActivityIndicator color={brand.dark} size="small" />
+                ) : (
+                  <View style={styles.googleRow}>
+                    <GoogleIcon />
+                    <Text style={styles.authBtnText}>Continue with Google</Text>
+                  </View>
+                )}
+              </Pressable>
+            )}
 
-          {/* Guest access */}
-          <Pressable
-            style={({ pressed }) => [styles.guestBtn, pressed && styles.guestBtnPressed]}
-            onPress={handleGuest}
-            disabled={loading}
-          >
-            <Text style={styles.guestBtnText}>Continue as Guest</Text>
-            <Text style={styles.guestBtnSubtext}>No stats recorded</Text>
-          </Pressable>
-        </ScrollView>
-        </Animated.View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            {/* Apple Sign In — iOS + Web (not Android) */}
+            {SHOW_APPLE_SIGN_IN && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.authBtn,
+                  pressed && { opacity: 0.85 },
+                ]}
+                onPress={handleAppleSignIn}
+                disabled={loading || socialLoading}
+              >
+                {socialLoading ? (
+                  <ActivityIndicator color={brand.dark} size="small" />
+                ) : (
+                  <View style={styles.googleRow}>
+                    <AppleIcon />
+                    <Text style={styles.authBtnText}>Continue with Apple</Text>
+                  </View>
+                )}
+              </Pressable>
+            )}
+
+            {/* Guest access */}
+            <Pressable
+              style={({ pressed }) => [styles.guestBtn, pressed && { opacity: 0.5 }]}
+              onPress={handleGuest}
+              disabled={loading}
+            >
+              <Text style={styles.guestBtnText}>Continue as Guest</Text>
+              <Text style={styles.guestBtnSubtext}>No stats recorded</Text>
+            </Pressable>
+
+            {/* Handle line */}
+            <Text style={styles.handleLine}>ballknowledge.app</Text>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -343,97 +401,80 @@ export default function Login({ onLogin }: LoginProps) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: 'transparent',
+  },
+  safeArea: {
+    flex: 1,
   },
   flex: {
     flex: 1,
   },
+  scrollContent: {
+    paddingHorizontal: spacing['2xl'],
+    paddingTop: spacing['4xl'],
+    paddingBottom: spacing['3xl'],
+    alignItems: 'center',
+  },
 
-  // ── Zone 1 ──
-  zone1: {
-    backgroundColor: colors.brand,
-    paddingTop: spacing['5xl'],
-    paddingBottom: spacing['4xl'] + spacing.lg,
+  // ── Logo ──
+  logoCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
+    marginBottom: spacing['2xl'],
   },
-  title: {
-    fontFamily: fontFamily.black,
-    fontWeight: '900',
-    fontSize: 32,
+  logoText: {
+    fontFamily: fonts.display,
+    fontSize: 22,
+    color: '#FFFFFF',
     letterSpacing: 1,
-    color: colors.white,
   },
 
-  // ── Zone 2 ──
-  zone2: {
-    flex: 1,
-    backgroundColor: darkColors.surface,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.10)',
-    marginTop: -32,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.7,
-    shadowRadius: 16,
-    elevation: 20,
+  // ── Headline ──
+  headline: {
+    fontFamily: fonts.display,
+    fontSize: 64,
+    lineHeight: 66,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
   },
-  zone2Content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing['3xl'],
-    paddingBottom: spacing['3xl'],
+  subtitle: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 20,
+    color: 'rgba(255,255,255,0.65)',
+    textAlign: 'center',
+    marginBottom: spacing['3xl'],
   },
 
   // ── Input fields ──
-  fieldLabel: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 14,
-    letterSpacing: 1,
-    color: colors.white,
-    marginBottom: spacing.sm,
-    marginLeft: 4,
-  },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 12,
-    height: 56,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    borderTopWidth: 1,
-    borderBottomWidth: 2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    borderRadius: 32,
+    height: layout.buttonHeight,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    width: '100%',
+    marginBottom: spacing.md,
   },
   inputWrapFocused: {
-    borderColor: colors.brand,
-    borderTopColor: colors.brand,
-    borderBottomColor: colors.brand,
-    borderTopWidth: 1.5,
-    borderBottomWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
   },
   input: {
     flex: 1,
     height: '100%',
-    paddingHorizontal: spacing.lg,
-    fontFamily: fontFamily.medium,
+    paddingHorizontal: spacing.xl,
+    fontFamily: fonts.bodyMedium,
     fontSize: 15,
-    color: colors.white,
+    color: '#FFFFFF',
   },
   eyeBtn: {
     paddingHorizontal: spacing.lg,
@@ -445,142 +486,109 @@ const styles = StyleSheet.create({
   // ── Forgot password ──
   forgotWrap: {
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    marginBottom: spacing.sm,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
   },
   forgotText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 14,
-    color: colors.accentCyan,
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
   },
 
-  // ── Auth buttons ──
+  // ── Auth buttons — white pill ──
   authBtn: {
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: colors.brand,
+    width: '100%',
+    height: layout.buttonHeight,
+    borderRadius: 32,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
-  authBtnSecondary: {
-    backgroundColor: darkColors.surfaceElevated,
+  authBtnOutline: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
-    borderColor: darkColors.border,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   authBtnDisabled: {
     opacity: 0.6,
   },
   authBtnText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 15,
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
     letterSpacing: 1,
-    color: colors.white,
+    color: brand.dark,
+  },
+  authBtnOutlineText: {
+    color: '#FFFFFF',
+  },
+
+  // ── Google row ──
+  googleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
 
   // ── Feedback messages ──
   errorMsg: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontSize: 14,
-    color: colors.accentRed,
+    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
+
   // ── Divider ──
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: spacing['2xl'],
+    marginVertical: spacing.xl,
     gap: spacing.md,
+    width: '100%',
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: darkColors.border,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   dividerText: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontSize: 13,
-    color: darkColors.textSecondary,
-  },
-
-  // ── Google web button ──
-  googleWebBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: colors.white,
-    gap: spacing.md,
-    marginBottom: spacing['3xl'],
-  },
-  googleWebBtnPressed: {
-    opacity: 0.85,
-    transform: [{ translateY: 1 }],
-  },
-  googleWebBtnText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 16,
-    color: darkColors.surface,
-  },
-
-  // ── Social buttons ──
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
-    marginBottom: spacing['3xl'],
-  },
-  socialBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: darkColors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderLeftColor: darkColors.border,
-    borderRightColor: darkColors.border,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  socialBtnPressed: {
-    opacity: 0.8,
-    transform: [{ translateY: 2 }],
+    color: 'rgba(255,255,255,0.5)',
   },
 
   // ── Guest button ──
   guestBtn: {
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
     marginBottom: spacing.sm,
   },
-  guestBtnPressed: {
-    opacity: 0.6,
-  },
   guestBtnText: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
-    fontSize: 15,
-    color: darkColors.textSecondary,
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
   },
   guestBtnSubtext: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: darkColors.textSecondary,
-    opacity: 0.6,
+    color: 'rgba(255,255,255,0.35)',
     marginTop: 4,
+  },
+
+  // ── Handle line ──
+  handleLine: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.45)',
+    textAlign: 'center',
+    marginTop: spacing.md,
   },
 });

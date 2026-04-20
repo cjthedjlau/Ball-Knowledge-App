@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import { getTodayEST } from './gameResults';
 
 // ─── XP Constants ─────────────────────────────────────────────────────────────
 
@@ -122,56 +121,71 @@ export async function saveGameResult(
 export async function updateUserXPAndStreak(
   userId: string,
   xpEarned: number,
-  isDailyGame: boolean,
-): Promise<Record<string, unknown> | null> {
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('lifetime_xp, weekly_xp, streak, last_game_date')
-    .eq('id', userId)
-    .single();
+  isDailyGame: boolean = false,
+): Promise<{ lifetime_xp: number; weekly_xp: number; streak: number; brain_level: number } | null> {
+  const { data, error } = await supabase.rpc('update_xp_and_streak', {
+    p_user_id: userId,
+    p_xp_earned: xpEarned,
+    p_is_daily: isDailyGame,
+  });
 
-  if (error || !profile) {
-    console.error('[XP] Failed to fetch profile for XP update:', error?.message, '| userId:', userId);
+  if (error) {
+    console.error('[XP] Failed to update XP:', error.message);
     return null;
   }
 
-  const newLifetimeXP: number = (profile.lifetime_xp ?? 0) + xpEarned;
-  const newWeeklyXP: number = (profile.weekly_xp ?? 0) + xpEarned;
-  const newLevel = getLevelFromXP(newLifetimeXP).level;
+  return data as { lifetime_xp: number; weekly_xp: number; streak: number; brain_level: number };
+}
 
-  const todayUTC = getTodayEST(); // 'YYYY-MM-DD' in America/New_York — resets at midnight EST
-  let newStreak: number = profile.streak ?? 0;
-  let newLastGameDate: string = profile.last_game_date ?? '';
+/**
+ * Recalculate lifetime_xp by summing all xp_earned from game_sessions.
+ * Use this to recover XP that was lost due to profile resets.
+ * Only updates if the recalculated total is higher than the current value.
+ */
+export async function recalculateLifetimeXP(userId: string): Promise<number | null> {
+  // Sum all xp_earned from game_sessions for this user
+  const { data: sessions, error: sessionsError } = await supabase
+    .from('game_sessions')
+    .select('xp_earned')
+    .eq('user_id', userId);
 
-  if (isDailyGame && newLastGameDate !== todayUTC) {
-    newStreak += 1;
-    newLastGameDate = todayUTC;
-  }
-
-  const updates: Record<string, unknown> = {
-    lifetime_xp: newLifetimeXP,
-    weekly_xp: newWeeklyXP,
-    level: newLevel,
-    streak_at_risk: false,
-    ...(isDailyGame && {
-      streak: newStreak,
-      last_game_date: newLastGameDate,
-    }),
-  };
-
-  const { data: updated, error: updateError } = await supabase
-    .from('profiles')
-    .update(updates)
-    .eq('id', userId)
-    .select()
-    .single();
-
-  if (updateError) {
-    console.error('[XP] Failed to update profile XP:', updateError.message, '| userId:', userId, '| updates:', JSON.stringify(updates));
+  if (sessionsError || !sessions) {
+    console.error('[XP] Failed to fetch game_sessions for recalculation:', sessionsError?.message);
     return null;
   }
-  console.log('[XP] Successfully updated XP for user:', userId, '| lifetime_xp:', updates.lifetime_xp, '| weekly_xp:', updates.weekly_xp);
-  return updated;
+
+  const totalXP = sessions.reduce((sum, s) => sum + (s.xp_earned ?? 0), 0);
+
+  if (totalXP <= 0) {
+    console.log('[XP] No XP found in game_sessions for user:', userId);
+    return null;
+  }
+
+  // Only update if recalculated total is higher than current profile value
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('lifetime_xp')
+    .eq('id', userId)
+    .single();
+
+  const currentXP = profile?.lifetime_xp ?? 0;
+
+  if (totalXP > currentXP) {
+    const newLevel = getLevelFromXP(totalXP).level;
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ lifetime_xp: totalXP, level: newLevel })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('[XP] Failed to update recalculated XP:', updateError.message);
+      return null;
+    }
+    console.log(`[XP] Recalculated XP for user ${userId}: ${currentXP} → ${totalXP}`);
+    return totalXP;
+  }
+
+  return currentXP;
 }
 
 export async function checkAndUpdateStreakAtRisk(userId: string): Promise<void> {

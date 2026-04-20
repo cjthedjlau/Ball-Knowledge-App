@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, fonts, colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 
 interface AuthCallbackProps {
   error?: string | null;
@@ -12,17 +13,18 @@ interface AuthCallbackProps {
  * then navigates away once the auth state change fires.
  */
 export default function AuthCallback({ error }: AuthCallbackProps) {
+  const { isDark } = useTheme();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: isDark ? dark.background : light.background }]}>
       {error ? (
         <>
-          <Text style={styles.title}>Sign-in failed</Text>
-          <Text style={styles.message}>{error}</Text>
+          <Text style={[styles.title, { color: brand.primary }]}>Sign-in failed</Text>
+          <Text style={[styles.message, { color: isDark ? dark.textSecondary : light.textSecondary }]}>{error}</Text>
         </>
       ) : (
         <>
-          <ActivityIndicator size="large" color={colors.brand} />
-          <Text style={styles.message}>Signing you in…</Text>
+          <ActivityIndicator size="large" color={brand.primary} />
+          <Text style={[styles.message, { color: isDark ? dark.textSecondary : light.textSecondary }]}>Signing you in…</Text>
         </>
       )}
     </View>
@@ -34,20 +36,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: darkColors.background,
     padding: spacing.lg,
   },
   title: {
-    fontFamily: fontFamily.bold,
+    fontFamily: fonts.bodySemiBold,
     fontWeight: '700',
     fontSize: 20,
-    color: colors.brand,
     marginBottom: spacing.md,
   },
   message: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fonts.bodyMedium,
     fontSize: 15,
-    color: darkColors.textSecondary,
     marginTop: spacing.lg,
     textAlign: 'center',
   },

@@ -12,10 +12,20 @@ export type Player = {
 };
 
 // Cache to avoid repeat queries in the same session
-const cache: Record<string, Player[]> = {};
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+interface CacheEntry {
+  data: Player[];
+  timestamp: number;
+}
+
+const cache: Record<string, CacheEntry> = {};
 
 async function fetchPlayers(league: string): Promise<Player[]> {
-  if (cache[league]) return cache[league];
+  const entry = cache[league];
+  if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
+    return entry.data;
+  }
 
   const { data, error } = await supabase
     .from('players_pool')
@@ -28,8 +38,9 @@ async function fetchPlayers(league: string): Promise<Player[]> {
   }
 
   // Default status to 'active' — status column will be added via migration later
-  cache[league] = (data as any[]).map(p => ({ ...p, status: p.status ?? 'active' })) as Player[];
-  return cache[league];
+  const players = (data as any[]).map(p => ({ ...p, status: p.status ?? 'active' })) as Player[];
+  cache[league] = { data: players, timestamp: Date.now() };
+  return players;
 }
 
 function shuffle<T>(arr: T[]): T[] {

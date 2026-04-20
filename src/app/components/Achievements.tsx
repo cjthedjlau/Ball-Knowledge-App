@@ -7,7 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   Trophy,
@@ -21,7 +21,8 @@ import {
   Globe,
   Users,
 } from 'lucide-react-native';
-import { colors, darkColors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, colors, darkColors, fonts, fontFamily, spacing } from '../../styles/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { supabase } from '../../lib/supabase';
 import AchievementBadge from '../../screens/components/ui/AchievementBadge';
 
@@ -122,6 +123,8 @@ const ACHIEVEMENTS: AchievementDef[] = [
 ];
 
 export default function Achievements({ onBack }: Props) {
+  const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -166,11 +169,11 @@ export default function Achievements({ onBack }: Props) {
   }, []);
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={styles.root}>
       {/* Zone 1 */}
-      <View style={styles.zone1}>
+      <View style={[styles.zone1, { backgroundColor: brand.primary, paddingTop: insets.top + spacing.lg }]}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+          <ArrowLeft size={22} color={dark.textPrimary} strokeWidth={2.5} />
         </Pressable>
         <Text style={styles.zone1Title}>ACHIEVEMENTS</Text>
         {!loading && userStats && (
@@ -182,33 +185,63 @@ export default function Achievements({ onBack }: Props) {
 
       {/* Zone 2 */}
       <ScrollView
-        style={styles.zone2}
-        contentContainerStyle={styles.zone2Content}
+        style={[styles.zone2, { borderTopColor: isDark ? dark.cardBorder : light.cardBorder }]}
+        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
           <ActivityIndicator color={colors.brand} style={{ marginTop: spacing['3xl'] }} />
         ) : (
-          <View style={styles.grid}>
-            {ACHIEVEMENTS.map(achievement => {
+          <View style={styles.timelineList}>
+            {ACHIEVEMENTS.map((achievement, index) => {
               const unlocked = userStats ? achievement.condition(userStats) : false;
+              const accentNum = String(index + 1).padStart(2, '0');
               return (
-                <View key={achievement.id} style={styles.badgeWrap}>
-                  <AchievementBadge
-                    icon={achievement.icon}
-                    label={achievement.title}
-                    unlocked={unlocked}
-                  />
-                  <Text style={[styles.desc, !unlocked && styles.descLocked]}>
-                    {achievement.description}
-                  </Text>
+                <View key={achievement.id}>
+                  {index > 0 && (
+                    <View style={[styles.timelineDivider, { backgroundColor: isDark ? dark.divider : light.divider }]} />
+                  )}
+                  <View style={styles.timelineRow}>
+                    <Text style={[
+                      styles.timelineAccent,
+                      {
+                        color: unlocked
+                          ? brand.primary
+                          : (isDark ? dark.textDisabled : light.textDisabled),
+                      },
+                    ]}>
+                      {accentNum}
+                    </Text>
+                    <View style={styles.timelineRight}>
+                      <Text style={[
+                        styles.timelineTitle,
+                        {
+                          color: unlocked
+                            ? (isDark ? dark.textPrimary : light.textPrimary)
+                            : (isDark ? dark.textDisabled : light.textDisabled),
+                        },
+                      ]}>
+                        {achievement.title}
+                      </Text>
+                      <Text style={[
+                        styles.timelineDetail,
+                        {
+                          color: unlocked
+                            ? (isDark ? dark.textSecondary : light.textSecondary)
+                            : (isDark ? dark.textDisabled : light.textDisabled),
+                        },
+                      ]}>
+                        {achievement.description}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               );
             })}
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -218,7 +251,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   zone1: {
-    backgroundColor: colors.brand,
     paddingTop: spacing.lg,
     paddingBottom: spacing['3xl'] + spacing.md,
     paddingHorizontal: spacing.lg,
@@ -241,9 +273,10 @@ const styles = StyleSheet.create({
   zone1Title: {
     fontFamily: fontFamily.black,
     fontWeight: '900',
-    fontSize: 28,
+    fontSize: 36,
+    lineHeight: 38,
     letterSpacing: 3,
-    color: colors.white,
+    color: dark.textPrimary,
   },
   zone1Sub: {
     fontFamily: fontFamily.bold,
@@ -258,10 +291,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    marginTop: -32,
+    marginTop: 0,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    shadowColor: '#000',
+    shadowColor: dark.background,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -273,24 +305,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: 48,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.lg,
-    justifyContent: 'center',
+  timelineList: {
+    gap: 0,
   },
-  badgeWrap: {
-    alignItems: 'center',
-    width: 100,
-    gap: spacing.xs,
+  timelineRow: {
+    flexDirection: 'row' as const,
+    gap: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
   },
-  desc: {
-    fontFamily: fontFamily.regular,
+  timelineAccent: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    minWidth: 56,
+  },
+  timelineRight: {
+    flex: 1,
+    justifyContent: 'center' as const,
+  },
+  timelineTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+  },
+  timelineDetail: {
+    fontFamily: fonts.body,
     fontSize: 11,
-    color: darkColors.textSecondary,
-    textAlign: 'center',
+    marginTop: 2,
   },
-  descLocked: {
-    opacity: 0.4,
+  timelineDivider: {
+    height: 1,
+    marginHorizontal: 4,
   },
 });

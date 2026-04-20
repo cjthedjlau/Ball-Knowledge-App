@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Zap } from 'lucide-react-native';
-import { colors, fontFamily, spacing } from '../../styles/theme';
+import { brand, dark, light, fonts, colors, darkColors, fontFamily, spacing, radius } from '../../styles/theme';
 
 const { width: W } = Dimensions.get('window');
 
@@ -149,7 +149,7 @@ function Scene2({ opacity }: { opacity: Animated.Value }) {
   }, []);
 
   const ptColor = (pts: number) =>
-    pts >= 30 ? colors.brand : pts >= 15 ? colors.brandMid : 'rgba(255,255,255,0.5)';
+    pts >= 30 ? colors.brand : pts >= 15 ? colors.brandMid : dark.textSecondary;
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.scene2, { opacity }]}>
@@ -341,12 +341,12 @@ export default function PowerPlayIntro({ onFinish }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: dark.background,
   },
 
   // ── Scene 1 ──────────────────────────────────────────────────────────────
   scene1: {
-    backgroundColor: '#0F0F0F',
+    backgroundColor: dark.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.45)',
+    color: dark.textSecondary,
     letterSpacing: 3,
     textAlign: 'center',
     marginTop: 20,
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
 
   // ── Scene 2 ──────────────────────────────────────────────────────────────
   scene2: {
-    backgroundColor: '#0F0F0F',
+    backgroundColor: dark.background,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 13,
-    color: 'rgba(255,255,255,0.4)',
+    color: dark.textMuted,
     letterSpacing: 2,
     flex: 1,
   },
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(252,52,92,0.15)',
+    backgroundColor: colors.brandAlpha15,
     borderWidth: 1,
     borderColor: colors.brand,
     borderRadius: 50,
@@ -431,12 +431,12 @@ const styles = StyleSheet.create({
     color: colors.brand,
   },
   questionCard: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: dark.surface,
     borderRadius: 16,
     padding: 20,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(252,52,92,0.2)',
+    borderColor: colors.brandAlpha15,
   },
   questionMeta: {
     fontFamily: fontFamily.bold,
@@ -456,13 +456,13 @@ const styles = StyleSheet.create({
   answerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2A2A2A',
+    backgroundColor: dark.surface,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: dark.cardBorder,
   },
   answerText: {
     fontFamily: fontFamily.medium,
@@ -480,12 +480,12 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontWeight: '400',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.35)',
+    color: dark.textMuted,
     marginLeft: 4,
   },
   timerTrack: {
     height: 6,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: dark.surface,
     borderRadius: 3,
     overflow: 'hidden',
     marginTop: 12,
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
 
   // ── Scene 3 ──────────────────────────────────────────────────────────────
   scene3: {
-    backgroundColor: '#0F0F0F',
+    backgroundColor: dark.background,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontWeight: '700',
     fontSize: 13,
-    color: 'rgba(255,255,255,0.4)',
+    color: dark.textMuted,
     letterSpacing: 4,
     marginBottom: 4,
   },
@@ -522,14 +522,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontWeight: '400',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     marginTop: 4,
   },
   xpBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: 'rgba(0,200,151,0.1)',
+    backgroundColor: darkColors.successBg,
     borderWidth: 1.5,
     borderColor: colors.accentGreen,
     borderRadius: 50,
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.4)',
+    color: dark.textMuted,
   },
   ctaWrap: {
     alignItems: 'center',
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontWeight: '400',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.3)',
+    color: dark.textMuted,
     letterSpacing: 2,
   },
 
@@ -592,13 +592,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: dark.tagBg,
   },
   skipText: {
     fontFamily: fontFamily.medium,
     fontWeight: '500',
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
+    color: dark.textSecondary,
     letterSpacing: 2,
   },
 });

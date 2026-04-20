@@ -1,8 +1,18 @@
 import { registerRootComponent } from 'expo';
 
+// Global unhandled promise rejection handler
+if (typeof global !== 'undefined') {
+  const originalHandler = (global as any).onunhandledrejection;
+  (global as any).onunhandledrejection = (event: any) => {
+    console.error('[Global] Unhandled promise rejection:', event?.reason);
+    if (originalHandler) originalHandler(event);
+  };
+}
+
 import App from './App';
 
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
-registerRootComponent(App);
+try {
+  registerRootComponent(App);
+} catch (e) {
+  console.error('[FATAL] registerRootComponent crashed:', e);
+}

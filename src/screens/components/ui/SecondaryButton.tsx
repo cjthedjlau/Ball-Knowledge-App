@@ -6,7 +6,8 @@ import {
   StyleSheet,
   type PressableProps,
 } from 'react-native';
-import { colors, darkColors, fontFamily } from '../../../styles/theme';
+import { brand, dark, light, fonts, radius } from '../../../styles/theme';
+import { useTheme } from '../../../hooks/useTheme';
 
 interface SecondaryButtonProps extends Omit<PressableProps, 'children'> {
   label: string;
@@ -20,6 +21,7 @@ export default function SecondaryButton({
   disabled = false,
   ...rest
 }: SecondaryButtonProps) {
+  const { isDark } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -48,12 +50,24 @@ export default function SecondaryButton({
         disabled={disabled}
         style={({ pressed }) => [
           styles.button,
-          pressed && styles.pressed,
+          {
+            borderColor: isDark ? 'rgba(255,255,255,0.15)' : light.cardBorder,
+          },
+          pressed && {
+            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+          },
           disabled && styles.disabled,
         ]}
         {...rest}
       >
-        <Text style={styles.label}>{label}</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: isDark ? dark.textPrimary : light.textPrimary },
+          ]}
+        >
+          {label}
+        </Text>
       </Pressable>
     </Animated.View>
   );
@@ -63,34 +77,19 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     height: 52,
-    backgroundColor: darkColors.surfaceElevated,
-    borderRadius: 999,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.10)',
-    borderBottomWidth: 3,
-    borderBottomColor: 'rgba(0,0,0,0.6)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  pressed: {
-    backgroundColor: darkColors.surface,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    elevation: 4,
   },
   disabled: {
     opacity: 0.3,
   },
   label: {
-    fontFamily: fontFamily.bold,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
     fontSize: 17,
     letterSpacing: 1,
-    color: colors.white,
   },
 });
