@@ -1,8 +1,40 @@
 import { useState, useEffect, useRef } from 'react';
-import { PostHogProvider, usePostHog } from 'posthog-react-native';
+let PostHogProvider: any = null;
+let usePostHog: any = () => null;
+try {
+  const ph = require('posthog-react-native');
+  PostHogProvider = ph.PostHogProvider;
+  usePostHog = ph.usePostHog;
+} catch {}
+
 import { StatusBar } from 'expo-status-bar';
-import { View, Animated, Easing, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Keep the native splash screen visible until our animated splash is ready
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+import { View, Animated, Easing, StyleSheet, ActivityIndicator, Platform, AppState, AppStateStatus } from 'react-native';
+// Native-only modules — wrapped in try-catch to prevent crash
+let requestTrackingPermissionsAsync: any = null;
+let StoreReview: any = null;
+try {
+  if (Platform.OS === 'ios') {
+    requestTrackingPermissionsAsync = require('expo-tracking-transparency').requestTrackingPermissionsAsync;
+  }
+} catch {}
+try {
+  if (Platform.OS !== 'web') {
+    StoreReview = require('expo-store-review');
+  }
+} catch {}
 import { useFonts } from 'expo-font';
+import { BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
+import {
+  SpaceGrotesk_400Regular,
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold,
+} from '@expo-google-fonts/space-grotesk';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenBase from './src/components/ScreenBase';
@@ -10,6 +42,7 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { ThemeProvider, useTheme } from './src/hooks/useTheme';
 import { colors } from './src/styles/theme';
 import { supabase } from './src/lib/supabase';
+import type { JoinedLobbyInfo } from './src/lib/multiplayer';
 import Splash from './src/app/components/Splash';
 import Login from './src/app/components/Login';
 import Home from './src/screens/components/Home';
@@ -29,8 +62,9 @@ import ThirteenWordsScreen from './src/app/game/13-words';
 import CustomMysteryPlayerScreen from './src/app/game/custom-mystery-player';
 import PowerPlayScreen from './src/app/game/power-play';
 import AutoCompleteScreen from './src/app/game/auto-complete';
+import HotTakeShowdownScreen from './src/app/game/hot-take-showdown';
 import GameIntro from './src/app/components/GameIntro';
-import { type Tab } from './src/app/components/ui/BottomNav';
+import BottomNav, { type Tab } from './src/app/components/ui/BottomNav';
 import Archive from './src/app/components/Archive';
 import MyStats from './src/app/components/MyStats';
 import FavoriteTeams from './src/app/components/FavoriteTeams';
@@ -38,8 +72,6 @@ import Achievements from './src/app/components/Achievements';
 import NotificationsScreen from './src/app/components/Notifications';
 import SettingsScreen from './src/app/components/Settings';
 import AuthCallback from './src/app/components/AuthCallback';
-import WaitlistScreen from './src/app/components/WaitlistScreen';
-import WaitlistPill from './src/app/components/WaitlistPill';
 import {
   registerForPushNotifications,
   savePushToken,
@@ -48,19 +80,25 @@ import {
 } from './src/lib/notifications';
 import { initAdsense } from './src/lib/adsense';
 import { getInviteCodeFromURL } from './src/lib/friends';
+import { processQueue } from './src/lib/offlineQueue';
+import { cleanStaleCache } from './src/lib/dailyGames';
+import useNetworkStatus from './src/hooks/useNetworkStatus';
+import OfflineBanner from './src/components/OfflineBanner';
+let setTrackingConsent: any = null;
+try { setTrackingConsent = require('./src/lib/adConfig').setTrackingConsent; } catch {}
 
-type Screen = 'splash' | 'onboarding' | 'login' | 'home' | 'games' | 'game' | 'leaderboard' | 'profile' | 'archive' | 'settings' | 'favorite-teams' | 'achievements' | 'my-stats' | 'notifications' | 'game-intro' | 'auth-callback' | 'waitlist';
+type Screen = 'splash' | 'onboarding' | 'login' | 'home' | 'games' | 'game' | 'leaderboard' | 'profile' | 'archive' | 'settings' | 'favorite-teams' | 'achievements' | 'my-stats' | 'notifications' | 'game-intro' | 'auth-callback';
 
-// Screens where the floating waitlist pill is visible (no pill on game/auth/splash/waitlist screens)
-const PILL_SCREENS = new Set<Screen>([
-  'home', 'games', 'leaderboard', 'profile', 'settings',
-  'favorite-teams', 'achievements', 'my-stats', 'notifications', 'archive',
+// Screens where the bottom nav should NOT appear
+const NO_NAV_SCREENS = new Set<Screen>([
+  'splash', 'onboarding', 'login', 'auth-callback', 'game-intro',
 ]);
 
 type GameScreenComponent = React.ComponentType<{
   onBack: () => void;
   onNavigate: (tab: Tab) => void;
   archiveDate?: string;
+  joinedLobby?: JoinedLobbyInfo;
 }>;
 
 const GAME_SCREENS: Record<string, GameScreenComponent> = {
@@ -76,6 +114,7 @@ const GAME_SCREENS: Record<string, GameScreenComponent> = {
   'custom-mystery-player': CustomMysteryPlayerScreen,
   'power-play': PowerPlayScreen,
   'auto-complete': AutoCompleteScreen,
+  'hot-take-showdown': HotTakeShowdownScreen,
 };
 
 // Daily games return to home after completion; party/unlimited games return to games hub
@@ -90,13 +129,15 @@ function AppContent() {
   const [screen, setScreen] = useState<Screen>('splash');
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [archiveDate, setArchiveDate] = useState<string | null>(null);
+  const [joinedLobby, setJoinedLobby] = useState<JoinedLobbyInfo | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [homeRefreshTrigger, setHomeRefreshTrigger] = useState(0);
   const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
   const [authCallbackError, setAuthCallbackError] = useState<string | null>(null);
-  // Default true to avoid a flash of the pill before AsyncStorage loads
-  const [waitlistDismissed, setWaitlistDismissed] = useState(true);
-  const waitlistDismissedRef = useRef(true);
+
+  // Network status — tracks connectivity and auto-processes offline queue on reconnect
+  const { isConnected, isInternetReachable } = useNetworkStatus();
+  const isOffline = !isConnected || !isInternetReachable;
 
   // Splash routing: store destination here; splash navigates when both
   // the animation AND the session check are done (whichever finishes last).
@@ -106,35 +147,47 @@ function AppContent() {
   const screenOpacity = useRef(new Animated.Value(0)).current;
   const screenTranslateY = useRef(new Animated.Value(30)).current;
 
-  const [fontsLoaded] = useFonts({
-    'Chillax-Bold': require('./assets/fonts/Chillax-Bold.otf'),
+  const [fontsLoaded, fontError] = useFonts({
+    BebasNeue_400Regular,
+    SpaceGrotesk_400Regular,
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_600SemiBold,
+    SpaceGrotesk_700Bold,
   });
 
   useEffect(() => {
+    if (fontError) console.error('[App] Font loading error:', fontError);
+  }, [fontError]);
+
+  useEffect(() => {
     // Identify user in PostHog once session is known
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        posthog?.identify(session.user.id, { email: session.user.email });
-      }
-    });
+    try {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          posthog?.identify(session.user.id, { email: session.user.email });
+        }
+      }).catch(e => console.error('[App] PostHog identify failed:', e));
+    } catch (e) {
+      console.error('[App] Session check for PostHog failed:', e);
+    }
   }, []);
 
   useEffect(() => {
-    // Initialize AdSense: first visit = no ads, return visits = ads enabled
-    initAdsense();
+    console.log('[App] Starting initialization...');
 
-    // Load waitlist dismissed state (separate from main init — non-blocking)
-    AsyncStorage.getItem('bk_waitlist_done').then(val => {
-      const dismissed = !!val;
-      setWaitlistDismissed(dismissed);
-      waitlistDismissedRef.current = dismissed;
-    });
+    // Initialize AdSense: first visit = no ads, return visits = ads enabled
+    try { initAdsense(); } catch (e) { console.error('[App] AdSense init failed:', e); }
+
+
+    console.log('[App] Checking session and onboarding state...');
 
     Promise.all([
-      supabase.auth.getSession(),
-      AsyncStorage.getItem('onboarded'),
-      AsyncStorage.getItem('bk_intros_seen'),
-    ]).then(([{ data: { session } }, onboarded, introSeen]) => {
+      supabase.auth.getSession().catch(e => { console.error('[App] getSession failed:', e); return { data: { session: null } }; }),
+      AsyncStorage.getItem('onboarded').catch(() => null),
+      AsyncStorage.getItem('bk_intros_seen').catch(() => null),
+    ]).then(async ([sessionResult, onboarded, introSeen]) => {
+      const session = (sessionResult as any)?.data?.session ?? null;
+      console.log('[App] Session:', !!session, 'Onboarded:', !!onboarded, 'IntroSeen:', !!introSeen);
       // Check for invite code in URL (web only)
       const inviteCode = getInviteCodeFromURL();
       if (inviteCode) setPendingInviteCode(inviteCode);
@@ -147,12 +200,24 @@ function AppContent() {
       } else if (inviteCode && onboarded && session) {
         // Deep-linked invite — go straight to leaderboard friends tab
         dest = 'leaderboard';
+      } else if (!session && !onboarded) {
+        // Play-first: auto-create anonymous session so new users can play immediately
+        // They'll be prompted to sign up later from the profile/leaderboard screens
+        try {
+          const { error: anonError } = await supabase.auth.signInAnonymously();
+          if (anonError) throw anonError;
+          await AsyncStorage.setItem('onboarded', '1');
+          dest = 'home';
+        } catch (e) {
+          console.warn('[App] Anonymous sign-in failed, falling back to login:', e);
+          dest = 'login';
+        }
       } else if (onboarded && session) {
         dest = 'home';
         // Ensure profile exists for returning users
         const user = session.user;
         if (user) {
-          supabase.from('profiles').select('id').eq('id', user.id).single().then(({ data }) => {
+          supabase.from('profiles').select('id').eq('id', user.id).single().then(({ data }: any) => {
             if (!data) {
               const username =
                 user.user_metadata?.full_name ||
@@ -168,20 +233,23 @@ function AppContent() {
                 streak: 0,
                 streak_at_risk: false,
                 favorite_league: 'NBA',
-              }).then(({ error }) => {
-                if (error) console.error('[App] Session restore profile creation failed:', error.message);
-                else console.log('[App] Profile created for returning user:', user.id);
-              });
+              }).then(({ error }: any) => {
+                if (error) console.error('[App] Profile creation failed:', error.message);
+              }).catch((e: any) => console.error('[App] Profile upsert error:', e));
             }
-          });
+          }).catch((e: any) => console.error('[App] Profile lookup error:', e));
         }
+        // Clean stale offline cache
+        cleanStaleCache().catch(() => {});
         // Register for push notifications on session restore
-        registerForPushNotifications().then(token => {
-          if (token) {
-            void savePushToken(token);
-            void scheduleDailyReminder(18);
-          }
-        });
+        try {
+          registerForPushNotifications().then(token => {
+            if (token) {
+              void savePushToken(token);
+              void scheduleDailyReminder(18);
+            }
+          }).catch(e => console.error('[App] Push notification registration failed:', e));
+        } catch (e) { console.error('[App] Push notification setup failed:', e); }
       } else if (onboarded && !session) {
         dest = 'login';
       } else {
@@ -203,14 +271,17 @@ function AppContent() {
       if (splashDone.current) setScreen('login');
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      // Ignore INITIAL_SESSION — handled by getSession() above.
-      // Only react to actual sign-out events to avoid race conditions
-      // where the listener fires before session is restored from storage.
-      if (event === 'SIGNED_OUT') setScreen('login');
-    });
+    let subscription: any = null;
+    try {
+      const result = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_OUT') setScreen('login');
+      });
+      subscription = result?.data?.subscription;
+    } catch (e) {
+      console.error('[App] Auth state change listener failed:', e);
+    }
 
-    return () => subscription.unsubscribe();
+    return () => { try { subscription?.unsubscribe(); } catch {} };
   }, []);
 
   // OAuth redirect detection (web only)
@@ -295,6 +366,83 @@ function AppContent() {
     ]).start();
   }, [screen]);
 
+  // ---------------------------------------------------------------------------
+  // AppState lifecycle — handle foreground/background transitions
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        // App came to foreground — refresh auth session if stale
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session) {
+            // Refreshing the session ensures the access token is current
+            supabase.auth.refreshSession().catch((err: unknown) =>
+              console.warn('[AppState] Session refresh failed:', err),
+            );
+          }
+        });
+
+        // Process any queued offline game results
+        processQueue().catch((err: unknown) =>
+          console.warn('[AppState] Queue processing failed:', err),
+        );
+
+        // Refresh profile data so XP / streak / level are up to date
+        setHomeRefreshTrigger((prev) => prev + 1);
+      }
+      // Background/inactive: individual game screens handle their own timer cleanup
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, []);
+
+  // ── ATT prompt (iOS only, once per install) + AdMob init ──
+  const attRequested = useRef(false);
+  useEffect(() => {
+    if (screen !== 'home' || attRequested.current) return;
+    attRequested.current = true;
+
+    const timer = setTimeout(async () => {
+      // Request ATT permission on iOS
+      if (Platform.OS === 'ios') {
+        try {
+          const { status } = await requestTrackingPermissionsAsync();
+          if (setTrackingConsent) setTrackingConsent(status === 'granted');
+        } catch {}
+      }
+      // Initialize AdMob SDK after ATT consent
+      if (Platform.OS !== 'web') {
+        try {
+          const mobileAds = require('react-native-google-mobile-ads').default;
+          await mobileAds().initialize();
+          console.log('[AdMob] SDK initialized');
+        } catch (e) { console.warn('[AdMob] SDK init failed:', e); }
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [screen]);
+
+  // ── App rating prompt (after 3rd game completion) ──
+  const gameCompletionCount = useRef(0);
+  const ratingShown = useRef(false);
+  useEffect(() => {
+    if (screen === 'home' && !ratingShown.current) {
+      gameCompletionCount.current += 1;
+      // Show rating after 3rd return to home from a game (proxy for 3 games played)
+      if (gameCompletionCount.current >= 4) {
+        ratingShown.current = true;
+        setTimeout(async () => {
+          try {
+            if (await StoreReview.isAvailableAsync()) {
+              await StoreReview.requestReview();
+            }
+          } catch {}
+        }, 1500);
+      }
+    }
+  }, [screen]);
+
   function handleSplashFinish() {
     splashDone.current = true;
     if (pendingDestination.current) {
@@ -331,15 +479,17 @@ function AppContent() {
     }
   }
 
-  async function dismissWaitlist() {
-    await AsyncStorage.setItem('bk_waitlist_done', 'true');
-    setWaitlistDismissed(true);
-    waitlistDismissedRef.current = true;
-    setScreen('home');
-  }
 
   function navigateToGame(gameId: string) {
     setArchiveDate(null);
+    setJoinedLobby(null);
+    setActiveGame(gameId);
+    setScreen('game');
+  }
+
+  function navigateToLobbyGame(gameId: string, lobby: JoinedLobbyInfo) {
+    setArchiveDate(null);
+    setJoinedLobby(lobby);
     setActiveGame(gameId);
     setScreen('game');
   }
@@ -358,11 +508,13 @@ function AppContent() {
 
   function renderScreen() {
     // Splash always plays first on every launch.
-    // Show a blank dark screen for the brief moment before fonts load (<300ms).
+    // Keep native splash visible until fonts load, then show animated splash.
     if (screen === 'splash') {
       if (!fontsLoaded) {
         return <ScreenBase starCount={0} />;
       }
+      // Fonts loaded — hide native splash and show our animated one
+      SplashScreen.hideAsync().catch(() => {});
       return (
         <ScreenBase starCount={120}>
           <StatusBar style={statusBarStyle} />
@@ -387,9 +539,9 @@ function AppContent() {
         <ScreenBase>
           <StatusBar style={statusBarStyle} />
           <Onboarding onFinish={() => {
-            AsyncStorage.setItem('onboarded', 'true').then(() => {
-              setScreen('login');
-            });
+            AsyncStorage.setItem('onboarded', 'true')
+              .then(() => setScreen('login'))
+              .catch(() => setScreen('login'));
           }} />
         </ScreenBase>
       );
@@ -401,7 +553,7 @@ function AppContent() {
           <StatusBar style={statusBarStyle} />
           <GameIntro
             onFinish={() => {
-              void AsyncStorage.setItem('bk_intros_seen', 'true');
+              AsyncStorage.setItem('bk_intros_seen', 'true').catch(() => {});
               setScreen('home');
             }}
           />
@@ -422,7 +574,10 @@ function AppContent() {
       return (
         <ScreenBase>
           <StatusBar style={statusBarStyle} />
-          <Login onLogin={() => setScreen('home')} />
+          <Login onLogin={() => {
+            setHomeRefreshTrigger(prev => prev + 1);
+            setScreen('home');
+          }} />
         </ScreenBase>
       );
     }
@@ -514,6 +669,7 @@ function AppContent() {
           <Games
             onBack={() => handleNavigate('home')}
             onGoToGame={navigateToGame}
+            onGoToLobbyGame={navigateToLobbyGame}
             onGoToArchive={navigateToArchive}
             onNavigate={handleNavigate}
           />
@@ -521,14 +677,6 @@ function AppContent() {
       );
     }
 
-    if (screen === 'waitlist') {
-      return (
-        <ScreenBase>
-          <StatusBar style={statusBarStyle} />
-          <WaitlistScreen onDismiss={() => void dismissWaitlist()} />
-        </ScreenBase>
-      );
-    }
 
     if (screen === 'game' && activeGame) {
       const GameScreen = GAME_SCREENS[activeGame];
@@ -538,28 +686,17 @@ function AppContent() {
           <ScreenBase>
             <StatusBar style={statusBarStyle} />
             <GameScreen
+              joinedLobby={joinedLobby ?? undefined}
               onBack={() => {
-                const wasDaily = archiveDate === null && DAILY_GAMES.has(activeGame ?? '');
                 setActiveGame(null);
                 setArchiveDate(null);
-                AsyncStorage.getItem('onboarded').then(async val => {
+                setJoinedLobby(null);
+                AsyncStorage.getItem('onboarded').catch(() => null).then(async (val: any) => {
                   if (!val) {
                     setScreen('onboarding');
                     return;
                   }
                   setHomeRefreshTrigger(prev => prev + 1);
-                  // Track daily game completions for waitlist auto-trigger
-                  if (wasDaily && !waitlistDismissedRef.current) {
-                    const today = new Date().toISOString().split('T')[0];
-                    const key = `bk_games_today_${today}`;
-                    const prev = parseInt((await AsyncStorage.getItem(key)) ?? '0');
-                    const next = prev + 1;
-                    await AsyncStorage.setItem(key, String(next));
-                    if (next >= 3) {
-                      setScreen('waitlist');
-                      return;
-                    }
-                  }
                   setScreen(backTarget as Screen);
                 });
               }}
@@ -574,15 +711,26 @@ function AppContent() {
     return (
       <ScreenBase>
         <StatusBar style={statusBarStyle} />
-        <Home onNavigate={handleNavigate} onGoToGame={navigateToGame} onGoToArchive={navigateToArchive} refreshTrigger={homeRefreshTrigger} />
+        <Home onNavigate={handleNavigate} onGoToGame={navigateToGame} onGoToArchive={navigateToArchive} onGoToNotifications={() => setScreen('notifications')} refreshTrigger={homeRefreshTrigger} />
       </ScreenBase>
     );
   }
+
+  // Determine active tab for the nav pill based on current screen
+  const getActiveTab = (): Tab => {
+    if (screen === 'games' || screen === 'game' || screen === 'archive') return 'games';
+    if (screen === 'leaderboard') return 'leaderboard';
+    if (screen === 'profile' || screen === 'settings' || screen === 'favorite-teams' || screen === 'achievements' || screen === 'my-stats' || screen === 'notifications') return 'profile';
+    return 'home';
+  };
+
+  const showNav = !NO_NAV_SCREENS.has(screen);
 
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
         <View style={{ flex: 1 }}>
+          <OfflineBanner visible={isOffline} />
           <Animated.View
             style={{
               flex: 1,
@@ -592,8 +740,8 @@ function AppContent() {
           >
             {renderScreen()}
           </Animated.View>
-          {!waitlistDismissed && PILL_SCREENS.has(screen) && (
-            <WaitlistPill onPress={() => setScreen('waitlist')} />
+          {showNav && (
+            <BottomNav activeTab={getActiveTab()} onNavigate={handleNavigate} />
           )}
         </View>
       </SafeAreaProvider>
@@ -601,22 +749,35 @@ function AppContent() {
   );
 }
 
-export default function App() {
-  return (
-    <PostHogProvider
-      apiKey={process.env.EXPO_PUBLIC_POSTHOG_API_KEY!}
-      options={{
-        host: process.env.EXPO_PUBLIC_POSTHOG_HOST,
-        captureScreens: true,
-        captureLifecycleEvents: true,
-      }}
-    >
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
-    </PostHogProvider>
+function App() {
+  const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_API_KEY;
+
+  const content = (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
+
+  // Only wrap in PostHog if API key exists AND provider loaded
+  if (posthogKey && PostHogProvider) {
+    return (
+      <PostHogProvider
+        apiKey={posthogKey}
+        options={{
+          host: process.env.EXPO_PUBLIC_POSTHOG_HOST,
+          captureScreens: true,
+          captureLifecycleEvents: true,
+        }}
+      >
+        {content}
+      </PostHogProvider>
+    );
+  }
+
+  return content;
 }
+
+export default App;
 
 const styles = StyleSheet.create({
   loading: {

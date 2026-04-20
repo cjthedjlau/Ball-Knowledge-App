@@ -1,0 +1,35 @@
+{
+  "cli": {
+    "version": ">= 15.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://scloxktkudutupiyqvbx.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjbG94a3RrdWR1dHVwaXlxdmJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDUzNjQsImV4cCI6MjA4OTA4MTM2NH0.0UWPTFN-5KAHgGSzECATN76cfrhPrEAYG-Sa4xwgyMk",
+        "EXPO_PUBLIC_POSTHOG_API_KEY": "phc_criKmeTb8p53WFZ6NJ6sURa1TiSJR43iuWHZEXRYfHn",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+        "EXPO_PUBLIC_APP_URL": "https://ballknowledgeapp.com",
+        "EXPO_PUBLIC_ADMOB_REWARDED_IOS": "ca-app-pub-1818161492484327/1436665354",
+        "EXPO_PUBLIC_ADMOB_INTERSTITIAL_IOS": "ca-app-pub-1818161492484327/5402516470"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6762028140"
+      }
+    }
+  }
+}
