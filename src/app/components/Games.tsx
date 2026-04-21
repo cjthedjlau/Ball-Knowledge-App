@@ -195,15 +195,6 @@ export default function Games({ onBack: _onBack, onGoToGame, onGoToLobbyGame, on
               PreviewComponent={CustomMysteryPreview}
             />
           </AnimatedCard>
-          <AnimatedCard delay={480} style={styles.cardGridItem}>
-            <GameCard
-              title="Join Game"
-              subtitle="Enter a Code"
-              icon={<LogIn size={24} color={colors.brand} strokeWidth={2} />}
-              onPress={() => setShowJoinLobby(true)}
-              status="multiplayer"
-            />
-          </AnimatedCard>
         </View>
 
         {/* Daily Games — 2x2 grid */}
