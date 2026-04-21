@@ -404,6 +404,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenHorizontal + 8,
     paddingTop: 16, // overridden dynamically with insets.top + 16
     paddingBottom: spacing.xl,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
     width: '100%',
   },
   headerRow: {
