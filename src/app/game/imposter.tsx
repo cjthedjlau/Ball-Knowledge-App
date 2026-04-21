@@ -987,7 +987,7 @@ const styles = StyleSheet.create({
   zone1: {
     backgroundColor: colors.brand,
     paddingTop: spacing['3xl'],
-    paddingBottom: 24,
+    paddingBottom: 140,
     paddingHorizontal: spacing.lg,
     shadowColor: colors.brand,
     shadowOffset: { width: 0, height: 8 },

@@ -1177,7 +1177,7 @@ const styles = StyleSheet.create({
   zone1: {
     backgroundColor: colors.brand,
     paddingTop: spacing['3xl'],
-    paddingBottom: 56,
+    paddingBottom: 140,
     paddingHorizontal: spacing.lg,
     shadowColor: colors.brand,
     shadowOffset: { width: 0, height: 8 },
@@ -1188,7 +1188,7 @@ const styles = StyleSheet.create({
   zone1Draft: {
     backgroundColor: colors.brand,
     paddingTop: spacing['2xl'],
-    paddingBottom: 20,
+    paddingBottom: 140,
     paddingHorizontal: spacing.lg,
     shadowColor: colors.brand,
     shadowOffset: { width: 0, height: 8 },
@@ -1199,7 +1199,7 @@ const styles = StyleSheet.create({
   zone1Results: {
     backgroundColor: colors.brand,
     paddingTop: spacing['2xl'],
-    paddingBottom: 28,
+    paddingBottom: 140,
     paddingHorizontal: spacing.lg,
     shadowColor: colors.brand,
     shadowOffset: { width: 0, height: 8 },
@@ -1555,7 +1555,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: darkColors.background,
     paddingHorizontal: spacing.lg,
-    paddingBottom: 80,
+    paddingBottom: 140,
   },
   passCard: {
     width: '100%',
