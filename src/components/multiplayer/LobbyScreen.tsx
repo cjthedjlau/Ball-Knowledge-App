@@ -81,11 +81,15 @@ export function LobbyScreen({
   const { isDark } = useTheme()
   const [copiedVisible, setCopiedVisible] = useState(false)
 
-  // Build a set of connected playerIndexes for quick lookup
+  // Build a set of connected user IDs AND player indexes for quick lookup
+  // (presence may track by userId or playerIndex depending on when they joined)
   const connectedIndexes = new Set(presencePlayers.map((p) => p.playerIndex))
+  const connectedUserIds = new Set(presencePlayers.map((p) => p.userId).filter(Boolean))
 
-  const allReady = players.length >= 2 && players.every((p) => p.is_ready || p.is_host)
-  const canStart = isHost && players.length >= 2 && allReady
+  // Non-host players only
+  const nonHostPlayers = players.filter((p) => !p.is_host)
+  const allNonHostReady = nonHostPlayers.length >= 2 && nonHostPlayers.every((p) => p.is_ready)
+  const canStart = isHost && allNonHostReady
 
   const gameTypeLabel = lobby.game_type.charAt(0).toUpperCase() + lobby.game_type.slice(1)
 
@@ -138,7 +142,7 @@ export function LobbyScreen({
         {/* Player list */}
         <View style={styles.playerList}>
           {players.map((player) => {
-            const isConnected = connectedIndexes.has(player.player_index)
+            const isConnected = connectedIndexes.has(player.player_index) || connectedUserIds.has(player.user_id)
 
             return (
               <View

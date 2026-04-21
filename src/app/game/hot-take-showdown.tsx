@@ -233,11 +233,11 @@ export default function HotTakeShowdownScreen({ onBack, onNavigate, joinedLobby 
 
   // ── Refresh lobby players when presence changes (new player joins/leaves) ──
   useEffect(() => {
-    if (!lobbyId || phase !== 'lobby') return;
+    if (!lobbyId) return;
     getLobbyPlayers(lobbyId).then(players => {
       setLobbyPlayers(players);
     }).catch(() => {});
-  }, [presencePlayers.length, lobbyId, phase]);
+  }, [presencePlayers.length, lobbyId]);
 
   // ── Timer logic ──
   const startTimer = useCallback((seconds: number, onExpire: () => void) => {
