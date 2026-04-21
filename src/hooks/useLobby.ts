@@ -57,19 +57,19 @@ export function useLobby({
     }
 
     let stale = false
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
     const channel = subscribeLobby(code)
     channelRef.current = channel
 
-    // Listen for presence sync events
-    channel.on('presence', { event: 'sync' }, () => {
-      if (stale) return
+    const identity = { displayName, playerIndex, userId }
+
+    // Parse presence state into typed array
+    function parsePresence() {
       const state = channel.presenceState()
       const players: PresencePlayer[] = []
-
       for (const key of Object.keys(state)) {
-        const entries = state[key] as Array<
-          PresencePlayer & { presence_ref?: string }
-        >
+        const entries = state[key] as Array<PresencePlayer & { presence_ref?: string }>
         for (const entry of entries) {
           players.push({
             displayName: entry.displayName,
@@ -79,8 +79,19 @@ export function useLobby({
           })
         }
       }
+      return players
+    }
 
-      setPresencePlayers(players)
+    // Listen for presence sync events
+    channel.on('presence', { event: 'sync' }, () => {
+      if (stale) return
+      setPresencePlayers(parsePresence())
+    })
+
+    // Listen for explicit leave events so other clients react immediately
+    channel.on('presence', { event: 'leave' }, () => {
+      if (stale) return
+      setPresencePlayers(parsePresence())
     })
 
     // Single broadcast listener that dispatches to registered callbacks
@@ -94,32 +105,49 @@ export function useLobby({
       }
     })
 
+    // Start heartbeat — re-track presence every 25s to prevent Supabase
+    // from marking the user as stale (~60s timeout by default)
+    function startHeartbeat() {
+      if (heartbeatTimer) clearInterval(heartbeatTimer)
+      heartbeatTimer = setInterval(() => {
+        if (!stale && channelRef.current) {
+          channelRef.current.track(identity).catch(() => {})
+        }
+      }, 25_000)
+    }
+
     // Subscribe and track presence once connected
     channel.subscribe((status) => {
       if (stale) return
       if (status === 'SUBSCRIBED') {
         setIsConnected(true)
-        channel.track({
-          displayName,
-          playerIndex,
-          userId,
-        })
+        channel.track(identity)
+        startHeartbeat()
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         setIsConnected(false)
-        console.error(`Realtime channel error: ${status}`)
+        console.warn(`[useLobby] Channel ${status} — attempting reconnect in 3s`)
+        // Auto-reconnect after a short delay
+        if (!stale && !reconnectTimer) {
+          reconnectTimer = setTimeout(() => {
+            reconnectTimer = null
+            if (stale) return
+            channel.subscribe()
+          }, 3_000)
+        }
       }
     })
 
     // Cleanup on code change or unmount
     return () => {
       stale = true
+      if (heartbeatTimer) clearInterval(heartbeatTimer)
+      if (reconnectTimer) clearTimeout(reconnectTimer)
       channel.unsubscribe()
       channelRef.current = null
       setIsConnected(false)
       setPresencePlayers([])
     }
-    // Only re-subscribe when the lobby code changes. The identity values
-    // (displayName, playerIndex, userId) are captured at subscribe time.
+    // Only re-subscribe when the lobby code changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code])
 
