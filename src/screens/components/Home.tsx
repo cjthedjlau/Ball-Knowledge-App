@@ -141,7 +141,6 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, onGoToNoti
 
         {/* ── ZONE 2: Content Area ── */}
         <Animated.View style={[styles.zone2, zone2Style, {
-          borderTopColor: isDark ? dark.cardBorder : light.cardBorder,
           backgroundColor: isDark ? dark.background : light.background,
         }]}>
           {/* Ghost watermark behind hero area (light mode only) */}
@@ -402,12 +401,9 @@ const styles = StyleSheet.create({
 
   // ── Zone 1: Brand header ──
   zone1: {
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
     paddingHorizontal: spacing.screenHorizontal + 8,
     paddingTop: 16, // overridden dynamically with insets.top + 16
-    paddingBottom: 80,
-    overflow: 'hidden',
+    paddingBottom: spacing.xl,
     width: '100%',
   },
   headerRow: {
@@ -473,13 +469,9 @@ const styles = StyleSheet.create({
   // ── Zone 2: Content area ──
   zone2: {
     backgroundColor: 'transparent',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.10)',
-    marginTop: -64,
+    marginTop: 0,
     paddingHorizontal: spacing.screenHorizontal + 8,
-    paddingTop: 32,
+    paddingTop: spacing.lg,
     paddingBottom: 32,
     elevation: 20,
     maxWidth: 960,
