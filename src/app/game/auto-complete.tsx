@@ -440,11 +440,8 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
         style={s.playingWrap}
         keyboardVerticalOffset={0}
       >
-        <ScrollView
-          style={s.playingScroll}
-          contentContainerStyle={[s.playingScrollContent, { paddingBottom: insets.bottom + 120 }]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <View
+          style={s.playingScrollContent}
         >
         {/* Prompt counter + strikes */}
         <View style={s.topRow}>
@@ -609,7 +606,7 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
             />
           ))}
         </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     );
   }
@@ -619,10 +616,8 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
     const hitTarget = totalScore >= TARGET_SCORE;
 
     return (
-      <ScrollView
-        style={s.resultsScroll}
-        contentContainerStyle={[s.resultsContent, { paddingBottom: insets.bottom + 120 }]}
-        showsVerticalScrollIndicator={false}
+      <View
+        style={s.resultsContent}
       >
         {/* Score header */}
         <View style={s.scoreHeader}>
@@ -758,7 +753,7 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
             <Text style={s.doneBtnText}>DONE</Text>
           </Pressable>
         )}
-      </ScrollView>
+      </View>
     );
   }
 
@@ -766,8 +761,12 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
 
   return (
     <View style={s.root}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        showsVerticalScrollIndicator={false}
+      >
       {/* Zone 1 */}
-      <View style={[s.zone1, { paddingTop: insets.top + 16 }]}>
+      <View style={[s.zone1, { paddingTop: insets.top + 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
         <View style={s.zone1TopRow}>
           <Pressable onPress={onBack} hitSlop={8} style={s.backBtn}>
             <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
@@ -798,6 +797,7 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
         {phase === 'playing' && renderPlaying()}
         {phase === 'results' && renderResults()}
       </View>
+      </ScrollView>
 
       {/* Wrong guess overlay — big red X flash */}
       <Animated.View

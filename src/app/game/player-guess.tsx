@@ -710,8 +710,13 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
         style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* ── Zone 1 ── */}
-        <View style={[s.zone1, { paddingTop: insets.top + 16 }]}>
+        <View style={[s.zone1, { paddingTop: insets.top + 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
           {/* Back button row */}
           <View style={s.zone1TopRow}>
             <Pressable onPress={() => { if (gameState === 'playing') trackGameAbandoned('player-guess', activeLeague); onBack(); }} hitSlop={8} style={s.backBtn}>
@@ -777,13 +782,7 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
                 <GhostButton label="VIEW ARCHIVE" onPress={() => onNavigate('archive' as Tab)} />
               </View>
             </View>
-          ) : (
-          <ScrollView
-            style={s.gameScrollView}
-            contentContainerStyle={[s.gameScrollContent, { paddingBottom: insets.bottom + 120 }]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
+          ) : (<>
           {/* Column headers */}
           <View style={s.headerRow}>
             {cols.map((col, i) => (
@@ -918,9 +917,10 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
               />
             </View>
           )}
-          </ScrollView>
+          </>
           )}
         </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );

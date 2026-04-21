@@ -483,7 +483,7 @@ export default function ImposterScreen({ onBack, joinedLobby }: Props) {
 
   function Zone1({ children }: { children: React.ReactNode }) {
     return (
-      <View style={styles.zone1}>
+      <View style={[styles.zone1, { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
           <ArrowLeft size={22} color={colors.white} strokeWidth={2} />
         </Pressable>
@@ -644,15 +644,15 @@ export default function ImposterScreen({ onBack, joinedLobby }: Props) {
 
     return (
       <SafeAreaView style={styles.root}>
-        <Zone1>
-          <Text style={styles.zone1Sub}>SETUP</Text>
-        </Zone1>
-
         <ScrollView
           style={styles.zone2}
           contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
+        <Zone1>
+          <Text style={styles.zone1Sub}>SETUP</Text>
+        </Zone1>
           {/* Mode Toggle */}
           <ModeToggle mode={mode} onModeChange={(m) => { setMode(m); setOnlinePhase('choose'); }} />
           <View style={{ height: 16 }} />
@@ -918,14 +918,14 @@ export default function ImposterScreen({ onBack, joinedLobby }: Props) {
 
   return (
     <SafeAreaView style={styles.root}>
-      <Zone1>
-        <Text style={styles.zone1Sub}>THE REVEAL</Text>
-      </Zone1>
-
       <ScrollView
         style={styles.zone2}
         contentContainerStyle={[styles.zone2Content, { paddingBottom: 120 }]}
+        showsVerticalScrollIndicator={false}
       >
+      <Zone1>
+        <Text style={styles.zone1Sub}>THE REVEAL</Text>
+      </Zone1>
         {/* Imposter reveal */}
         <View style={styles.imposterRevealCard}>
           <Text style={styles.revealCardLabel}>

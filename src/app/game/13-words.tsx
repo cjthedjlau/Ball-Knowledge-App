@@ -126,8 +126,16 @@ export default function ThirteenWordsScreen({ onBack }: Props) {
 
   return (
     <SafeAreaView style={styles.root}>
+      <ScrollView
+        style={styles.zone2}
+        contentContainerStyle={[
+          styles.zone2Content,
+          { paddingBottom: 120 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
       {/* ── Zone 1 ── */}
-      <View style={styles.zone1}>
+      <View style={[styles.zone1, { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
           <ArrowLeft size={22} color={colors.white} strokeWidth={2} />
         </Pressable>
@@ -143,16 +151,6 @@ export default function ThirteenWordsScreen({ onBack }: Props) {
         </Text>
         <Text style={styles.budgetLabel}>WORDS REMAINING</Text>
       </View>
-
-      {/* ── Zone 2 ── */}
-      <ScrollView
-        style={styles.zone2}
-        contentContainerStyle={[
-          styles.zone2Content,
-          { paddingBottom: 120 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
         {/* League Switcher */}
         <LeagueSwitcher selected={selectedLeague} onChange={handleLeagueChange} />
 

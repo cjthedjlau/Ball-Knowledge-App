@@ -235,8 +235,12 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
 
   return (
     <View style={s.root}>
+      <ScrollView
+        contentContainerStyle={[s.zone2Content, { paddingBottom: insets.bottom + 120 }]}
+        showsVerticalScrollIndicator={false}
+      >
       {/* ── Zone 1 ── */}
-      <View style={[s.zone1, { paddingTop: insets.top + 16 }]}>
+      <View style={[s.zone1, { paddingTop: insets.top + 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
         <View style={s.zone1TopRow}>
           <Pressable onPress={() => { if (!picks[selectedLeague]) trackGameAbandoned('blind-showdown', selectedLeague); onBack(); }} hitSlop={8} style={s.backBtn}>
             <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
@@ -258,13 +262,6 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
           </View>
         )}
       </View>
-
-      {/* ── Zone 2 ── */}
-      <ScrollView
-        style={s.zone2}
-        contentContainerStyle={[s.zone2Content, { paddingBottom: insets.bottom + 120 }]}
-        showsVerticalScrollIndicator={false}
-      >
         {isLoading ? (
           <View style={s.centerState}>
             <ActivityIndicator size="large" color={brand.primary} />

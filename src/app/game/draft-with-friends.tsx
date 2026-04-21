@@ -826,21 +826,21 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby
       // onlinePhase === 'choose' — show Create/Join buttons
       return (
         <SafeAreaView style={styles.root}>
-          <View style={styles.zone1}>
-            <Pressable onPress={onBack} style={styles.backBtnZone1} hitSlop={8}>
-              <ArrowLeft size={22} color={colors.white} strokeWidth={2} />
-            </Pressable>
-            <Text style={styles.zone1Label}>DRAFT WITH FRIENDS</Text>
-            <Text style={styles.zone1CategoryLabel}>ONLINE</Text>
-          </View>
-
           <ScrollView
             style={styles.zone2Scroll}
             contentContainerStyle={[
               styles.zone2Content,
               { paddingBottom: insets.bottom + 120 },
             ]}
+            showsVerticalScrollIndicator={false}
           >
+          <View style={[styles.zone1, { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
+            <Pressable onPress={onBack} style={styles.backBtnZone1} hitSlop={8}>
+              <ArrowLeft size={22} color={colors.white} strokeWidth={2} />
+            </Pressable>
+            <Text style={styles.zone1Label}>DRAFT WITH FRIENDS</Text>
+            <Text style={styles.zone1CategoryLabel}>ONLINE</Text>
+          </View>
             <ModeToggle mode={mode} onModeChange={(m) => { setMode(m); setOnlinePhase('choose'); }} />
             <View style={{ height: 32 }} />
             <PrimaryButton label="CREATE GAME" onPress={handleCreateGame} disabled={!userId || onlineLoading} />
@@ -862,17 +862,6 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby
     // ── LOCAL MODE — existing code unchanged ──
     return (
       <SafeAreaView style={styles.root}>
-        {/* Zone 1 */}
-        <View style={styles.zone1}>
-          <Pressable onPress={onBack} style={styles.backBtnZone1} hitSlop={8}>
-            <ArrowLeft size={22} color={colors.white} strokeWidth={2} />
-          </Pressable>
-          <Text style={styles.zone1Label}>DRAFT WITH FRIENDS</Text>
-          <Text style={styles.zone1CategoryLabel}>Today's Category</Text>
-          <Text style={styles.zone1Category}>{leagueCategory}</Text>
-        </View>
-
-        {/* Zone 2 */}
         <ScrollView
           style={styles.zone2Scroll}
           contentContainerStyle={[
@@ -880,7 +869,17 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby
             { paddingBottom: insets.bottom + 120 },
           ]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
+        {/* Zone 1 */}
+        <View style={[styles.zone1, { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
+          <Pressable onPress={onBack} style={styles.backBtnZone1} hitSlop={8}>
+            <ArrowLeft size={22} color={colors.white} strokeWidth={2} />
+          </Pressable>
+          <Text style={styles.zone1Label}>DRAFT WITH FRIENDS</Text>
+          <Text style={styles.zone1CategoryLabel}>Today's Category</Text>
+          <Text style={styles.zone1Category}>{leagueCategory}</Text>
+        </View>
           {/* Mode Toggle */}
           <ModeToggle mode={mode} onModeChange={(m) => { setMode(m); setOnlinePhase('choose'); }} />
           <View style={{ height: 16 }} />
@@ -978,8 +977,15 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby
 
     return (
       <SafeAreaView style={styles.root}>
+        {/* Scrollable content: zone1 + board strip + athlete list */}
+        <ScrollView
+          style={styles.draftScroll}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         {/* Zone 1 */}
-        <View style={styles.zone1Draft}>
+        <View style={[styles.zone1Draft, { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
           <Text style={styles.zone1Label}>DRAFT WITH FRIENDS</Text>
           <Text style={styles.draftCategorySmall}>{leagueCategory}</Text>
           <View style={styles.currentPickBanner}>
@@ -1002,13 +1008,6 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby
             <Text style={styles.roundBadge}>ROUND {currentRound} OF {rounds}</Text>
           </View>
         </View>
-
-        {/* Scrollable content: board strip + athlete list */}
-        <ScrollView
-          style={styles.draftScroll}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
-          keyboardShouldPersistTaps="handled"
-        >
           {/* Draft Board Strip */}
           <ScrollView
             horizontal
@@ -1092,18 +1091,17 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby
 
   return (
     <SafeAreaView style={styles.root}>
+      <ScrollView
+        style={styles.zone2Scroll}
+        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 120 }]}
+        showsVerticalScrollIndicator={false}
+      >
       {/* Zone 1 */}
-      <View style={styles.zone1Results}>
+      <View style={[styles.zone1Results, { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
         <Text style={styles.zone1Label}>DRAFT WITH FRIENDS</Text>
         <Text style={styles.resultsHeading}>DRAFT COMPLETE</Text>
         <Text style={styles.draftCategorySmall}>{leagueCategory}</Text>
       </View>
-
-      {/* Zone 2 */}
-      <ScrollView
-        style={styles.zone2Scroll}
-        contentContainerStyle={[styles.zone2Content, { paddingBottom: insets.bottom + 120 }]}
-      >
         {activePlayerNames.map((pName, pIdx) => {
           const playerPicks = board[pIdx] || [];
           return (
