@@ -135,7 +135,7 @@ export default function ThirteenWordsScreen({ onBack }: Props) {
         showsVerticalScrollIndicator={false}
       >
       {/* ── Zone 1 ── */}
-      <View style={[styles.zone1, { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
+      <View style={[styles.zone1, { paddingTop: insets.top + 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
           <ArrowLeft size={22} color={colors.white} strokeWidth={2} />
         </Pressable>

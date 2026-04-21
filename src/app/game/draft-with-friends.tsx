@@ -834,7 +834,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby
             ]}
             showsVerticalScrollIndicator={false}
           >
-          <View style={[styles.zone1, { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
+          <View style={[styles.zone1, { paddingTop: insets.top + 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
             <Pressable onPress={onBack} style={styles.backBtnZone1} hitSlop={8}>
               <ArrowLeft size={22} color={colors.white} strokeWidth={2} />
             </Pressable>
@@ -872,7 +872,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby
           showsVerticalScrollIndicator={false}
         >
         {/* Zone 1 */}
-        <View style={[styles.zone1, { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
+        <View style={[styles.zone1, { paddingTop: insets.top + 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
           <Pressable onPress={onBack} style={styles.backBtnZone1} hitSlop={8}>
             <ArrowLeft size={22} color={colors.white} strokeWidth={2} />
           </Pressable>
@@ -985,7 +985,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby
           showsVerticalScrollIndicator={false}
         >
         {/* Zone 1 */}
-        <View style={[styles.zone1Draft, { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
+        <View style={[styles.zone1Draft, { paddingTop: insets.top + 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
           <Text style={styles.zone1Label}>DRAFT WITH FRIENDS</Text>
           <Text style={styles.draftCategorySmall}>{leagueCategory}</Text>
           <View style={styles.currentPickBanner}>
@@ -1097,7 +1097,7 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby
         showsVerticalScrollIndicator={false}
       >
       {/* Zone 1 */}
-      <View style={[styles.zone1Results, { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
+      <View style={[styles.zone1Results, { paddingTop: insets.top + 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
         <Text style={styles.zone1Label}>DRAFT WITH FRIENDS</Text>
         <Text style={styles.resultsHeading}>DRAFT COMPLETE</Text>
         <Text style={styles.draftCategorySmall}>{leagueCategory}</Text>
