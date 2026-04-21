@@ -331,16 +331,6 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
               <Text style={s.shareBtnText}>SHARE RESULTS</Text>
             </Pressable>
 
-            {/* Notify Friends button */}
-            <Pressable
-              onPress={() => { void (async () => {
-                setNotifyState('sending');
-                setNotifyState('done');
-                setTimeout(() => setNotifyState('idle'), 3000);
-              })(); }}
-            >
-              </Text>
-            </Pressable>
 
             {/* XP card */}
             {!isArchive && xpEarnedMap[selectedLeague] !== undefined && (
@@ -764,25 +754,6 @@ function createStyles(isDark: boolean) {
       fontSize: 15,
       color: txt,
       letterSpacing: 1.5,
-    },
-      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-      borderRadius: radius.primary,
-      paddingVertical: 16,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: borderCol,
-      marginBottom: 12,
-      width: '100%' as any,
-    },
-      opacity: 0.7,
-    },
-      borderColor: 'rgba(0,200,151,0.40)',
-      backgroundColor: 'rgba(0,200,151,0.08)',
-    },
-      fontFamily: fonts.display,
-      fontSize: 15,
-      color: txt,
-      letterSpacing: 2,
     },
   });
 }

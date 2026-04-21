@@ -570,16 +570,6 @@ export default function TriviaScreen({ onBack, onNavigate, archiveDate }: Props)
               >
                 <Text style={s.shareBtnText}>SHARE RESULTS</Text>
               </Pressable>
-              {/* Notify Friends button */}
-              <Pressable
-                onPress={() => { void (async () => {
-                  setNotifyState('sending');
-                  setNotifyState('done');
-                  setTimeout(() => setNotifyState('idle'), 3000);
-                })(); }}
-              >
-                </Text>
-              </Pressable>
               {!isArchive && (
                 <GhostButton label="PLAY ARCHIVE" onPress={() => onNavigate('archive' as Tab)} />
               )}

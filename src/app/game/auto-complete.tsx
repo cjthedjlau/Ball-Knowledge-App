@@ -732,18 +732,6 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
           </Pressable>
         )}
 
-        {/* Notify Friends button */}
-        {revealedCount === NUM_PROMPTS && (
-          <Pressable
-            onPress={() => { void (async () => {
-              setNotifyState('sending');
-              setNotifyState('done');
-              setTimeout(() => setNotifyState('idle'), 3000);
-            })(); }}
-          >
-            </Text>
-          </Pressable>
-        )}
 
         {revealedCount === NUM_PROMPTS && (
           <Pressable
@@ -1653,25 +1641,6 @@ function createStyles(_isDark: boolean) {
     fontWeight: '900',
     fontSize: 15,
     color: darkColors.textSecondary,
-    letterSpacing: 2,
-  },
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    marginBottom: 12,
-  },
-    opacity: 0.7,
-  },
-    borderColor: 'rgba(0,200,151,0.40)',
-    backgroundColor: 'rgba(0,200,151,0.08)',
-  },
-    fontFamily: fonts.display,
-    fontWeight: '900' as const,
-    fontSize: 15,
-    color: dark.textPrimary,
     letterSpacing: 2,
   },
   });
