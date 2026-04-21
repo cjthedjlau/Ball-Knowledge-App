@@ -387,7 +387,7 @@ function createStyles(isDark: boolean) {
   return StyleSheet.create({
     root: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: brand.primary,
     },
 
     // Zone 1

@@ -720,7 +720,7 @@ function createStyles(isDark: boolean) {
   const dividerCol = isDark ? dark.divider : light.divider;
 
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: 'transparent' },
+    root: { flex: 1, backgroundColor: brand.primary },
 
     // Zone 1
     zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },

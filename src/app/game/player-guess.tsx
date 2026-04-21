@@ -928,7 +928,7 @@ function createStyles(isDark: boolean) {
   const inputBg = isDark ? dark.inputBg : light.inputBg;
 
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: 'transparent' },
+    root: { flex: 1, backgroundColor: brand.primary },
     flex: { flex: 1 },
 
     // Zone 1

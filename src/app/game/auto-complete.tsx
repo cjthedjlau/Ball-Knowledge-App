@@ -809,7 +809,7 @@ function createStyles(_isDark: boolean) {
   return StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: brand.primary,
   },
   wrongOverlay: {
     backgroundColor: 'rgba(220,30,50,0.55)',
