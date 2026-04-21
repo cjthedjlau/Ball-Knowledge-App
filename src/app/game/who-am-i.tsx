@@ -680,9 +680,11 @@ const styles = StyleSheet.create({
   zone1: {
     backgroundColor: colors.brand,
     paddingTop: spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,

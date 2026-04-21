@@ -773,6 +773,8 @@ function createStyles(_isDark: boolean) {
     backgroundColor: brand.primary,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
   zone1TopRow: {
     flexDirection: 'row',

@@ -101,15 +101,10 @@ export default function QuestionOfTheDay({ onPress }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
+    borderRadius: 16,
     padding: spacing.xl,
-    paddingTop: spacing.xl + 8,
-    paddingHorizontal: spacing.screenHorizontal + 8,
-    borderLeftWidth: 0,
-    borderBottomWidth: 1,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
     width: '100%',
   },
   cardPressed: {

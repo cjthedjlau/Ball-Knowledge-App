@@ -150,7 +150,7 @@ export default function Home({ onNavigate, onGoToGame, onGoToArchive, onGoToNoti
           )}
 
           {/* Question of the Day */}
-          <View style={{ marginHorizontal: -(spacing.screenHorizontal + 8), marginTop: 0, marginBottom: spacing.sm }}>
+          <View style={{ marginBottom: spacing.sm }}>
             <QuestionOfTheDay
               onPress={(q, id) => {
                 setQotdQuestion(q);

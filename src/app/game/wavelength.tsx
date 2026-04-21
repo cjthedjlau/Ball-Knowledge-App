@@ -1631,6 +1631,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['3xl'] + spacing.md,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,

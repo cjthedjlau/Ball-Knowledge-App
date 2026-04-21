@@ -733,7 +733,7 @@ function createStyles(isDark: boolean) {
     root: { flex: 1, backgroundColor: 'transparent' },
 
     // Zone 1
-    zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
+    zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
     zone1TopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xs },
     backBtn: { padding: spacing.sm, marginLeft: -spacing.sm },
     liveScore: { flexDirection: 'row', alignItems: 'baseline', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 20, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
