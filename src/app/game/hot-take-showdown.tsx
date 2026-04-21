@@ -372,6 +372,11 @@ export default function HotTakeShowdownScreen({ onBack, onNavigate, joinedLobby 
   useEffect(() => { matchupIndexRef.current = currentMatchupIndex; }, [currentMatchupIndex]);
   useEffect(() => { roundMatchupsRef.current = roundMatchups; }, [roundMatchups]);
 
+  // Use refs to break the circular dependency between advanceToVoting ↔ advanceToReveal.
+  // Without refs, each useCallback captures a stale reference to the other.
+  const advanceToVotingRef = useRef<(r: number, mIdx: number) => void>(() => {});
+  const advanceToRevealRef = useRef<(r: number, mIdx: number) => void>(() => {});
+
   const advanceToVoting = useCallback((r: number, mIdx: number) => {
     broadcast('game:phase', { phase: 'voting', round: r, matchupIndex: mIdx });
     setPhase('voting');
@@ -385,8 +390,8 @@ export default function HotTakeShowdownScreen({ onBack, onNavigate, joinedLobby 
       broadcast('game:phase', { phase: 'voting', round: r, matchupIndex: mIdx, timer: VOTE_TIME, votingOpen: true });
       setTimer(VOTE_TIME);
       startTimer(VOTE_TIME, () => {
-        // Voting closed — show reveal
-        advanceToReveal(r, mIdx);
+        // Voting closed — show reveal (use ref to get latest function)
+        advanceToRevealRef.current(r, mIdx);
       });
     }, PROMPT_PAUSE * 1000);
   }, [broadcast, startTimer]);
@@ -404,13 +409,18 @@ export default function HotTakeShowdownScreen({ onBack, onNavigate, joinedLobby 
     autoAdvanceRef.current = setTimeout(() => {
       const matchups = roundMatchupsRef.current[r - 1] || [];
       if (mIdx < matchups.length - 1) {
-        advanceToVoting(r, mIdx + 1);
+        // Use ref to get latest function
+        advanceToVotingRef.current(r, mIdx + 1);
       } else {
         broadcast('game:phase', { phase: 'leaderboard', round: r });
         setPhase('leaderboard');
       }
     }, REVEAL_PAUSE * 1000);
   }, [broadcast, stopTimer]);
+
+  // Keep refs in sync with latest callbacks
+  useEffect(() => { advanceToVotingRef.current = advanceToVoting; }, [advanceToVoting]);
+  useEffect(() => { advanceToRevealRef.current = advanceToReveal; }, [advanceToReveal]);
 
   // ── Start game (host only) ──
   const handleStartGame = useCallback(async () => {
@@ -555,10 +565,9 @@ export default function HotTakeShowdownScreen({ onBack, onNavigate, joinedLobby 
       }
     });
 
-    // Host signals answers are closed — triggers the auto-advancing matchup flow
-    const unsubAnswersClosed = onEvent('game:answers_closed', (payload: any) => {
-      // Only the host drives the auto-advancing flow
-      // Players just respond to phase changes
+    // Host signals answers are closed — non-host players just stop their timer
+    const unsubAnswersClosed = onEvent('game:answers_closed', () => {
+      stopTimer();
     });
 
     const unsubFinalAnswer = onEvent('game:final_answer', (payload: any) => {
@@ -751,7 +760,7 @@ export default function HotTakeShowdownScreen({ onBack, onNavigate, joinedLobby 
     } else if (phase === 'final-voting') {
       handleFinalReveal();
     } else if (phase === 'results') {
-      // Play again — go back to lobby
+      // Play again — go back to lobby with full state reset
       broadcast('game:phase', { phase: 'lobby' });
       setPhase('lobby');
       setRound(1);
@@ -761,6 +770,14 @@ export default function HotTakeShowdownScreen({ onBack, onNavigate, joinedLobby 
       setFinalAnswers({});
       setFinalVotes({});
       setFinalAudienceVotes({});
+      setMyAnswers({});
+      setMyVote(null);
+      setHasSubmitted(false);
+      setHasVoted(false);
+      setMyFinalAnswer('');
+      setFinalPrompt(null);
+      setPlayerNames({});
+      setIsReady(false);
     }
   }, [isHost, phase, round, broadcast, startTimer, stopTimer, clearAutoAdvance]);
 
