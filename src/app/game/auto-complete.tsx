@@ -960,7 +960,7 @@ function createStyles(_isDark: boolean) {
     lineHeight: 22,
   },
   startBtn: {
-    backgroundColor: 'transparent',
+    backgroundColor: brand.primary,
     borderRadius: 16,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing['4xl'],
