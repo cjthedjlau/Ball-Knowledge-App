@@ -709,6 +709,8 @@ export default function PowerPlayScreen({ onBack, archiveDate }: Props) {
 
   return (
     <View style={s.root}>
+      {/* Coral fill behind status bar */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: brand.primary, zIndex: 0 }} />
       {/* Zone 1 */}
       <View style={[s.zone1, { paddingTop: insets.top + 16 }]}>
         <View style={s.zone1TopRow}>
@@ -753,12 +755,12 @@ function createStyles(_isDark: boolean) {
   return StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
   },
 
   // Zone 1
   zone1: {
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
     borderBottomLeftRadius: 32,
@@ -890,7 +892,7 @@ function createStyles(_isDark: boolean) {
     lineHeight: 22,
   },
   startBtn: {
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
     borderRadius: 16,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing['4xl'],
@@ -1001,7 +1003,7 @@ function createStyles(_isDark: boolean) {
   },
   timerBarFill: {
     height: 4,
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
     borderRadius: 2,
   },
   timerRow: {
@@ -1099,7 +1101,7 @@ function createStyles(_isDark: boolean) {
   },
   lockInBtn: {
     flex: 2,
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
     borderRadius: 14,
     paddingVertical: spacing.lg,
     alignItems: 'center',
@@ -1132,7 +1134,7 @@ function createStyles(_isDark: boolean) {
     borderColor: 'rgba(255,255,255,0.15)',
   },
   dotActive: {
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
     borderColor: brand.primary,
   },
   dotLocked: {
@@ -1188,7 +1190,7 @@ function createStyles(_isDark: boolean) {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
     borderRadius: 12,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,

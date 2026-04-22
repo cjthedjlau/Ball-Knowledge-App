@@ -706,6 +706,8 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
 
   return (
     <View style={s.root}>
+      {/* Coral fill behind status bar */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: brand.primary, zIndex: 0 }} />
       <KeyboardAvoidingView
         style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -928,7 +930,7 @@ function createStyles(isDark: boolean) {
   const inputBg = isDark ? dark.inputBg : light.inputBg;
 
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: brand.primary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     flex: { flex: 1 },
 
     // Zone 1

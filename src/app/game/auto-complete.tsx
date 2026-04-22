@@ -749,6 +749,8 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
 
   return (
     <View style={s.root}>
+      {/* Coral fill behind status bar */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: brand.primary, zIndex: 0 }} />
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
         showsVerticalScrollIndicator={false}
@@ -809,7 +811,7 @@ function createStyles(_isDark: boolean) {
   return StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
   },
   wrongOverlay: {
     backgroundColor: 'rgba(220,30,50,0.55)',
@@ -828,7 +830,7 @@ function createStyles(_isDark: boolean) {
 
   // Zone 1
   zone1: {
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
   },
@@ -958,7 +960,7 @@ function createStyles(_isDark: boolean) {
     lineHeight: 22,
   },
   startBtn: {
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
     borderRadius: 16,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing['4xl'],
@@ -1306,7 +1308,7 @@ function createStyles(_isDark: boolean) {
   },
   lockInBtn: {
     flex: 2,
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
     borderRadius: 14,
     paddingVertical: spacing.lg,
     alignItems: 'center',
@@ -1328,7 +1330,7 @@ function createStyles(_isDark: boolean) {
 
   // Next prompt button (shown after strikes/pass)
   nextPromptBtn: {
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
     borderRadius: 16,
     paddingVertical: spacing.lg,
     alignItems: 'center',
@@ -1361,7 +1363,7 @@ function createStyles(_isDark: boolean) {
     borderColor: 'rgba(255,255,255,0.15)',
   },
   dotActive: {
-    backgroundColor: brand.primary,
+    backgroundColor: 'transparent',
     borderColor: brand.primary,
   },
   dotLocked: {

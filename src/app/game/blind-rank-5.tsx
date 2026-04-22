@@ -285,6 +285,8 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
 
   return (
     <View style={s.root}>
+      {/* Coral fill behind status bar so no dark gap shows above zone1 */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: brand.primary, zIndex: 0 }} />
       <ScrollView
         contentContainerStyle={[s.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
@@ -518,7 +520,7 @@ function createStyles(isDark: boolean) {
   const dividerCol = isDark ? dark.divider : light.divider;
 
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: brand.primary },
+    root: { flex: 1, backgroundColor: 'transparent' },
 
     // Zone 1
     zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },

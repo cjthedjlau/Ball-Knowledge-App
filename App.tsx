@@ -683,7 +683,7 @@ function AppContent() {
       if (GameScreen) {
         const backTarget = archiveDate ? 'archive' : (DAILY_GAMES.has(activeGame) ? 'home' : 'games');
         return (
-          <ScreenBase backgroundColor={brand.primary}>
+          <ScreenBase>
             <StatusBar style="light" />
             <GameScreen
               joinedLobby={joinedLobby ?? undefined}

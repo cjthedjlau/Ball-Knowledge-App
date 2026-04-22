@@ -235,6 +235,8 @@ export default function BlindShowdownScreen({ onBack, archiveDate }: Props) {
 
   return (
     <View style={s.root}>
+      {/* Coral fill behind status bar */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: brand.primary, zIndex: 0 }} />
       <ScrollView
         contentContainerStyle={[s.zone2Content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
@@ -387,12 +389,12 @@ function createStyles(isDark: boolean) {
   return StyleSheet.create({
     root: {
       flex: 1,
-      backgroundColor: brand.primary,
+      backgroundColor: 'transparent',
     },
 
     // Zone 1
     zone1: {
-      backgroundColor: brand.primary,
+      backgroundColor: 'transparent',
       paddingHorizontal: spacing.lg,
       paddingBottom: spacing.lg,
     },

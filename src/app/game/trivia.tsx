@@ -376,6 +376,8 @@ export default function TriviaScreen({ onBack, onNavigate, archiveDate }: Props)
 
   return (
     <View style={s.root}>
+      {/* Coral fill behind status bar */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: brand.primary, zIndex: 0 }} />
       {/* ── Zone 1 ── */}
       <View style={[s.zone1, { paddingTop: insets.top + 16 }]}>
         <View style={s.zone1TopRow}>
@@ -720,7 +722,7 @@ function createStyles(isDark: boolean) {
   const dividerCol = isDark ? dark.divider : light.divider;
 
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: brand.primary },
+    root: { flex: 1, backgroundColor: 'transparent' },
 
     // Zone 1
     zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
