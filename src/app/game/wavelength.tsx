@@ -89,7 +89,7 @@ function calcScore(guess: number, target: number): number {
   if (diff <= 10) return 4;
   if (diff <= 20) return 3;
   if (diff <= 30) return 2;
-  return 1;
+  return 0;
 }
 
 function scoreLabel(score: number): string {
@@ -1322,7 +1322,7 @@ export default function WavelengthScreen({ onBack, joinedLobby }: Props) {
       const lockedCount = Object.keys(allGuesses).length;
       // Use presencePlayers (connected players) instead of lobbyPlayers to avoid
       // deadlock when a player disconnects mid-guess phase.
-      const totalGuessers = presencePlayers.length;
+      const totalGuessers = Math.max(1, presencePlayers.length - 1); // exclude clue giver
       const allLocked = lockedCount >= totalGuessers;
 
       return (

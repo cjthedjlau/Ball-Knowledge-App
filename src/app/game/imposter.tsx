@@ -348,7 +348,9 @@ export default function ImposterScreen({ onBack, joinedLobby }: Props) {
         league: (fetched.league as Exclude<LeagueOption, 'ALL'>) || 'NBA',
         difficulty: selectedDifficulty,
       };
-      const chosenImposters = pickUniqueIndices(imposterCount, lobbyPlayers.length);
+      // Pick random array positions, then map to actual player_index values
+      const randomPositions = pickUniqueIndices(imposterCount, lobbyPlayers.length);
+      const chosenImposters = randomPositions.map(i => lobbyPlayers[i].player_index);
 
       setAthlete(chosenAthlete);
       setImposterIndices(chosenImposters);

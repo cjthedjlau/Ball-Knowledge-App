@@ -591,7 +591,8 @@ export default function HotTakeShowdownScreen({ onBack, onNavigate, joinedLobby 
 
     // Host-only: calculate scores for a matchup during reveal
     const unsubCalcScores = onEvent('game:calc_scores', (payload: any) => {
-      // All clients calculate and update scores locally
+      // Only the host calculates — non-host clients receive the result via game:scores
+      if (!isHost) return;
       const { round: r, matchupIndex: mIdx } = payload;
       setRoundMatchups(prev => {
         const matchup = prev[r - 1]?.[mIdx];
@@ -609,10 +610,7 @@ export default function HotTakeShowdownScreen({ onBack, onNavigate, joinedLobby 
           const newScores = { ...prevScores };
           newScores[matchup.playerA] = (newScores[matchup.playerA] || 0) + Math.round(pctA * multiplier);
           newScores[matchup.playerB] = (newScores[matchup.playerB] || 0) + Math.round(pctB * multiplier);
-          // Host broadcasts the new scores
-          if (isHost) {
-            broadcast('game:scores', { scores: newScores });
-          }
+          broadcast('game:scores', { scores: newScores });
           return newScores;
         });
 

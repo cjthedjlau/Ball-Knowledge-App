@@ -574,24 +574,11 @@ export default function DraftWithFriendsScreen({ onBack, onNavigate, joinedLobby
       nextPickIndex: nextIndex,
     });
 
-    // If last pick, broadcast game over
+    // If last pick, broadcast game over (XP is saved via the game:over handler)
     if (isLastPick) {
       broadcast('game:over', {});
       setOnlinePhase('results');
       setPhase('results');
-      const xp = calculateMultiplayerXP(rounds);
-      setXpEarned(xp);
-      void (async () => {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            await saveGameResult(user.id, 'draft-with-friends', xp, rounds);
-            await updateUserXPAndStreak(user.id, xp, false);
-          }
-        } catch {
-          // silently fail - XP is non-critical
-        }
-      })();
     }
   }, [isMyTurn, onlineCurrentPickIndex, onlinePickOrder.length, currentPlayerIndex, currentRound, broadcast, rounds]);
 

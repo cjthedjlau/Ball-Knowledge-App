@@ -143,6 +143,9 @@ export default function WhoAmIScreen({ onBack }: Props) {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tiltLocked = useRef(false); // debounce tilt so one tilt = one action
+  // Refs to avoid stale closures in timer/tilt callbacks
+  const turnScoreRef = useRef(0);
+  const turnCorrectRef = useRef<string[]>([]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -167,6 +170,10 @@ export default function WhoAmIScreen({ onBack }: Props) {
     [stopTimer],
   );
 
+  // Keep refs in sync with state so timer/tilt callbacks get fresh values
+  useEffect(() => { turnScoreRef.current = turnScore; }, [turnScore]);
+  useEffect(() => { turnCorrectRef.current = turnCorrect; }, [turnCorrect]);
+
   // ── Timer ─────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -174,8 +181,8 @@ export default function WhoAmIScreen({ onBack }: Props) {
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          // Use a timeout so we don't call setState/endTurn inside this setState
-          setTimeout(() => endTurn(turnScore, turnCorrect), 0);
+          // Use refs to get the LATEST score/correct values (not stale closure)
+          setTimeout(() => endTurn(turnScoreRef.current, turnCorrectRef.current), 0);
           return 0;
         }
         return prev - 1;

@@ -88,7 +88,7 @@ export function LobbyScreen({
 
   // Non-host players only
   const nonHostPlayers = players.filter((p) => !p.is_host)
-  const allNonHostReady = nonHostPlayers.length >= 2 && nonHostPlayers.every((p) => p.is_ready)
+  const allNonHostReady = nonHostPlayers.length >= 1 && nonHostPlayers.every((p) => p.is_ready)
   const canStart = isHost && allNonHostReady
 
   const gameTypeLabel = lobby.game_type.charAt(0).toUpperCase() + lobby.game_type.slice(1)

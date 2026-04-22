@@ -21,7 +21,7 @@ export interface JoinedLobbyInfo {
   gameType: string
 }
 
-export type GameType = 'imposter' | 'wavelength' | 'draft' | 'hot-take-showdown'
+export type GameType = 'imposter' | 'wavelength' | 'draft' | 'hot-take-showdown' | 'hot-take-showdown'
 export type LobbyStatus = 'waiting' | 'playing' | 'finished'
 
 export interface GameLobby {
