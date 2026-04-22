@@ -40,7 +40,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenBase from './src/components/ScreenBase';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { ThemeProvider, useTheme } from './src/hooks/useTheme';
-import { colors } from './src/styles/theme';
+import { colors, brand } from './src/styles/theme';
 import { supabase } from './src/lib/supabase';
 import type { JoinedLobbyInfo } from './src/lib/multiplayer';
 import Splash from './src/app/components/Splash';
@@ -683,8 +683,8 @@ function AppContent() {
       if (GameScreen) {
         const backTarget = archiveDate ? 'archive' : (DAILY_GAMES.has(activeGame) ? 'home' : 'games');
         return (
-          <ScreenBase>
-            <StatusBar style={statusBarStyle} />
+          <ScreenBase backgroundColor={brand.primary}>
+            <StatusBar style="light" />
             <GameScreen
               joinedLobby={joinedLobby ?? undefined}
               onBack={() => {
