@@ -436,8 +436,11 @@ async function generateGameForDate(date: string, league: string): Promise<{ stat
     }
   }
 
-  // Power Play — pick 5 questions from bank, prefer unused
+  // Power Play — pick 5 questions from bank, never repeat within 30 days
   let powerPlay: any = null
+  const thirtyDaysAgo = new Date(new Date(date).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+  // First: try questions never used
   const { data: ppUnused } = await supabaseAdmin
     .from('power_play_bank')
     .select('id, question_text, answers')
@@ -447,6 +450,25 @@ async function generateGameForDate(date: string, league: string): Promise<{ stat
     .limit(20)
 
   let ppPool = ppUnused ?? []
+
+  // Second: if not enough, add questions not used in last 30 days
+  if (ppPool.length < 5) {
+    const { data: ppOld } = await supabaseAdmin
+      .from('power_play_bank')
+      .select('id, question_text, answers')
+      .eq('league', league)
+      .eq('active', true)
+      .lt('last_used_date', thirtyDaysAgo)
+      .order('last_used_date', { ascending: true })
+      .limit(20)
+    // Merge without duplicates
+    const existingIds = new Set(ppPool.map(p => p.id))
+    for (const p of (ppOld ?? [])) {
+      if (!existingIds.has(p.id)) ppPool.push(p)
+    }
+  }
+
+  // Last resort: use oldest questions regardless (at least they won't be from this week)
   if (ppPool.length < 5) {
     const { data: ppAny } = await supabaseAdmin
       .from('power_play_bank')
