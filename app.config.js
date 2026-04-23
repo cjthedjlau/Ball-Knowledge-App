@@ -10,9 +10,7 @@ const isWeb = process.env.EXPO_PLATFORM === 'web' ||
 const NATIVE_ONLY_PLUGINS = new Set([
   'expo-secure-store',
   'expo-apple-authentication',
-  'expo-tracking-transparency',
   'expo-notifications',
-  'react-native-google-mobile-ads',
 ]);
 
 function filterPlugin(p) {
