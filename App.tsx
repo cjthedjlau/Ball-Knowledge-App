@@ -15,13 +15,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 import { View, Animated, Easing, StyleSheet, ActivityIndicator, Platform, AppState, AppStateStatus } from 'react-native';
 // Native-only modules — wrapped in try-catch to prevent crash
-let requestTrackingPermissionsAsync: any = null;
 let StoreReview: any = null;
-try {
-  if (Platform.OS === 'ios') {
-    requestTrackingPermissionsAsync = require('expo-tracking-transparency').requestTrackingPermissionsAsync;
-  }
-} catch {}
 try {
   if (Platform.OS !== 'web') {
     StoreReview = require('expo-store-review');
@@ -84,8 +78,6 @@ import { processQueue } from './src/lib/offlineQueue';
 import { cleanStaleCache } from './src/lib/dailyGames';
 import useNetworkStatus from './src/hooks/useNetworkStatus';
 import OfflineBanner from './src/components/OfflineBanner';
-let setTrackingConsent: any = null;
-try { setTrackingConsent = require('./src/lib/adConfig').setTrackingConsent; } catch {}
 
 type Screen = 'splash' | 'onboarding' | 'login' | 'home' | 'games' | 'game' | 'leaderboard' | 'profile' | 'archive' | 'settings' | 'favorite-teams' | 'achievements' | 'my-stats' | 'notifications' | 'game-intro' | 'auth-callback';
 
@@ -397,30 +389,14 @@ function AppContent() {
     return () => subscription.remove();
   }, []);
 
-  // ── ATT prompt (iOS only, once per install) + AdMob init ──
-  const attRequested = useRef(false);
+  // ── AdMob init (disabled until ads are enabled) ──
+  const adInitDone = useRef(false);
   useEffect(() => {
-    if (screen !== 'home' || attRequested.current) return;
-    attRequested.current = true;
-
-    const timer = setTimeout(async () => {
-      // Request ATT permission on iOS
-      if (Platform.OS === 'ios') {
-        try {
-          const { status } = await requestTrackingPermissionsAsync();
-          if (setTrackingConsent) setTrackingConsent(status === 'granted');
-        } catch {}
-      }
-      // Initialize AdMob SDK after ATT consent
-      if (Platform.OS !== 'web') {
-        try {
-          const mobileAds = require('react-native-google-mobile-ads').default;
-          await mobileAds().initialize();
-          console.log('[AdMob] SDK initialized');
-        } catch (e) { console.warn('[AdMob] SDK init failed:', e); }
-      }
-    }, 2000);
-    return () => clearTimeout(timer);
+    if (screen !== 'home' || adInitDone.current) return;
+    adInitDone.current = true;
+    // AdMob SDK init is skipped when ADS_ENABLED=false.
+    // When re-enabling ads, uncomment the init block below and
+    // add expo-tracking-transparency back to app.json plugins.
   }, [screen]);
 
   // ── App rating prompt (after 3rd game completion) ──
