@@ -47,7 +47,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             The app ran into an unexpected error. Try again, and if the problem
             persists, restart the app.
           </Text>
-          {__DEV__ && this.state.error && (
+          {this.state.error && (
             <Text style={styles.devError} numberOfLines={6}>
               {this.state.error.message}
             </Text>
