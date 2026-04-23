@@ -21,7 +21,6 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "NSUserTrackingUsageDescription": "Ball Knowledge uses this to personalize your experience and show relevant content.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "privacyManifests": {
