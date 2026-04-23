@@ -11,6 +11,7 @@ const NATIVE_ONLY_PLUGINS = new Set([
   'expo-secure-store',
   'expo-apple-authentication',
   'expo-notifications',
+  'react-native-google-mobile-ads',
 ]);
 
 function filterPlugin(p) {

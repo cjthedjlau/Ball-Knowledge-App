@@ -72,7 +72,14 @@
       "expo-localization",
       "expo-secure-store",
       "expo-apple-authentication",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "iosAppId": "ca-app-pub-1818161492484327~4897353088",
+          "androidAppId": "ca-app-pub-1818161492484327~7332147991"
+        }
+      ]
     ],
     "scheme": "ball-knowledge",
     "assetBundlePatterns": [
