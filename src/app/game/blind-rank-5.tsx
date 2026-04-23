@@ -290,10 +290,10 @@ export default function BlindRank5Screen({ onBack, onNavigate, archiveDate }: Pr
         showsVerticalScrollIndicator={false}
       >
       {/* ── Zone 1 ── */}
-      <View style={[s.zone1, { paddingTop: insets.top + 32, marginTop: -(insets.top), marginHorizontal: -1, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
+      <View style={[s.zone1, { paddingTop: insets.top + 16 }]}>
         <View style={s.zone1TopRow}>
           <Pressable onPress={() => { if (!gameComplete) trackGameAbandoned('blind-rank-5', selectedLeague); onBack(); }} hitSlop={8} style={s.backBtn}>
-            <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />
+            <ArrowLeft size={22} color={isDark ? colors.white : colors.brand} strokeWidth={2.5} />
           </Pressable>
         </View>
 
@@ -521,16 +521,16 @@ function createStyles(isDark: boolean) {
     root: { flex: 1, backgroundColor: 'transparent' },
 
     // Zone 1
-    zone1: { backgroundColor: brand.primary, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
+    zone1: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
     zone1TopRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
     backBtn: { padding: spacing.sm, marginLeft: -spacing.sm },
     zone1Center: { alignItems: 'center', marginTop: spacing.xs },
-    zone1Title: { fontFamily: fonts.display, fontSize: 24, color: '#FFFFFF', letterSpacing: 3, textAlign: 'center' },
-    zone1CategoryBanner: { backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: radius.primary, paddingVertical: 10, paddingHorizontal: 20, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)' },
-    zone1CategoryLabel: { fontFamily: fonts.bodySemiBold, fontSize: 10, color: 'rgba(255,255,255,0.60)', letterSpacing: 2, marginBottom: 2 },
-    zone1CategoryValue: { fontFamily: fonts.display, fontSize: 18, color: '#FFFFFF', letterSpacing: 1, textAlign: 'center' },
+    zone1Title: { fontFamily: fonts.display, fontSize: 24, color: txt, letterSpacing: 3, textAlign: 'center' },
+    zone1CategoryBanner: { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', borderRadius: radius.primary, paddingVertical: 10, paddingHorizontal: 20, marginTop: 12, alignItems: 'center', borderWidth: 1, borderColor: borderCol },
+    zone1CategoryLabel: { fontFamily: fonts.bodySemiBold, fontSize: 10, color: txtSec, letterSpacing: 2, marginBottom: 2 },
+    zone1CategoryValue: { fontFamily: fonts.display, fontSize: 18, color: txt, letterSpacing: 1, textAlign: 'center' },
     dotsRow: { marginTop: spacing.md },
-    zone1Counter: { fontFamily: fonts.bodySemiBold, fontSize: 12, color: 'rgba(255,255,255,0.80)', letterSpacing: 2, marginTop: spacing.xs },
+    zone1Counter: { fontFamily: fonts.bodySemiBold, fontSize: 12, color: txtSec, letterSpacing: 2, marginTop: spacing.xs },
     switcherRow: { marginTop: spacing.lg },
 
     // Zone 2
