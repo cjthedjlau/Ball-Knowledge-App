@@ -23,7 +23,7 @@ begin
     coalesce(
       new.raw_user_meta_data ->> 'full_name',
       split_part(new.email, '@', 1),
-      'Player'
+      'Player_' || substr(new.id::text, 1, 8)
     ),
     0,    -- lifetime_xp
     0,    -- weekly_xp
