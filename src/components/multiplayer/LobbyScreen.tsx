@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   },
   bottomActions: {
     paddingHorizontal: spacing.screenHorizontal,
-    paddingBottom: spacing['5xl'],
+    paddingBottom: 140,
     paddingTop: spacing.lg,
   },
   actionButton: {

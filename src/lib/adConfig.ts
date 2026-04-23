@@ -13,7 +13,7 @@ import { Platform } from 'react-native';
  */
 
 // ── Master Kill Switch ──
-export const ADS_ENABLED = true;
+export const ADS_ENABLED = false;
 
 // ── Initialize the Google Mobile Ads SDK ──
 // Called from native ad components only. Not imported on web.
