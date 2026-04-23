@@ -749,14 +749,12 @@ export default function AutoCompleteScreen({ onBack, archiveDate }: Props) {
 
   return (
     <View style={s.root}>
-      {/* Coral fill behind status bar */}
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: brand.primary, zIndex: 0 }} />
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
         showsVerticalScrollIndicator={false}
       >
       {/* Zone 1 */}
-      <View style={[s.zone1, { paddingTop: insets.top + 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
+      <View style={[s.zone1, { paddingTop: insets.top + 32, marginTop: -(insets.top), marginHorizontal: -1, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
         <View style={s.zone1TopRow}>
           <Pressable onPress={onBack} hitSlop={8} style={s.backBtn}>
             <ArrowLeft size={22} color={colors.white} strokeWidth={2.5} />

@@ -706,8 +706,6 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
 
   return (
     <View style={s.root}>
-      {/* Coral fill behind status bar */}
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: brand.primary, zIndex: 0 }} />
       <KeyboardAvoidingView
         style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -718,7 +716,7 @@ export default function PlayerGuessScreen({ onBack, archiveDate }: Props) {
           keyboardShouldPersistTaps="handled"
         >
         {/* ── Zone 1 ── */}
-        <View style={[s.zone1, { paddingTop: insets.top + 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
+        <View style={[s.zone1, { paddingTop: insets.top + 32, marginTop: -(insets.top), marginHorizontal: -1, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
           {/* Back button row */}
           <View style={s.zone1TopRow}>
             <Pressable onPress={() => { if (gameState === 'playing') trackGameAbandoned('player-guess', activeLeague); onBack(); }} hitSlop={8} style={s.backBtn}>
