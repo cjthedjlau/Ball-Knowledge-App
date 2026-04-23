@@ -15,6 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ballknowledge.bk",
+      "usesAppleSignIn": true,
       "buildNumber": "1",
       "config": {
         "usesNonExemptEncryption": false
